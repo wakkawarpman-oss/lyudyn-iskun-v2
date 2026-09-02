@@ -692,15 +692,33 @@ def format_factcheck_badge(e: DetectedEvent) -> str:
     count = getattr(e, "sources_count", 1) or 1
     sources = getattr(e, "sources_list", "") or e.source_channel
     
-    if status == "VERIFIED" or count >= 2:
+    # 1. Verification Label
+    if status == "OFFICIAL" or getattr(e, "is_official", False):
+        badge = f"🏛️ <b>ОФІЦІЙНЕ ДЖЕРЕЛО (@{e.source_channel})</b>"
+    elif status == "VERIFIED" or count >= 2:
         clean_sources = ", ".join([f"@{s.strip().lstrip('@')}" for s in sources.split(",") if s.strip()][:2])
-        return f"\U0001f7e2 <b>ВЕРИФІКОВАНО ({count} дж.: {clean_sources})</b>"
-    elif status == "OFFICIAL" or getattr(e, "is_official", False):
-        return f"\U0001f535 <b>ОФІЦІЙНЕ ДЖЕРЕЛО (@{e.source_channel})</b>"
+        badge = f"🟢 <b>ВЕРИФІКОВАНО (Консенсус {count} дж.: {clean_sources})</b>"
     elif status == "POSSIBLE_IPSO":
-        return "\U0001f6a8 <b>УВАГА: НЕПІДТВЕРДЖЕНО (МОЖЛИВИЙ ВКАТ)</b>"
+        badge = "🚨 <b>УВАГА: СУМНІВНЕ / МОЖЛИВИЙ ВКАТ</b>"
     else:
-        return f"\U0001f7e1 <b>ОДИНАРНЕ ДЖЕРЕЛО (@{e.source_channel})</b>"
+        badge = f"🟡 <b>ОДИНАРНЕ ДЖЕРЕЛО (@{e.source_channel})</b>"
+
+    # 2. C2 Geoint Synthesis Logic
+    if getattr(e, "has_media", False):
+        geo_method = "📸 Фото EXIF GPS / Vision AI"
+    elif getattr(e, "is_official", False):
+        geo_method = "🏛️ Офіційна прив'язка влади"
+    elif count >= 2:
+        geo_method = f"🟢 Перехресний консенсус ({count} дж.)"
+    else:
+        geo_method = "🗺️ Топонімічна прив'язка (OSINT)"
+
+    c2_trace = (
+        f"{badge}
+"
+        f"   └ 🛰️ <b>C2 Схема:</b> <code>[Джерела: {count}] ➔ [Синтез: {geo_method}] ➔ [PostGIS GIST]</code>"
+    )
+    return c2_trace
 
 
 BILINGUAL_MAP = [

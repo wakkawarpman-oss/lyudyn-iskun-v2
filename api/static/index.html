@@ -260,6 +260,47 @@
             gap: 4px;
         }
 
+
+        /* C2 Tactical Evidence Flow */
+        .c2-flow-box {
+            margin: 8px 0;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 11px;
+            color: #f1f5f9;
+        }
+        .c2-flow-title {
+            font-size: 10px;
+            color: #38bdf8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .c2-step {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .c2-step:last-child { margin-bottom: 0; }
+        .c2-step-num {
+            background: #1e293b;
+            color: #38bdf8;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .c2-step-txt { color: #94a3b8; }
+        .c2-step-txt b { color: #f8fafc; }
+        .c2-arrow { color: #64748b; font-size: 10px; text-align: center; margin: 1px 0 1px 12px; }
+
 </style>
 </head>
 <body>
@@ -617,9 +658,23 @@
                             <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${spec.title}</h3>
                             <p style="margin:0 0 6px 0; font-size:12px;"><b>📍 Локація:</b> ${e.location_text}</p>
                             
-                            <div style="margin:0 0 6px 0; font-size:11px; background:#f8fafc; border:1px solid #e2e8f0; padding:6px; border-radius:6px;">
-                                <div style="margin-bottom:3px; color:#334155;"><b>🧩 Визначення точки:</b></div>
-                                <div style="color:#0284c7; font-weight:600;">${logicBadge}</div>
+                            <!-- C2 Intelligence Verification Scheme -->
+                            <div class="c2-flow-box">
+                                <div class="c2-flow-title">🛰️ C2 ТАКТИЧНИЙ ЛАНЦЮЖОК ВЕРИФІКАЦІЇ:</div>
+                                <div class="c2-step">
+                                    <span class="c2-step-num">1. ДЖЕРЕЛА</span>
+                                    <span class="c2-step-txt"><b>${e.sources_count || 1} дж.</b> (${sourcesStr})</span>
+                                </div>
+                                <div class="c2-arrow">↓</div>
+                                <div class="c2-step">
+                                    <span class="c2-step-num">2. ГЕО-СИНТЕЗ</span>
+                                    <span class="c2-step-txt"><b>${logicBadge}</b></span>
+                                </div>
+                                <div class="c2-arrow">↓</div>
+                                <div class="c2-step">
+                                    <span class="c2-step-num">3. КООРДИНАТИ</span>
+                                    <span class="c2-step-txt"><code>${Number(e.lat).toFixed(4)}, ${Number(e.lon).toFixed(4)}</code> (PostGIS GIST)</span>
+                                </div>
                             </div>
 
                             <div style="margin:0 0 8px 0; font-size:11px; color:#475569;">
