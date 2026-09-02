@@ -9,6 +9,15 @@ import datetime
 import os
 import requests
 import base64
+import json
+from datetime import timedelta
+import redis
+import os
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+
 import asyncio
 import html
 
@@ -121,7 +130,8 @@ async def cmd_deep_osint(message: types.Message):
             await message.answer("🔒 Для глибокого OSINT-аналізу потрібен OpenAI API Key (Vision).\nВстановіть його командою:\n`/key sk-...`", parse_mode=ParseMode.MARKDOWN)
             return
             
-        api_key = user_key.openai_api_key
+        from database.models import decrypt_key
+        api_key = decrypt_key(user_key.openai_api_key)
         
         # Get strikes in last 12 hours
         threshold = datetime.utcnow() - timedelta(hours=12)
@@ -1074,10 +1084,11 @@ async def _save_user_key(message: types.Message, raw_key: str):
         uname = message.from_user.username
         user_key = db.query(UserApiKey).filter(UserApiKey.user_id == uid).first()
         if user_key:
-            user_key.openai_api_key = raw_key
+            user_key.openai_api_key = encrypt_key(raw_key)
             user_key.username = uname
         else:
-            user_key = UserApiKey(user_id=uid, username=uname, openai_api_key=raw_key)
+            from database.models import encrypt_key, decrypt_key
+            user_key = UserApiKey(user_id=uid, username=uname, openai_api_key=encrypt_key(raw_key))
             db.add(user_key)
         db.commit()
         
@@ -1119,7 +1130,8 @@ async def cmd_my_key(message: types.Message):
         uid = message.from_user.id
         user_key = db.query(UserApiKey).filter(UserApiKey.user_id == uid).first()
         if user_key:
-            k = user_key.openai_api_key
+            from database.models import decrypt_key
+            k = decrypt_key(user_key.openai_api_key)
             masked = k[:7] + "..." + k[-4:]
             await safe_send(
                 message,
@@ -1145,7 +1157,8 @@ async def cmd_premium(message: types.Message):
         uid = message.from_user.id
         user_key = db.query(UserApiKey).filter(UserApiKey.user_id == uid).first()
         if user_key:
-            k = user_key.openai_api_key
+            from database.models import decrypt_key
+            k = decrypt_key(user_key.openai_api_key)
             masked = k[:7] + "..." + k[-4:]
             await safe_send(
                 message,
@@ -1185,7 +1198,8 @@ async def handle_photo(message: types.Message, bot: Bot):
     try:
         uk = db.query(UserApiKey).filter(UserApiKey.user_id == message.from_user.id).first()
         if uk:
-            user_api_key = uk.openai_api_key
+            from database.models import decrypt_key
+            user_api_key = decrypt_key(uk.openai_api_key)
     finally:
         db.close()
 
