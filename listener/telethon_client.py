@@ -27,7 +27,7 @@ async def perform_sync(client, valid_channels):
     for entity in valid_channels:
         try:
             ch_name = getattr(entity, 'username', None) or str(entity.id)
-            recent_msgs = await client.get_messages(entity, limit=30)
+            recent_msgs = await client.get_messages(entity, limit=300)
             for msg in recent_msgs:
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
                     payload = {
