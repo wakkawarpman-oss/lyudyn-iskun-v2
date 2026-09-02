@@ -714,8 +714,7 @@ def format_factcheck_badge(e: DetectedEvent) -> str:
         geo_method = "🗺️ Топонімічна прив'язка (OSINT)"
 
     c2_trace = (
-        f"{badge}
-"
+        f"{badge}\n"
         f"   └ 🛰️ <b>C2 Схема:</b> <code>[Джерела: {count}] ➔ [Синтез: {geo_method}] ➔ [PostGIS GIST]</code>"
     )
     return c2_trace
