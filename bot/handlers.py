@@ -40,7 +40,7 @@ def format_source_link(src, msg_id):
 import logging
 from aiogram import Bot
 
-from bot.threat_report import generate_live_threat_assessment
+from bot.threat_report import generate_live_threat_assessment, generate_reference_card
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -525,21 +525,39 @@ async def cmd_status(message: types.Message):
 @router.message(Command("forecast"))
 @router.message(F.text == "\U0001f3af Прогноз загроз")
 async def cmd_threat_report(message: types.Message):
-    txt = (message.text or "").strip()
+    txt = (message.text or "").strip().lower()
+    is_en = " en" in txt or txt.endswith("/threats_en")
     prompt = ""
     if txt.startswith("/threats ") or txt.startswith("/forecast "):
         prompt = txt.split(maxsplit=1)[1].strip()
-        
-    await safe_send(
-        message,
-        "\u23f3 <b>Аналізую свіжі розвіддані та активність ворога на цей момент...</b>\n"
-        "<i>\u2022 Опитування баз стратегічної авіації (Енгельс, Саваслейка)\n"
-        "\u2022 Звірка пускових районів БПЛА та балістики\n"
-        "\u2022 Розрахунок ймовірності ракетної загрози...</i>"
+
+    wait_msg = (
+        "\u23f3 <b>Querying database for verified events in the last 24 hours...</b>\n"
+        "<i>\u2022 Scanning recorded incidents and air alerts\n"
+        "\u2022 Calculating threat levels from confirmed data\n"
+        "\u2022 Cross-referencing source verification status...</i>"
+    ) if is_en else (
+        "\u23f3 <b>Запитую базу даних щодо верифікованих подій за останні 24 години...</b>\n"
+        "<i>\u2022 Перевірка зафіксованих інцидентів та повітряних тривог\n"
+        "\u2022 Розрахунок рівнів загрози за підтвердженими фактами\n"
+        "\u2022 Звірка статусів верифікації джерел...</i>"
     )
-    
-    report = await asyncio.to_thread(generate_live_threat_assessment, prompt)
+
+    await safe_send(message, wait_msg)
+
+    lang = "en" if is_en else "ua"
+    report = await asyncio.to_thread(generate_live_threat_assessment, prompt, lang=lang)
     await safe_send(message, report, disable_web_page_preview=True)
+
+
+@router.message(Command("reference"))
+@router.message(Command("ttx"))
+@router.message(F.text == "📖 Довідник ТТХ")
+async def cmd_reference(message: types.Message):
+    txt = (message.text or "").strip().lower()
+    lang = "en" if " en" in txt else "ua"
+    card = generate_reference_card(lang=lang)
+    await safe_send(message, card, disable_web_page_preview=True)
 
 
 # ──────────────────────── 🛸 Радар Контур ─────────────────────────

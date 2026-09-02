@@ -1,21 +1,14 @@
 import os
 import datetime
-import requests
-import json
 import logging
 from zoneinfo import ZoneInfo
 from database.models import SessionLocal, DetectedEvent
-from worker.schemas import ThreatAssessmentSlotSchema
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-
-# 1. Словник офіційних та перевірених джерел
+# ─────────────────── Official Source Registry ───────────────────
 OFFICIAL_CHANNELS = {
     "kpszsu": "Повітряні Сили ЗСУ",
     "comafua": "Командувач ПС ЗСУ",
@@ -27,34 +20,25 @@ OFFICIAL_CHANNELS = {
     "mvs_ua": "МВС України"
 }
 
-# 2. Верифіковані ТТХ та довідник озброєнь (Двомовний)
-GROUND_TRUTH_WEAPONS_UA = [
-    {"name": "9М723 «Іскандер-М»", "type": "Балістична", "speed": "~2100 м/с (2-5 хв підльоту)", "stock_est": "[Оцінка ГУР: ~130-150 од.]", "risk": "🔴 Висока загроза"},
-    {"name": "Х-47М2 «Кинджал»", "type": "Аеробалістична", "speed": "до Mach 10", "stock_est": "[Оцінка ГУР: ~50 од.]", "risk": "🟠 Пуски з МіГ-31К"},
-    {"name": "Х-101 / Х-555", "type": "Крилата ракета", "speed": "дозвукова (0.7M)", "stock_est": "[Оцінка ГУР: ~200-250 од.]", "risk": "🟡 Стратегічна авіація Ту-95МС"},
-    {"name": "Shahed-136 / Герань-2", "type": "Ударний БпЛА", "speed": "180 км/год", "stock_est": "[Серійне вир-во]", "risk": "🟢 Щоденне виснаження ППО"}
+# ─────────────── Keyword Detectors (Evidence-Based) ─────────────
+BALLISTIC_KEYWORDS = [
+    'балістик', 'іскандер', 'ракетна небезпека', 'загроза балістики',
+    'ballistic', 'iskander'
+]
+STRATEGIC_AVIATION_KEYWORDS = [
+    'стратегічна авіація', 'ту-95', 'ту-160', 'міг-31',
+    'кинджал', 'зліт з аеродром', 'зліт стратегіч',
+    'tu-95', 'tu-160', 'mig-31', 'kinzhal', 'strategic aviation',
+    'енгельс', 'саваслейка', 'оленья', 'engels', 'savasleyka'
+]
+CRUISE_MISSILE_KEYWORDS = [
+    'крилат', 'х-101', 'х-555', 'калібр', 'калибр',
+    'kh-101', 'kh-555', 'caliber', 'cruise missile'
+]
+DRONE_KEYWORDS = [
+    'шахед', 'герань', 'бпла', 'дрон', 'shahed', 'geran', 'uav', 'drone'
 ]
 
-GROUND_TRUTH_WEAPONS_EN = [
-    {"name": "9M723 Iskander-M", "type": "Quasi-Ballistic", "speed": "~2100 m/s (2-5 min flight time)", "stock_est": "[DIU Est: ~130-150 units]", "risk": "🔴 Critical Threat"},
-    {"name": "Kh-47M2 Kinzhal", "type": "Aero-Ballistic", "speed": "up to Mach 10", "stock_est": "[DIU Est: ~50 units]", "risk": "🟠 MiG-31K Launches"},
-    {"name": "Kh-101 / Kh-555", "type": "Cruise Missile", "speed": "Subsonic (0.7M)", "stock_est": "[DIU Est: ~200-250 units]", "risk": "🟡 Tu-95MS Strategic Bombers"},
-    {"name": "Shahed-136 / Geran-2", "type": "Attack Drone", "speed": "180 km/h", "stock_est": "[Mass Serial Production]", "risk": "🟢 Daily Air Defense Attrition"}
-]
-
-GROUND_TRUTH_AIRBASES_UA = [
-    {"base": "Енгельс-2 (Саратовська обл.)", "role": "Ту-95МС / Ту-160", "activity_hint": "Заряджання та перельоти стратегічної авіації"},
-    {"base": "Саваслейка (Нижньогородська обл.)", "role": "МіГ-31К («Кинджал»)", "activity_hint": "Тренувальні вильоти та бойові пуски"},
-    {"base": "Приморсько-Ахтарськ / Курськ", "role": "Пускові майданчики БпЛА", "activity_hint": "Нічні пуски ударних груп"},
-    {"base": "Міллерове / Крим (Чауда)", "role": "ОТРК «Іскандер» / БпЛА", "activity_hint": "Тактична підтримка та балістика"}
-]
-
-GROUND_TRUTH_AIRBASES_EN = [
-    {"base": "Engels-2 (Saratov Region)", "role": "Tu-95MS / Tu-160", "activity_hint": "Strategic missile rearming and combat sorties"},
-    {"base": "Savasleyka (Nizhny Novgorod)", "role": "MiG-31K (Kinzhal)", "activity_hint": "Air combat patrol and strike readiness"},
-    {"base": "Primorsko-Akhtarsk / Kursk", "role": "UAV Launch Sites", "activity_hint": "Daily nocturnal Shahed swarm launches"},
-    {"base": "Millerovo / Crimea (Chauda)", "role": "Iskander TEL / Drones", "activity_hint": "Ballistic tactical coverage"}
-]
 
 def format_event_type(event_type: str, lang: str = "ua") -> str:
     types_map_ua = {
@@ -80,12 +64,13 @@ def format_event_type(event_type: str, lang: str = "ua") -> str:
     m = types_map_en if lang == "en" else types_map_ua
     return m.get(event_type.lower(), f"📍 {event_type.upper()}")
 
+
 def format_verified_source_link(source: str, msg_id: int, lang: str = "ua") -> str:
     """Generates a verified, clickable Telegram link with human-readable name."""
     if not source:
         return "Unknown Source" if lang == "en" else "Невідоме джерело"
     clean_src = str(source).strip().lstrip('@').lower()
-    
+
     prefix = "Operational Channel #" if lang == "en" else "Оперативний монітор #"
     if clean_src.isdigit() or clean_src.replace('-', '').isdigit():
         channel_name = f"{prefix}{clean_src[-4:]}"
@@ -97,92 +82,170 @@ def format_verified_source_link(source: str, msg_id: int, lang: str = "ua") -> s
     else:
         channel_name = f"@{clean_src}"
         url = f"https://t.me/{clean_src}/{msg_id}" if msg_id else f"https://t.me/{clean_src}"
-        
+
     return f"<a href='{url}'>{channel_name}</a>"
 
-def query_llm_for_slots(events_context: str, now_str: str, lang: str = "ua") -> ThreatAssessmentSlotSchema:
-    """Uses LLM strictly to fill semantic slots in requested language."""
-    target_lang_prompt = "Напиши українською мовою." if lang == "ua" else "Write strictly in English language."
-    sys_prompt = f"""Ти старший аналітик розвідки сил ППО. 
-Поточний точний час: {now_str}.
-{target_lang_prompt}
-Проаналізуй останні інциденти за 24 години:
-{events_context}
 
-Поверни ТІЛЬКИ валідний JSON згідно схеми:
-{{
-  "current_status_summary": "1-2 sentences summarizing enemy activity and current operational air threat",
-  "ballistic_risk_level": "CRITICAL|HIGH|MEDIUM|LOW",
-  "drone_activity_level": "CRITICAL|HIGH|MEDIUM|LOW",
-  "aviation_status": "HIGH_ALERT|STANDARD_PATROL|STANDBY",
-  "safety_recommendation": "1 sentence civil defense safety directive"
-}}
-"""
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"} if GROQ_API_KEY else {}
-    if GROQ_API_KEY:
-        try:
-            resp = requests.post(
-                GROQ_URL,
-                headers=headers,
-                json={
-                    "model": "llama-3.1-70b-versatile",
-                    "messages": [{"role": "system", "content": sys_prompt}],
-                    "temperature": 0.1,
-                    "response_format": {"type": "json_object"}
-                },
-                timeout=12
-            )
-            if resp.status_code == 200:
-                raw_json = json.loads(resp.json()["choices"][0]["message"]["content"])
-                return ThreatAssessmentSlotSchema(**raw_json)
-        except Exception as e:
-            logger.warning(f"Groq slot extraction failed: {e}")
+# ─────────────── Deterministic Threat Assessment ────────────────
 
-    # Fallback to OpenAI if Groq fails
-    if OPENAI_API_KEY:
-        try:
-            resp = requests.post(
-                OPENAI_URL,
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-                json={
-                    "model": "gpt-4o-mini",
-                    "messages": [{"role": "system", "content": sys_prompt}],
-                    "temperature": 0.1,
-                    "response_format": {"type": "json_object"}
-                },
-                timeout=12
-            )
-            if resp.status_code == 200:
-                raw_json = json.loads(resp.json()["choices"][0]["message"]["content"])
-                return ThreatAssessmentSlotSchema(**raw_json)
-        except Exception as e:
-            logger.warning(f"OpenAI slot extraction failed: {e}")
+def _text_matches(text: str, keywords: list) -> bool:
+    """Check if any keyword is found in text (case-insensitive)."""
+    t = text.lower()
+    return any(kw in t for kw in keywords)
 
-    # Safe deterministic default
+
+def _find_evidence_event(events: list, keywords: list):
+    """Find the most recent event matching any keyword. Returns (event, keyword_matched) or (None, None)."""
+    for e in events:
+        txt = (e.message_text or "").lower()
+        for kw in keywords:
+            if kw in txt:
+                return e, kw
+    return None, None
+
+
+def calculate_threat_levels(events: list, lang: str = "ua") -> dict:
+    """
+    Deterministic threat assessment based ONLY on evidence in the database.
+    Every level has a traceable reason.
+    """
+    # Classify events
+    strike_events = [e for e in events if e.event_type in ('direct_strike', 'explosion')]
+    drone_track_events = [e for e in events if e.event_type == 'radar_track' or _text_matches(e.message_text or "", DRONE_KEYWORDS)]
+    alert_events = [e for e in events if e.event_type == 'general_alert']
+    ad_events = [e for e in events if e.event_type == 'air_defense']
+
+    # ──── Ballistic Threat ────
+    ballistic_evidence, ballistic_kw = _find_evidence_event(events, BALLISTIC_KEYWORDS)
+    if ballistic_evidence:
+        dt_val = ballistic_evidence.detected_at.replace(tzinfo=datetime.timezone.utc) if ballistic_evidence.detected_at.tzinfo is None else ballistic_evidence.detected_at
+        t_str = dt_val.astimezone(KYIV_TZ).strftime("%H:%M")
+        src = ballistic_evidence.source_channel
+        if lang == "en":
+            ballistic_level = "CRITICAL"
+            ballistic_reason = f"Keyword '{ballistic_kw}' found in [{t_str}] from @{src}"
+        else:
+            ballistic_level = "CRITICAL"
+            ballistic_reason = f"Маркер '{ballistic_kw}' знайдено у повідомленні [{t_str}] від @{src}"
+    elif len(strike_events) >= 3:
+        if lang == "en":
+            ballistic_level = "HIGH"
+            ballistic_reason = f"{len(strike_events)} confirmed strikes in 24h — indirect ballistic risk"
+        else:
+            ballistic_level = "HIGH"
+            ballistic_reason = f"{len(strike_events)} прильотів за 24 год — непряма ознака балістичної загрози"
+    elif len(strike_events) >= 1:
+        if lang == "en":
+            ballistic_level = "MEDIUM"
+            ballistic_reason = f"{len(strike_events)} strike(s) recorded, no ballistic keywords confirmed"
+        else:
+            ballistic_level = "MEDIUM"
+            ballistic_reason = f"{len(strike_events)} приліт(ів), ключових слів про балістику не виявлено"
+    else:
+        if lang == "en":
+            ballistic_level = "LOW"
+            ballistic_reason = "No ballistic keywords or strikes detected in 24h data"
+        else:
+            ballistic_level = "LOW"
+            ballistic_reason = "За 24 год маркерів балістичної загрози у повідомленнях не виявлено"
+
+    # ──── Drone Activity ────
+    drone_count = len(drone_track_events)
+    if drone_count >= 10:
+        drone_level = "CRITICAL"
+    elif drone_count >= 5:
+        drone_level = "HIGH"
+    elif drone_count >= 1:
+        drone_level = "MEDIUM"
+    else:
+        drone_level = "LOW"
+
+    if drone_count > 0:
+        latest_drone = drone_track_events[0]
+        dt_val = latest_drone.detected_at.replace(tzinfo=datetime.timezone.utc) if latest_drone.detected_at.tzinfo is None else latest_drone.detected_at
+        t_str = dt_val.astimezone(KYIV_TZ).strftime("%H:%M")
+        if lang == "en":
+            drone_reason = f"{drone_count} UAV/drone event(s), last at [{t_str}]"
+        else:
+            drone_reason = f"{drone_count} фіксацій БпЛА, остання о [{t_str}]"
+    else:
+        if lang == "en":
+            drone_reason = "No UAV tracks or drone mentions in 24h data"
+        else:
+            drone_reason = "Фіксацій руху БпЛА за 24 год не виявлено"
+
+    # ──── Strategic Aviation ────
+    aviation_evidence, aviation_kw = _find_evidence_event(events, STRATEGIC_AVIATION_KEYWORDS)
+    if aviation_evidence:
+        dt_val = aviation_evidence.detected_at.replace(tzinfo=datetime.timezone.utc) if aviation_evidence.detected_at.tzinfo is None else aviation_evidence.detected_at
+        t_str = dt_val.astimezone(KYIV_TZ).strftime("%H:%M")
+        src = aviation_evidence.source_channel
+        if lang == "en":
+            aviation_status = "⚠️ ACTIVE"
+            aviation_reason = f"Keyword '{aviation_kw}' found in [{t_str}] from @{src}"
+        else:
+            aviation_status = "⚠️ АКТИВНА"
+            aviation_reason = f"Маркер '{aviation_kw}' знайдено у повідомленні [{t_str}] від @{src}"
+    else:
+        if lang == "en":
+            aviation_status = "UNKNOWN"
+            aviation_reason = "No strategic aviation mentions found in monitored channels in 24h"
+        else:
+            aviation_status = "НЕВІДОМО"
+            aviation_reason = "За 24 год повідомлень про стратегічну авіацію в підключених каналах не зафіксовано"
+
+    # ──── Summary (deterministic, no LLM) ────
     if lang == "en":
-        return ThreatAssessmentSlotSchema(
-            current_status_summary="Enemy tactical reconnaissance activity detected with ongoing air defense readiness across the capital region.",
-            ballistic_risk_level="HIGH",
-            drone_activity_level="MEDIUM",
-            aviation_status="STANDARD_PATROL",
-            safety_recommendation="Do not ignore air raid sirens; proceed immediately to certified bomb shelters during ballistic alerts."
-        )
-    return ThreatAssessmentSlotSchema(
-        current_status_summary="Фіксується активність ворожої повітряної розвідки та моніторинг обстановки силами ППО.",
-        ballistic_risk_level="HIGH",
-        drone_activity_level="MEDIUM",
-        aviation_status="STANDARD_PATROL",
-        safety_recommendation="Не ігноруйте сигнали повітряної тривоги та прямуйте до укриттів при загрозі балістики."
-    )
+        if len(events) == 0:
+            summary = "No events recorded in the database for the last 24 hours."
+        elif len(strike_events) > 0:
+            summary = f"{len(strike_events)} confirmed strike(s), {drone_count} UAV track(s), {len(alert_events)} air alert(s) recorded in 24h."
+        else:
+            summary = f"{drone_count} UAV track(s) and {len(alert_events)} air alert(s) recorded in 24h. No confirmed strikes."
+
+        safety = "Follow official air raid alerts. Proceed to shelters immediately upon ballistic threat notifications."
+    else:
+        if len(events) == 0:
+            summary = "За останні 24 години подій у базі даних не зафіксовано."
+        elif len(strike_events) > 0:
+            summary = f"За 24 год: {len(strike_events)} приліт(ів), {drone_count} фіксацій БпЛА, {len(alert_events)} повітряних тривог."
+        else:
+            summary = f"За 24 год: {drone_count} фіксацій БпЛА, {len(alert_events)} повітряних тривог. Прямих прильотів не зафіксовано."
+
+        safety = "Дотримуйтесь офіційних повідомлень про повітряну тривогу. При загрозі балістики негайно прямуйте до укриття."
+
+    return {
+        "summary": summary,
+        "safety": safety,
+        "ballistic_level": ballistic_level,
+        "ballistic_reason": ballistic_reason,
+        "drone_level": drone_level,
+        "drone_count": drone_count,
+        "drone_reason": drone_reason,
+        "aviation_status": aviation_status,
+        "aviation_reason": aviation_reason,
+        "total_events": len(events),
+        "strikes": len(strike_events),
+        "alerts": len(alert_events),
+        "ad_engaged": len(ad_events),
+    }
+
+
+def _threat_color(level: str) -> str:
+    return {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "UNKNOWN": "⚪"}.get(level, "⚪")
+
+
+# ─────────────── Main Report Generator ──────────────────────────
 
 def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") -> str:
-    """Deterministically renders a bilingual verified military intelligence report."""
+    """Deterministically renders a bilingual verified intelligence report.
+    Every claim is backed by a database record or explicitly marked UNKNOWN."""
     db = SessionLocal()
     events_items = []
-    total_events_24h = 0
+    recent_events = []
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     now_kyiv = now_utc.astimezone(KYIV_TZ)
-    
+
     date_format = "%d.%m.%Y | %H:%M (Kyiv Time)" if lang == "en" else "%d.%m.%Y | %H:%M (за Києвом)"
     now_str = now_kyiv.strftime(date_format)
 
@@ -195,16 +258,15 @@ def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") ->
                 DetectedEvent.source_channel.not_ilike('test%')
             )
             .order_by(DetectedEvent.detected_at.desc())
-            .limit(10)
             .all()
         )
-        total_events_24h = len(recent_events)
-        for e in recent_events:
+
+        for e in recent_events[:10]:
             dt_val = e.detected_at.replace(tzinfo=datetime.timezone.utc) if e.detected_at.tzinfo is None else e.detected_at
             t_str = dt_val.astimezone(KYIV_TZ).strftime("%H:%M")
             type_label = format_event_type(e.event_type, lang=lang)
             source_link = format_verified_source_link(e.source_channel, e.message_id, lang=lang)
-            
+
             # C2 Verification Tag
             if getattr(e, "is_official", False) or e.source_channel.lower().lstrip('@') in OFFICIAL_CHANNELS:
                 verif_badge = "🏛️ [OFFICIAL]" if lang == "en" else "🏛️ [ОФІЦІЙНО]"
@@ -213,7 +275,7 @@ def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") ->
             else:
                 verif_badge = "🟡 [1 SOURCE]" if lang == "en" else "🟡 [1 ДЖЕРЕЛО]"
 
-            source_label = "Primary Source" if lang == "en" else "Першоджерело"
+            source_label = "Source" if lang == "en" else "Джерело"
             loc_label = e.location_text or ("Kyiv Region" if lang == "en" else "Київщина")
             events_items.append(
                 f"• <code>[{t_str}]</code> <b>{type_label}</b>: {loc_label}\n"
@@ -224,60 +286,116 @@ def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") ->
     finally:
         db.close()
 
-    no_events_msg = "No direct kinetic impacts recorded in the last 24 hours." if lang == "en" else "За останні 24 години прямих влучань не зафіксовано."
-    events_context_raw = "\n".join(events_items) if events_items else no_events_msg
+    # ── Deterministic threat calculation ──
+    threat = calculate_threat_levels(recent_events, lang=lang)
 
-    # Extract slots through AI with strict Pydantic parsing
-    slots = query_llm_for_slots(events_context_raw, now_str, lang=lang)
-
-    # Deterministic Layout Assembly
+    # ── Report Assembly ──
     if lang == "en":
         report_lines = [
-            "🎯 <b>OPERATIONAL ASSESSMENT: RF THREATS & ACTIVITY</b>",
-            f"<i>Status as of {now_str} | Verified Evidence Data</i>\n",
-            "📌 <b>EXECUTIVE THREAT SUMMARY:</b>",
-            f"{slots.current_status_summary}\n",
-            "📊 <b>24-HOUR OPERATIONAL METRICS:</b>",
-            f"• Confirmed Events in DB: <code>{total_events_24h}</code>",
-            f"• Ballistic Threat Level: <b>{slots.ballistic_risk_level}</b>",
-            f"• Recon / UAV Intensity: <b>{slots.drone_activity_level}</b>",
-            f"• Strategic Aviation State: <b>{slots.aviation_status}</b>\n",
-            "🚀 <b>VERIFIED MISSILE ARSENAL & TTX SPECIFICATIONS:</b>"
+            "🎯 <b>VERIFIED THREAT ASSESSMENT: Kyiv Region</b>",
+            f"<i>As of {now_str} | Evidence-based analysis</i>\n",
+            "📌 <b>SITUATION SUMMARY:</b>",
+            f"{threat['summary']}\n",
+            "📊 <b>24-HOUR DATABASE STATISTICS:</b>",
+            f"• Total events recorded: <code>{threat['total_events']}</code>",
+            f"• Confirmed strikes: <code>{threat['strikes']}</code>",
+            f"• UAV/drone tracks: <code>{threat['drone_count']}</code>",
+            f"• Air alerts: <code>{threat['alerts']}</code>",
+            f"• Air defense engaged: <code>{threat['ad_engaged']}</code>\n",
+            f"{_threat_color(threat['ballistic_level'])} <b>BALLISTIC THREAT: {threat['ballistic_level']}</b>",
+            f"   └ <i>Reason: {threat['ballistic_reason']}</i>\n",
+            f"{_threat_color(threat['drone_level'])} <b>UAV ACTIVITY: {threat['drone_level']}</b>",
+            f"   └ <i>Reason: {threat['drone_reason']}</i>\n",
+            f"{'🔴' if threat['aviation_status'] != 'UNKNOWN' else '⚪'} <b>STRATEGIC AVIATION: {threat['aviation_status']}</b>",
+            f"   └ <i>Reason: {threat['aviation_reason']}</i>",
         ]
-        weapons = GROUND_TRUTH_WEAPONS_EN
-        airbases = GROUND_TRUTH_AIRBASES_EN
-        recent_header = "\n🔍 <b>LATEST VERIFIED INCIDENTS & EVIDENCE LINKS:</b>"
+        recent_header = "\n🔍 <b>LATEST VERIFIED EVENTS (with source links):</b>"
         safety_header = "\n⚠️ <b>CIVIL DEFENSE ADVISORY:</b>"
+        ref_hint = "\n<i>ℹ️ Weapons reference card: /reference</i>"
     else:
         report_lines = [
-            "🎯 <b>ОПЕРАТИВНИЙ ЗВІТ: ЗАГРОЗИ ТА АКТИВНІСТЬ РФ</b>",
-            f"<i>Стан на {now_str} | Автоматично верифіковані дані</i>\n",
-            "📌 <b>ОЦІНКА ПОТОЧНОЇ ОБСТАНОВКИ:</b>",
-            f"{slots.current_status_summary}\n",
-            "📊 <b>ОПЕРАТИВНІ ПОКАЗНИКИ ЗА 24 ГОДИНИ:</b>",
-            f"• Зафіксовано інцидентів у базі: <code>{total_events_24h}</code>",
-            f"• Рівень загрози балістики: <b>{slots.ballistic_risk_level}</b>",
-            f"• Активність БпЛА/розвідки: <b>{slots.drone_activity_level}</b>",
-            f"• Статус стратегічної авіації: <b>{slots.aviation_status}</b>\n",
-            "🚀 <b>ДОВІДНИК ТТХ ТА ЗАПАСІВ ОЗБРОЄННЯ РФ:</b>"
+            "🎯 <b>ВЕРИФІКОВАНИЙ ЗВІТ ЗАГРОЗ: Київський регіон</b>",
+            f"<i>Станом на {now_str} | Аналіз на основі фактів</i>\n",
+            "📌 <b>СИТУАЦІЙНА ЗВЕДЕННЯ:</b>",
+            f"{threat['summary']}\n",
+            "📊 <b>СТАТИСТИКА БД ЗА 24 ГОДИНИ:</b>",
+            f"• Усього подій зафіксовано: <code>{threat['total_events']}</code>",
+            f"• Підтверджених прильотів: <code>{threat['strikes']}</code>",
+            f"• Фіксацій БпЛА: <code>{threat['drone_count']}</code>",
+            f"• Повітряних тривог: <code>{threat['alerts']}</code>",
+            f"• Робота ППО: <code>{threat['ad_engaged']}</code>\n",
+            f"{_threat_color(threat['ballistic_level'])} <b>ЗАГРОЗА БАЛІСТИКИ: {threat['ballistic_level']}</b>",
+            f"   └ <i>Підстава: {threat['ballistic_reason']}</i>\n",
+            f"{_threat_color(threat['drone_level'])} <b>АКТИВНІСТЬ БпЛА: {threat['drone_level']}</b>",
+            f"   └ <i>Підстава: {threat['drone_reason']}</i>\n",
+            f"{'🔴' if threat['aviation_status'] != 'НЕВІДОМО' else '⚪'} <b>СТРАТЕГІЧНА АВІАЦІЯ: {threat['aviation_status']}</b>",
+            f"   └ <i>Підстава: {threat['aviation_reason']}</i>",
         ]
-        weapons = GROUND_TRUTH_WEAPONS_UA
-        airbases = GROUND_TRUTH_AIRBASES_UA
-        recent_header = "\n🔍 <b>ОСТАННІ ПЕРЕВІРЕНІ ПОДІЇ ТА ПЕРШОДЖЕРЕЛА:</b>"
+        recent_header = "\n🔍 <b>ОСТАННІ ВЕРИФІКОВАНІ ПОДІЇ (з посиланнями на джерела):</b>"
         safety_header = "\n⚠️ <b>РЕКОМЕНДАЦІЇ ЦИВІЛЬНОГО ЗАХИСТУ:</b>"
-
-    for w in weapons:
-        report_lines.append(f"• <b>{w['name']}</b> ({w['type']}): {w['speed']} — <i>{w['stock_est']}</i> | {w['risk']}")
-
-    airbase_title = "\n🏢 <b>KEY STRATEGIC AIRBASES UNDER MONITORING:</b>" if lang == "en" else "\n🏢 <b>МОНІТОРИНГ КЛЮЧОВИХ АВІАБАЗ РФ:</b>"
-    report_lines.append(airbase_title)
-    for b in airbases:
-        report_lines.append(f"• <b>{b['base']}</b>: {b['role']} — {b['activity_hint']}")
+        ref_hint = "\n<i>ℹ️ Довідник ТТХ озброєнь: /reference</i>"
 
     if events_items:
         report_lines.append(recent_header)
-        report_lines.extend(events_items[:5])
+        report_lines.extend(events_items[:7])
 
-    report_lines.append(f"{safety_header}\n{slots.safety_recommendation}")
+    report_lines.append(f"{safety_header}\n{threat['safety']}")
+    report_lines.append(ref_hint)
 
     return "\n".join(report_lines)
+
+
+# ─────────────── Static Reference Card (Separate) ──────────────
+
+def generate_reference_card(lang: str = "ua") -> str:
+    """Static weapons & airbase reference. Clearly marked as non-live reference data."""
+    WEAPONS_UA = [
+        {"name": "9М723 «Іскандер-М»", "type": "Балістична", "speed": "~2100 м/с (2-5 хв підльоту)", "stock_est": "Оцінка ГУР: ~130-150 од."},
+        {"name": "Х-47М2 «Кинджал»", "type": "Аеробалістична", "speed": "до Mach 10", "stock_est": "Оцінка ГУР: ~50 од."},
+        {"name": "Х-101 / Х-555", "type": "Крилата ракета", "speed": "дозвукова (0.7M)", "stock_est": "Оцінка ГУР: ~200-250 од."},
+        {"name": "Shahed-136 / Герань-2", "type": "Ударний БпЛА", "speed": "180 км/год", "stock_est": "Серійне виробництво"},
+        {"name": "3М-54 «Калібр»", "type": "Крилата ракета (морська)", "speed": "дозвукова / фін. Mach 2.9", "stock_est": "Оцінка ГУР: ~80-100 од."},
+    ]
+    WEAPONS_EN = [
+        {"name": "9M723 Iskander-M", "type": "Quasi-Ballistic", "speed": "~2100 m/s (2-5 min flight)", "stock_est": "DIU Est: ~130-150 units"},
+        {"name": "Kh-47M2 Kinzhal", "type": "Aero-Ballistic", "speed": "up to Mach 10", "stock_est": "DIU Est: ~50 units"},
+        {"name": "Kh-101 / Kh-555", "type": "Cruise Missile", "speed": "Subsonic (0.7M)", "stock_est": "DIU Est: ~200-250 units"},
+        {"name": "Shahed-136 / Geran-2", "type": "Attack Drone", "speed": "180 km/h", "stock_est": "Mass Serial Production"},
+        {"name": "3M-54 Kalibr", "type": "Cruise Missile (naval)", "speed": "Subsonic / terminal Mach 2.9", "stock_est": "DIU Est: ~80-100 units"},
+    ]
+    AIRBASES = [
+        {"base_ua": "Енгельс-2 (Саратовська обл.)", "base_en": "Engels-2 (Saratov)", "role": "Ту-95МС / Ту-160"},
+        {"base_ua": "Саваслейка (Нижньогородська обл.)", "base_en": "Savasleyka (Nizhny Novgorod)", "role": "МіГ-31К (Кинджал)"},
+        {"base_ua": "Оленья (Мурманська обл.)", "base_en": "Olenya (Murmansk)", "role": "Ту-95МС / Ту-22М3"},
+        {"base_ua": "Приморсько-Ахтарськ / Курськ", "base_en": "Primorsko-Akhtarsk / Kursk", "role": "Shahed launch sites"},
+        {"base_ua": "Міллерове / Крим (Чауда)", "base_en": "Millerovo / Crimea (Chauda)", "role": "Iskander / Drones"},
+    ]
+
+    if lang == "en":
+        lines = [
+            "📖 <b>STATIC REFERENCE: RF Weapons & Airbases</b>",
+            "<i>⚠️ This is a static reference card. Data is NOT updated in real-time.</i>",
+            "<i>Stock estimates are based on publicly available Ukrainian DIU assessments (~2024).</i>\n",
+            "🚀 <b>KNOWN WEAPON SYSTEMS:</b>"
+        ]
+        for w in WEAPONS_EN:
+            lines.append(f"• <b>{w['name']}</b> ({w['type']}): {w['speed']} — <i>{w['stock_est']}</i>")
+        lines.append("\n🏢 <b>KNOWN STRATEGIC AIRBASES:</b>")
+        for b in AIRBASES:
+            lines.append(f"• <b>{b['base_en']}</b>: {b['role']}")
+        lines.append("\n<i>Sources: Ukrainian DIU (GUR MO) public briefings, RUSI, ISW open-source assessments.</i>")
+    else:
+        lines = [
+            "📖 <b>СТАТИЧНИЙ ДОВІДНИК: Озброєння та авіабази РФ</b>",
+            "<i>⚠️ Це статичний довідник. Дані НЕ оновлюються в реальному часі.</i>",
+            "<i>Оцінки запасів базуються на публічних брифінгах ГУР МО України (~2024 р.).</i>\n",
+            "🚀 <b>ВІДОМІ СИСТЕМИ ОЗБРОЄННЯ:</b>"
+        ]
+        for w in WEAPONS_UA:
+            lines.append(f"• <b>{w['name']}</b> ({w['type']}): {w['speed']} — <i>{w['stock_est']}</i>")
+        lines.append("\n🏢 <b>ВІДОМІ СТРАТЕГІЧНІ АВІАБАЗИ:</b>")
+        for b in AIRBASES:
+            lines.append(f"• <b>{b['base_ua']}</b>: {b['role']}")
+        lines.append("\n<i>Джерела: публічні брифінги ГУР МО, RUSI, ISW.</i>")
+
+    return "\n".join(lines)
