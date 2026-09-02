@@ -3,7 +3,11 @@ import json
 import logging
 import base64
 import requests
+import datetime
+from zoneinfo import ZoneInfo
+from worker.schemas import ParsedEventSchema, EventTypeEnum, DamageLevelEnum
 
+KYIV_TZ = ZoneInfo("Europe/Kyiv")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -11,8 +15,15 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Ти професійний OSINT-аналітик військової розвідки.
+def get_current_time_str() -> str:
+    now_kyiv = datetime.datetime.now(datetime.timezone.utc).astimezone(KYIV_TZ)
+    return now_kyiv.strftime("%Y-%m-%d %H:%M:%S (Kyiv)")
+
+def build_system_prompt() -> str:
+    current_time = get_current_time_str()
+    return f"""Ти професійний OSINT-аналітик військової розвідки.
 ТВОЯ ЗОНА ВІДПОВІДАЛЬНОСТІ — ВИКЛЮЧНО МІСТО КИЇВ ТА КИЇВСЬКА ОБЛАСТЬ!
+ПОТОЧНИЙ СИСТЕМНИЙ ЧАС: {current_time}. Будь-які події за цю дату є актуальними.
 Якщо повідомлення стосується інших міст чи країн (Дніпро, Одеса, Суми, Харків, Росія, закордон) — поверни "is_kyiv_region": false.
 
 ЯКЩО ТОБІ НАДАНО ФОТО — ПРОВЕДИ ВІЗУАЛЬНИЙ АНАЛІЗ ФАСАДІВ ТА АРХІТЕКТУРИ КИЄВА:
@@ -24,8 +35,8 @@ SYSTEM_PROMPT = """Ти професійний OSINT-аналітик війсь
 6. Промислові зони з ангарами -> Теличка, Відрадний, Троєщина, або Дарницька промзона.
 Використай ці підказки, щоб максимально точно витягти `location`, навіть якщо в тексті немає адреси!
 
-Поверни ТІЛЬКИ валідний JSON:
-{
+Поверни ТІЛЬКИ валідний JSON у такій структурі:
+{{
   "is_kyiv_region": true/false,
   "is_confirmed_incident": true/false,
   "is_radar_track": true/false,
@@ -35,17 +46,12 @@ SYSTEM_PROMPT = """Ти професійний OSINT-аналітик війсь
   "casualties": true/false,
   "damage_level": "none|low|medium|high|critical",
   "short_summary": "стислий факт без води (1 речення)"
-}
+}}
 """
 
-
-def clean_json_response(text: str) -> dict:
-    import json
+def clean_and_validate_json_response(text: str) -> dict:
+    """Extracts, cleans, and strictly validates LLM response using Pydantic."""
     import re
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    # 1. Clean markdown blocks explicitly
     cleaned = text.strip()
     if cleaned.startswith('```json'):
         cleaned = cleaned[7:]
@@ -54,30 +60,44 @@ def clean_json_response(text: str) -> dict:
     if cleaned.endswith('```'):
         cleaned = cleaned[:-3]
     cleaned = cleaned.strip()
-    
-    # 2. Fix Python boolean capitalization (True/False to true/false)
-    # This prevents json.loads from crashing if LLM outputs Python booleans
+
     cleaned = cleaned.replace(": True", ": true").replace(": False", ": false")
     cleaned = cleaned.replace(":True", ": true").replace(":False", ": false")
 
-    # 3. Try parsing directly first
+    raw_dict = None
     try:
-        return json.loads(cleaned)
+        raw_dict = json.loads(cleaned)
     except json.JSONDecodeError:
-        pass
-        
-    # 4. Deep fallback: Use regex to extract everything between { and }
-    match = re.search(r'\{.*\}', text, re.DOTALL)
-    if match:
-        json_str = match.group(0)
-        json_str = json_str.replace(": True", ": true").replace(": False", ": false")
-        try:
-            return json.loads(json_str)
-        except Exception as e:
-            logger.error(f"Failed regex JSON decode: {e} | Raw text: {text}")
-    
-    logger.error(f"Completely failed to decode JSON. Raw text: {text}")
-    return {}
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            json_str = match.group(0).replace(": True", ": true").replace(": False", ": false")
+            try:
+                raw_dict = json.loads(json_str)
+            except Exception as e:
+                logger.error(f"Failed regex JSON decode: {e}")
+
+    if not raw_dict or not isinstance(raw_dict, dict):
+        logger.error(f"Invalid JSON structure received from LLM: {text[:200]}")
+        return {}
+
+    # Strict Pydantic Validation Guard
+    try:
+        validated = ParsedEventSchema(**raw_dict)
+        return validated.model_dump()
+    except Exception as ve:
+        logger.warning(f"Pydantic validation warning ({ve}), attempting safe coercion...")
+        # Safe fallback coercion
+        return {
+            "is_kyiv_region": bool(raw_dict.get("is_kyiv_region", False)),
+            "is_confirmed_incident": bool(raw_dict.get("is_confirmed_incident", False)),
+            "is_radar_track": bool(raw_dict.get("is_radar_track", False)),
+            "event_type": str(raw_dict.get("event_type", "general_alert")).lower(),
+            "location": str(raw_dict.get("location", "Київ та область")),
+            "osm_query": str(raw_dict.get("osm_query", "Київ")),
+            "casualties": bool(raw_dict.get("casualties", False)),
+            "damage_level": str(raw_dict.get("damage_level", "none")).lower(),
+            "short_summary": str(raw_dict.get("short_summary", "Оперативна інформація"))[:150]
+        }
 
 def rule_based_fallback_parser(raw_text: str) -> dict:
     if not raw_text:
@@ -126,6 +146,7 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
 
 def process_with_llm(text: str, media_path: str = None) -> dict:
     llm_data = {}
+    sys_prompt = build_system_prompt()
     try:
         if media_path and os.path.exists(media_path) and OPENAI_API_KEY:
             with open(media_path, "rb") as f:
@@ -141,7 +162,7 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": f"{SYSTEM_PROMPT}\n\nТекст повідомлення: {text[:1000]}"},
+                            {"type": "text", "text": f"{sys_prompt}\n\nТекст повідомлення: {text[:1000]}"},
                             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                         ]
                     }
@@ -151,7 +172,7 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
             }
             resp = requests.post(OPENAI_URL, headers=headers, json=data, timeout=20)
             resp.raise_for_status()
-            llm_data = clean_json_response(resp.json()["choices"][0]["message"]["content"])
+            llm_data = clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
             
         else:
             if not text:
@@ -161,7 +182,7 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
             data = {
                 "model": "llama-3.1-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": f"{SYSTEM_PROMPT} json:"},
+                    {"role": "system", "content": f"{sys_prompt} json:"},
                     {"role": "user", "content": text[:1500]}
                 ],
                 "temperature": 0.1,
@@ -177,7 +198,7 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
                 data_oai = {
                     "model": "gpt-4o-mini",
                     "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": sys_prompt},
                         {"role": "user", "content": text[:1500]}
                     ],
                     "temperature": 0.1,
@@ -191,10 +212,10 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
             if resp.status_code != 200:
                 llm_data = rule_based_fallback_parser(text)
             else:
-                llm_data = clean_json_response(resp.json()["choices"][0]["message"]["content"])
+                llm_data = clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
             
     except Exception as e:
-        logger.warning(f"LLM API rate-limited or error ({e}). Using Rule-Based OSINT Fallback Parser.")
+        logger.warning(f"LLM API error ({e}). Using Rule-Based Fallback.")
         llm_data = rule_based_fallback_parser(text)
     finally:
         if media_path and os.path.exists(media_path):
@@ -204,4 +225,3 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
                 logger.error(f"Failed to remove media file {media_path}: {e}")
             
     return llm_data
-
