@@ -461,22 +461,28 @@
 
         function getEventIconSpec(type) {
             type = (type || "").toLowerCase();
+            if (type.includes('debris')) {
+                return { emoji: '🧩', bg: 'rgba(168, 85, 247, 0.25)', border: '#a855f7', shadow: '#a855f7', title: 'Падіння уламків' };
+            }
             if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav')) {
-                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'БпЛА / Радарний трек' };
+                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'Фіксація: Рух БпЛА' };
+            }
+            if (type.includes('missile')) {
+                return { emoji: '🚀', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'Фіксація: Рух ракети' };
             }
             if (type.includes('fire') || type.includes('destruction')) {
                 return { emoji: '🔥', bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', shadow: '#f97316', title: 'Пожежа / Руйнування' };
             }
             if (type.includes('strike') || type.includes('explosion') || type.includes('shelling')) {
-                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Приліт / Вибух' };
+                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Підтверджено: Приліт / Вибух' };
             }
             if (type.includes('air_defense')) {
-                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Робота ППО' };
+                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Підтверджено: Робота ППО' };
             }
-            if (type.includes('armed_conflict') || type.includes('special')) {
-                return { emoji: '⚔️', bg: 'rgba(168, 85, 247, 0.25)', border: '#a855f7', shadow: '#a855f7', title: 'Збройна подія' };
+            if (type.includes('alert') || type.includes('general')) {
+                return { emoji: '⚠️', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Загальна загроза / Попередження' };
             }
-            return { emoji: '📍', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Загальна подія' };
+            return { emoji: '📍', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Інцидент' };
         }
 
         async function loadShelters() {
