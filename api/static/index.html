@@ -180,6 +180,7 @@
             0% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.3; transform: scale(1.4); }
             100% { opacity: 1; transform: scale(1); }
+        }
         @keyframes pulse-icon {
             0% { transform: scale(1); box-shadow: 0 0 0 0 var(--pulse-color); }
             70% { transform: scale(1.18); box-shadow: 0 0 0 12px rgba(0, 0, 0, 0); }
@@ -577,37 +578,7 @@
             return { emoji: '📍', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Інцидент' };
         }
 
-        async function loadShelters() {
-            try {
-                const res = await fetch('/api/shelters');
-                const shelters = await res.json();
-                sheltersLayer.clearLayers();
-                
-                shelters.forEach(s => {
-                    const isMetro = s.type === 'metro_station';
-                    const iconMarker = L.circleMarker([s.lat, s.lon], {
-                        radius: isMetro ? 6 : 4,
-                        fillColor: isMetro ? '#18dcff' : '#7d5fff',
-                        color: '#fff',
-                        weight: 1,
-                        opacity: 0.8,
-                        fillOpacity: 0.85
-                    });
 
-                    iconMarker.bindPopup(`
-                        <div style="color:#111; font-family:-apple-system,sans-serif; min-width:180px;">
-                            <h4 style="margin:0 0 4px 0; font-size:13px; color:#0284c7;">${s.name}</h4>
-                            <p style="margin:0 0 4px 0; font-size:12px;">📍 ${s.address || 'Київ'}</p>
-                            <p style="margin:0 0 6px 0; font-size:11px; color:#64748b;">👥 Місткість: <b>${s.capacity} осіб</b></p>
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" style="font-size:11px; color:#0284c7; font-weight:600; text-decoration:none;">🧭 Прокласти маршрут →</a>
-                        </div>
-                    `);
-                    sheltersLayer.addLayer(iconMarker);
-                });
-            } catch (err) {
-                console.error('Shelters error:', err);
-            }
-        }
 
         async function loadData() {
             try {
@@ -726,8 +697,10 @@
                     if (lk.includes('strike') || lk.includes('explosion')) strikes += v;
                     else if (lk.includes('fire') || lk.includes('destruction')) fires += v;
                 }
-                document.getElementById('badge-strike').textContent = strikes;
-                document.getElementById('badge-fire').textContent = fires;
+                const badgeStrike = document.getElementById('badge-strike');
+                if (badgeStrike) badgeStrike.textContent = strikes;
+                const badgeFire = document.getElementById('badge-fire');
+                if (badgeFire) badgeFire.textContent = fires;
 
             } catch (err) {
                 console.error('Data error:', err);

@@ -180,15 +180,30 @@ def process_message(self, payload_str):
             db.commit()
             return
 
-        # Multi-Source Consensus Cluster Search (within 30 minutes in same location)
+        # Multi-Source Consensus Cluster Search
         threshold_30m = msg_date - timedelta(minutes=30)
         cluster_match = None
         if location:
-            cluster_match = db.query(DetectedEvent).filter(
+            query = db.query(DetectedEvent).filter(
                 DetectedEvent.detected_at >= threshold_30m,
-                DetectedEvent.location_text.ilike(f"%{location}%"),
-                DetectedEvent.source_channel != channel
-            ).first()
+                DetectedEvent.source_channel != channel,
+                DetectedEvent.event_type == event_type
+            )
+            
+            # Prevent mega-clusters on vague locations
+            vague_locations = ["київ", "київ та область", "київська область", "kyiv"]
+            is_vague = location.lower().strip() in vague_locations
+            
+            if is_vague:
+                # If vague, only cluster if within 5 minutes (tight window for generic alerts)
+                threshold_5m = msg_date - timedelta(minutes=5)
+                query = query.filter(DetectedEvent.detected_at >= threshold_5m)
+                query = query.filter(DetectedEvent.location_text.ilike(f"%{location}%"))
+            else:
+                # Specific location, normal 30 min match
+                query = query.filter(DetectedEvent.location_text.ilike(f"%{location}%"))
+                
+            cluster_match = query.order_by(DetectedEvent.detected_at.asc()).first()
 
         if cluster_match and is_confirmed:
             # Add to consensus cluster
@@ -203,10 +218,6 @@ def process_message(self, payload_str):
                 cluster_match.verification_status = "VERIFIED"
                 cluster_match.resonance_score = min(cluster_match.resonance_score + 15, 100)
             
-            # Update to the latest timestamp in the cluster
-            if msg_date > cluster_match.detected_at:
-                cluster_match.detected_at = msg_date
-                
             db.commit()
             logger.info(f"Consensus Cluster updated for event {cluster_match.id} (Sources: {cluster_match.sources_list})")
             return
