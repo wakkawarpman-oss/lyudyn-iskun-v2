@@ -34,12 +34,18 @@ import threading
 
 _geocode_lock = threading.Lock()
 
-@lru_cache(maxsize=2000)
+_GEO_CACHE = {}
+
 def _internal_geocode(query):
+    if query in _GEO_CACHE:
+        return _GEO_CACHE[query]
     try:
         geo = geolocator.geocode(query)
         if geo:
-            return f"POINT({geo.longitude} {geo.latitude})"
+            res = f"POINT({geo.longitude} {geo.latitude})"
+            if len(_GEO_CACHE) < 2000:
+                _GEO_CACHE[query] = res
+            return res
     except Exception as e:
         logger.error(f"Geocoding Error: {e}")
     return None
