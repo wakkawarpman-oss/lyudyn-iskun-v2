@@ -30,7 +30,7 @@ services:
   ai_worker:
     build: .
     restart: unless-stopped
-    command: celery -A worker.celery_app worker --loglevel=info -c 2
+    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 50
     env_file: .env
     depends_on:
       - redis

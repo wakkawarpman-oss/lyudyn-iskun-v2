@@ -5,6 +5,28 @@ from sqlalchemy import func
 from database.models import SessionLocal, DetectedEvent
 import datetime
 import os
+import json
+import redis
+import os
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+redis_client = redis.Redis.from_url(REDIS_URL)
+
+def get_cached(key):
+    try:
+        val = redis_client.get(key)
+        if val:
+            return json.loads(val)
+    except Exception:
+        pass
+    return None
+
+def set_cached(key, val, ttl=60):
+    try:
+        redis_client.setex(key, ttl, json.dumps(val))
+    except Exception:
+        pass
+
 
 app = FastAPI(title="Людин Іскун V2 Dashboard")
 
@@ -17,6 +39,10 @@ def get_db():
 
 @app.get("/api/events")
 def get_events(db: Session = Depends(get_db)):
+    cached = get_cached("api:events")
+    if cached:
+        return cached
+
     events = db.query(
         DetectedEvent.id,
         DetectedEvent.source_channel,
@@ -73,10 +99,15 @@ def get_events(db: Session = Depends(get_db)):
             "has_media": e.has_media or False,
             "geocoding_logic": logic
         })
+    set_cached("api:events", result, ttl=30)
     return result
 
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):
+    cached = get_cached("api:stats")
+    if cached:
+        return cached
+
     threshold_24h = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
     base_filter = [
         DetectedEvent.detected_at >= threshold_24h,
@@ -109,13 +140,15 @@ def get_stats(db: Session = Depends(get_db)):
     
     sources = [{"channel": ch, "count": cnt} for ch, cnt in sources_raw]
     
-    return {
+    res = {
         "total_events": total_events,
         "events_24h": events_24h,
         "avg_resonance": round(float(avg_resonance), 1),
         "categories": categories,
         "sources": sources
     }
+    set_cached("api:stats", res, ttl=60)
+    return res
 
 @app.get("/api/shelters")
 def get_map_shelters(db: Session = Depends(get_db)):
