@@ -36,6 +36,16 @@ def process_message(self, payload_str):
     media_path = payload.get("media_path")
     channel = payload.get("channel", "")
     channel_clean = channel.lstrip('@').lower()
+    msg_date_str = payload.get("date")
+    if msg_date_str:
+        try:
+            # handle timezone aware isoformat
+            msg_date = datetime.fromisoformat(msg_date_str).replace(tzinfo=None)
+        except Exception:
+            msg_date = datetime.utcnow()
+    else:
+        msg_date = datetime.utcnow()
+
     message_id = payload.get("message_id")
     
     if not text and not media_path:
@@ -143,7 +153,7 @@ def process_message(self, payload_str):
             return
 
         # Multi-Source Consensus Cluster Search (within 30 minutes in same location)
-        threshold_30m = datetime.utcnow() - timedelta(minutes=30)
+        threshold_30m = msg_date - timedelta(minutes=30)
         cluster_match = None
         if location:
             cluster_match = db.query(DetectedEvent).filter(
@@ -165,6 +175,10 @@ def process_message(self, payload_str):
                 cluster_match.verification_status = "VERIFIED"
                 cluster_match.resonance_score = min(cluster_match.resonance_score + 15, 100)
             
+            # Update to the latest timestamp in the cluster
+            if msg_date > cluster_match.detected_at:
+                cluster_match.detected_at = msg_date
+                
             db.commit()
             logger.info(f"Consensus Cluster updated for event {cluster_match.id} (Sources: {cluster_match.sources_list})")
             return
@@ -188,6 +202,7 @@ def process_message(self, payload_str):
             location_text=final_location_text,
             geom=WKTElement(geom_wkt, srid=4326) if geom_wkt else None,
             resonance_score=min(base_resonance, 100),
+            detected_at=msg_date,
             has_media=payload.get("has_media", False),
             raw_message=payload_str,
             verification_status=verif_status,

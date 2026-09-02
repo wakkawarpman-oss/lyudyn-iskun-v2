@@ -108,6 +108,21 @@ async def cmd_deep_osint(message: types.Message):
         
         # Get strikes in last 12 hours
         threshold = datetime.utcnow() - timedelta(hours=12)
+
+        # Check cache
+        cache_key = "osint:deep_analysis"
+        cached_report = None
+        try:
+            cached_val = redis_client.get(cache_key)
+            if cached_val:
+                cached_report = cached_val.decode('utf-8')
+        except Exception:
+            pass
+
+        if cached_report:
+            await safe_send(message, f"🔍 **ГЛИБОКИЙ OSINT ЗВІТ (Кеш)** 🔍\\\n\\\n{cached_report}")
+            return
+
         events = db.query(DetectedEvent).filter(
             DetectedEvent.detected_at >= threshold,
             DetectedEvent.event_type.in_(['direct_strike', 'explosion', 'fire', 'destruction'])
@@ -143,6 +158,10 @@ async def cmd_deep_osint(message: types.Message):
         
         if resp.status_code == 200:
             analysis = resp.json()["choices"][0]["message"]["content"]
+            try:
+                redis_client.setex(cache_key, 300, analysis)
+            except Exception:
+                pass
             await safe_send(message, f"🔍 **ГЛИБОКИЙ OSINT ЗВІТ** 🔍\n\n{analysis}")
         else:
             await message.answer(f"❌ Сталася помилка API: {resp.status_code}\n{resp.text[:200]}")
