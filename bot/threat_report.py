@@ -3,9 +3,7 @@ import datetime
 import requests
 import json
 import logging
-import re
 from zoneinfo import ZoneInfo
-from sqlalchemy import func
 from database.models import SessionLocal, DetectedEvent
 from worker.schemas import ThreatAssessmentSlotSchema
 
