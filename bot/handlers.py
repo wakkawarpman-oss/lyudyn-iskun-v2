@@ -812,9 +812,11 @@ async def cmd_report_12h(message: types.Message):
 async def cmd_top_events(message: types.Message):
     db = SessionLocal()
     try:
+        threshold_24h = datetime.utcnow() - timedelta(hours=24)
         raw_events = (
             db.query(DetectedEvent)
             .filter(
+                DetectedEvent.detected_at >= threshold_24h,
                 DetectedEvent.source_channel.not_ilike('test%'),
                 DetectedEvent.event_type.in_(CONFIRMED_INCIDENT_TYPES),
                 KYIV_REGION_FILTER

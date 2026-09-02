@@ -22,7 +22,7 @@ SYSTEM_PROMPT = """Ти професійний OSINT-аналітик війсь
   "is_radar_track": true/false,
   "event_type": "direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
   "location": "точна назва району/вулиці/міста на Київщині",
-  "osm_query": "коротка адреса для OpenStreetMap (напр: 'Шевченківський район, Київ' або 'Біла Церква')",
+  "osm_query": "вибери ЛИШЕ ОДНУ найбільш конкретну локацію для OpenStreetMap (заборонено використовувати 'та' чи коми для перелічення кількох місць)",
   "casualties": true/false,
   "damage_level": "none|low|medium|high|critical",
   "short_summary": "стислий факт без води (1 речення)"

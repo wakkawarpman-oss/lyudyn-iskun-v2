@@ -30,9 +30,12 @@ exif_extractor = EXIFExtractor()
 
 
 from functools import lru_cache
+import threading
+
+_geocode_lock = threading.Lock()
 
 @lru_cache(maxsize=2000)
-def cached_geocode(query):
+def _internal_geocode(query):
     try:
         geo = geolocator.geocode(query)
         if geo:
@@ -41,7 +44,11 @@ def cached_geocode(query):
         logger.error(f"Geocoding Error: {e}")
     return None
 
-@shared_task(name="worker.tasks.process_message", bind=True, rate_limit="40/m", time_limit=30, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+def cached_geocode(query):
+    with _geocode_lock:
+        return _internal_geocode(query)
+
+@shared_task(name="worker.tasks.process_message", bind=True, time_limit=30, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
 def process_message(self, payload_str):
     payload = json.loads(payload_str)
     text = payload.get("text", "")
@@ -85,8 +92,23 @@ def process_message(self, payload_str):
         except Exception as osint_err:
             logger.warning(f"OSINT Image Extraction error: {osint_err}")
     
-    # 1. Analyze with LLM
-    llm_data = process_with_llm(text, media_path)
+    
+    # Fast-Track Generic Alerts (Skip LLM)
+    t_lower = text.lower()
+    is_generic_alert = any(w in t_lower for w in ["увага! повітряна тривога", "відбій повітряної тривоги", "руйнувань та потерпілих немає", "ракетна небезпека", "загроза балістики"])
+    if is_generic_alert and len(text) < 150 and not media_path:
+        llm_data = {
+            "is_kyiv_region": True,
+            "is_confirmed_incident": True,
+            "is_radar_track": False,
+            "event_type": "general_alert",
+            "location": "Київська область",
+            "osm_query": "Київська область, Україна",
+            "short_summary": text[:100]
+        }
+    else:
+        # 1. Analyze with LLM
+        llm_data = process_with_llm(text, media_path)
 
     is_kyiv = llm_data.get("is_kyiv_region", False)
     if not is_kyiv:

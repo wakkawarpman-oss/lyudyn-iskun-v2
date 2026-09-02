@@ -43,6 +43,7 @@ def get_events(db: Session = Depends(get_db)):
     if cached:
         return cached
 
+    threshold_24h = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
     events = db.query(
         DetectedEvent.id,
         DetectedEvent.source_channel,
@@ -61,7 +62,8 @@ def get_events(db: Session = Depends(get_db)):
         func.ST_X(DetectedEvent.geom).label('lon')
     ).filter(
         DetectedEvent.geom.isnot(None),
-        DetectedEvent.source_channel.not_ilike('test%')
+        DetectedEvent.source_channel.not_ilike('test%'),
+        DetectedEvent.detected_at >= threshold_24h
     ).all()
     
     result = []
