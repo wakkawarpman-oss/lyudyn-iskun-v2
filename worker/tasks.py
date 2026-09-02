@@ -1,3 +1,4 @@
+from worker.llm_engine import process_with_llm
 import os
 import json
 import logging
@@ -12,10 +13,6 @@ from datetime import datetime, timedelta
 from worker.osint.exif_extractor import EXIFExtractor
 from worker.osint.ai_geolocation import ai_geo
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
 logger = logging.getLogger(__name__)
@@ -29,54 +26,6 @@ OFFICIAL_SOURCES = {
 # In-memory Geocoding Cache to prevent rate limiting
 _GEO_CACHE = {}
 
-SYSTEM_PROMPT = """Ти професійний OSINT-аналітик військової розвідки.
-ТВОЯ ЗОНА ВІДПОВІДАЛЬНОСТІ — ВИКЛЮЧНО МІСТО КИЇВ ТА КИЇВСЬКА ОБЛАСТЬ!
-Якщо повідомлення стосується інших міст чи країн (Дніпро, Одеса, Суми, Харків, Росія, закордон) — поверни "is_kyiv_region": false.
-
-Поверни ТІЛЬКИ валідний JSON:
-{
-  "is_kyiv_region": true/false,
-  "is_confirmed_incident": true/false,
-  "is_radar_track": true/false,
-  "event_type": "direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
-  "location": "точна назва району/вулиці/міста на Київщині",
-  "osm_query": "коротка адреса для OpenStreetMap (напр: 'Шевченківський район, Київ' або 'Біла Церква')",
-  "casualties": true/false,
-  "damage_level": "none|low|medium|high|critical",
-  "short_summary": "стислий факт без води (1 речення)"
-}
-"""
-
-def rule_based_fallback_parser(raw_text: str) -> dict:
-    t_lower = (raw_text or "").lower()
-    kyiv_keywords = ['київ', 'київщин', 'бровар', 'борисп', 'ірпін', 'буч', 'вишгород', 'обух', 'фастів', 'васильк', 'біла церк', 'поділ', 'оболонь', 'печерськ', 'голосіїв', 'солом', 'дарниц', 'позняк', 'троєщин', 'борщагів', 'святошин', 'нивки', 'шуляв', 'татарк', 'загорівськ', 'лук']
-    is_kyiv = any(k in t_lower for k in kyiv_keywords)
-    
-    event_type = "general_alert"
-    if any(k in t_lower for k in ['радар', 'бпла', 'дрон', 'шахед', 'реактив', 'трек']):
-        event_type = "radar_track"
-    elif any(k in t_lower for k in ['приліт', 'вибух', 'удар', 'ракета', 'влучан']):
-        event_type = "direct_strike"
-    elif any(k in t_lower for k in ['пожеж', 'горить', 'руйнув']):
-        event_type = "fire"
-    elif any(k in t_lower for k in ['ппо', 'збито', 'робота ппо']):
-        event_type = "air_defense"
-        
-    loc_name = "Київська область"
-    for k in ['бровари', 'бориспіль', 'ірпінь', 'буча', 'вишгород', 'обухів', 'фастів', 'васильків', 'біла церква', 'поділ', 'оболонь', 'печерськ', 'голосієво', 'солом\'янка', 'дарниця', 'позняки', 'троєщина', 'борщагівка', 'святошин', 'нивки', 'шулявка', 'татарка', 'загорівська', 'лук\'янівка']:
-        if k in t_lower:
-            loc_name = k.capitalize()
-            break
-
-    return {
-        "is_kyiv_region": is_kyiv,
-        "is_confirmed_incident": True,
-        "is_radar_track": event_type == "radar_track",
-        "event_type": event_type,
-        "location": loc_name,
-        "osm_query": f"{loc_name}, Київ",
-        "short_summary": raw_text[:120] if raw_text else "Оперативна інформація"
-    }
 
 exif_extractor = EXIFExtractor()
 
@@ -115,83 +64,7 @@ def process_message(self, payload_str):
             logger.warning(f"OSINT Image Extraction error: {osint_err}")
     
     # 1. Analyze with LLM
-    try:
-        if media_path and os.path.exists(media_path) and OPENAI_API_KEY:
-            with open(media_path, "rb") as f:
-                base64_image = base64.b64encode(f.read()).decode('utf-8')
-            
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
-            }
-            data = {
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": f"{SYSTEM_PROMPT}\n\nТекст повідомлення: {text[:1000]}"},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                        ]
-                    }
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.1
-            }
-            resp = requests.post(OPENAI_URL, headers=headers, json=data, timeout=20)
-            resp.raise_for_status()
-            llm_data = json.loads(resp.json()["choices"][0]["message"]["content"])
-            
-            if os.path.exists(media_path):
-                os.remove(media_path)
-            
-        else:
-            if not text:
-                if media_path and os.path.exists(media_path):
-                    os.remove(media_path)
-                return
-                
-            headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
-            data = {
-                "model": "openai/gpt-oss-120b",
-                "messages": [
-                    {"role": "system", "content": f"{SYSTEM_PROMPT} json:"},
-                    {"role": "user", "content": text[:1500]}
-                ],
-                "temperature": 0.1,
-                "response_format": {"type": "json_object"}
-            }
-            resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=10)
-            if resp.status_code in (429, 503, 500) and OPENAI_API_KEY:
-                logger.warning(f"Groq API returned {resp.status_code}. Switching to OpenAI fallback...")
-                headers_oai = {
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {OPENAI_API_KEY}"
-                }
-                data_oai = {
-                    "model": "gpt-4o-mini",
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": text[:1500]}
-                    ],
-                    "temperature": 0.1,
-                    "response_format": {"type": "json_object"}
-                }
-                resp = requests.post(OPENAI_URL, headers=headers_oai, json=data_oai, timeout=15)
-            elif resp.status_code != 200:
-                data["model"] = "qwen/qwen3.6-27b"
-                resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=10)
-                
-            if resp.status_code != 200:
-                llm_data = rule_based_fallback_parser(text)
-            else:
-                llm_data = json.loads(resp.json()["choices"][0]["message"]["content"])
-            
-    except Exception as e:
-        logger.warning(f"LLM API rate-limited or error ({e}). Using Rule-Based OSINT Fallback Parser.")
-        llm_data = rule_based_fallback_parser(text)
-        if media_path and os.path.exists(media_path):
-            os.remove(media_path)
+    llm_data = process_with_llm(text, media_path)
 
     is_kyiv = llm_data.get("is_kyiv_region", False)
     if not is_kyiv:
