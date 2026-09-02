@@ -77,7 +77,10 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     text = str(raw_text)
     t_lower = text.lower()
     
-    kyiv_keywords = ['київ', 'київськ', 'столиц', 'kyiv', 'бровари', 'вишгород', 'бориспіль', 'ірпінь', 'буча', 'фастів', 'біла церква', 'обухів', 'оболонь', 'поділ', 'печерськ', 'солом', 'дарниц']
+    regional_cities = ['бровари', 'вишгород', 'бориспіль', 'ірпінь', 'буча', 'фастів', 'біла церква', 'обухів']
+    kyiv_districts = ['оболонь', 'поділ', 'печерськ', 'солом', 'дарниц']
+    kyiv_keywords = ['київ', 'київськ', 'столиц', 'kyiv'] + regional_cities + kyiv_districts
+    
     is_kyiv = any(k in t_lower for k in kyiv_keywords)
     
     event_type = "general_alert"
@@ -87,18 +90,28 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     elif 'пожеж' in t_lower or 'загорян' in t_lower: event_type = "fire"
     
     loc_name = "Київ та область"
-    for k in kyiv_keywords:
+    osm_query = "Київ"
+    
+    for k in regional_cities:
         if k in t_lower:
             loc_name = k.capitalize()
+            osm_query = f"{loc_name}, Київська область, Україна"
             break
-
+    
+    if loc_name == "Київ та область":
+        for k in kyiv_districts:
+            if k in t_lower:
+                loc_name = k.capitalize()
+                osm_query = f"{loc_name}, Київ"
+                break
+                
     return {
         "is_kyiv_region": is_kyiv,
         "is_confirmed_incident": True,
         "is_radar_track": event_type == "radar_track",
         "event_type": event_type,
         "location": loc_name,
-        "osm_query": f"{loc_name}, Київ",
+        "osm_query": osm_query,
         "short_summary": raw_text[:120] if raw_text else "Оперативна інформація"
     }
 
