@@ -6,8 +6,13 @@ from datetime import datetime
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///events.db")
 
-# PostgreSQL with PostGIS
-engine = create_engine(DATABASE_URL, pool_size=10, max_overflow=20)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=15,
+    max_overflow=30,
+    pool_pre_ping=True,
+    pool_recycle=1800
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

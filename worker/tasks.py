@@ -80,7 +80,7 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
 
 exif_extractor = EXIFExtractor()
 
-@shared_task(name="worker.tasks.process_message", bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=5)
+@shared_task(name="worker.tasks.process_message", bind=True, rate_limit="40/m", time_limit=30, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
 def process_message(self, payload_str):
     payload = json.loads(payload_str)
     text = payload.get("text", "")

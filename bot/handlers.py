@@ -18,6 +18,21 @@ from bot.threat_report import generate_live_threat_assessment
 
 router = Router()
 logger = logging.getLogger(__name__)
+
+@router.error()
+async def global_error_handler(event: types.ErrorEvent):
+    logger.error(f"Global Aiogram Error Caught: {event.exception}", exc_info=event.exception)
+    try:
+        if event.update.message:
+            await event.update.message.answer(
+                "⚡ <b>Вибачте, виник тимчасовий збій обробки.</b>\n"
+                "Система автоматично перезапустила з'єднання. Спробуйте натиснути кнопку ще раз!",
+                parse_mode=ParseMode.HTML,
+                reply_markup=get_main_keyboard()
+            )
+    except Exception as exc:
+        logger.error(f"Could not send error message to user: {exc}")
+    return True
 from zoneinfo import ZoneInfo
 
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
