@@ -206,7 +206,10 @@
             background: transparent !important;
             border: none !important;
         }
-    </style>
+            .leaflet-tile-pane {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+</style>
 </head>
 <body>
     <!-- Top Mobile Control Bar -->
@@ -335,7 +338,7 @@
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         // Basemaps
-        const darkBasemap = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        const darkBasemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; CARTO',
             subdomains: 'abcd',
             maxZoom: 20
@@ -543,12 +546,13 @@
                         ? `<span style="color:#16a34a; font-weight:700;">🟢 ВЕРИФІКОВАНО (${e.sources_count} дж.)</span>` 
                         : `<span style="color:#d97706; font-weight:700;">🟡 ОДИНАРНЕ ДЖЕРЕЛО</span>`;
 
-                    const sourcesStr = e.sources_list ? e.sources_list.split(',').map(s => '@' + s.trim()).join(', ') : ('@' + e.source_channel);
+                    const formatSrc = s => { s = s.trim().replace(/^@/, ''); return s.replace(/-/g, '').match(/^\d+$/) ? `ID:${s}` : `@${s}`; };
+                    const sourcesStr = e.sources_list ? e.sources_list.split(',').map(formatSrc).join(', ') : formatSrc(e.source_channel);
 
                     const popupContent = `
                         <div style="color:#0f172a; min-width:230px; font-family:-apple-system,sans-serif; line-height:1.4;">
                             <div style="font-size:11px; margin-bottom:4px;">${statusBadge}</div>
-                            <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${e.event_type}</h3>
+                            <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${spec.title}</h3>
                             <p style="margin:0 0 6px 0; font-size:12px;"><b>📍 Локація:</b> ${e.location_text}</p>
                             
                             <div style="margin:0 0 6px 0; font-size:11px; background:#f8fafc; border:1px solid #e2e8f0; padding:6px; border-radius:6px;">
