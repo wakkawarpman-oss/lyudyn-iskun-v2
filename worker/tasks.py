@@ -24,10 +24,22 @@ OFFICIAL_SOURCES = {
 }
 
 # In-memory Geocoding Cache to prevent rate limiting
-_GEO_CACHE = {}
 
 
 exif_extractor = EXIFExtractor()
+
+
+from functools import lru_cache
+
+@lru_cache(maxsize=2000)
+def cached_geocode(query):
+    try:
+        geo = geolocator.geocode(query)
+        if geo:
+            return f"POINT({geo.longitude} {geo.latitude})"
+    except Exception as e:
+        logger.error(f"Geocoding Error: {e}")
+    return None
 
 @shared_task(name="worker.tasks.process_message", bind=True, rate_limit="40/m", time_limit=30, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
 def process_message(self, payload_str):
@@ -100,21 +112,9 @@ def process_message(self, payload_str):
     osm_query = llm_data.get("osm_query") or location
     
     if not geom_wkt and osm_query:
-        if osm_query in _GEO_CACHE:
-            geom_wkt = _GEO_CACHE[osm_query]
-        else:
-            try:
-                geo = geolocator.geocode(osm_query)
-                if not geo and location:
-                    geo = geolocator.geocode(f"{location}, Київська область, Україна")
-                if geo:
-                    geom_wkt = f"POINT({geo.longitude} {geo.latitude})"
-                    _GEO_CACHE[osm_query] = geom_wkt
-                    logger.info(f"Geocoded {osm_query} -> {geom_wkt}")
-                else:
-                    logger.warning(f"Could not geocode {osm_query}")
-            except Exception as e:
-                logger.error(f"Geocoding Error: {e}")
+        geom_wkt = cached_geocode(osm_query)
+        if not geom_wkt and location:
+            geom_wkt = cached_geocode(f"{location}, Київська область, Україна")
             
     final_location_text = f"{location} | 🔍 {osint_location}" if osint_location else location
     final_message_text = llm_data.get("short_summary") or text[:2000]

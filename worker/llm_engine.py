@@ -29,6 +29,18 @@ SYSTEM_PROMPT = """Ти професійний OSINT-аналітик війсь
 }
 """
 
+
+def clean_json_response(text: str) -> dict:
+    import json
+    cleaned = text.strip()
+    if cleaned.startswith('```json'):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith('```'):
+        cleaned = cleaned[3:]
+    if cleaned.endswith('```'):
+        cleaned = cleaned[:-3]
+    return json.loads(cleaned.strip())
+
 def rule_based_fallback_parser(raw_text: str) -> dict:
     if not raw_text:
         return {"is_kyiv_region": False}
@@ -88,20 +100,15 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
             }
             resp = requests.post(OPENAI_URL, headers=headers, json=data, timeout=20)
             resp.raise_for_status()
-            llm_data = json.loads(resp.json()["choices"][0]["message"]["content"])
-            
-            if os.path.exists(media_path):
-                os.remove(media_path)
+            llm_data = clean_json_response(resp.json()["choices"][0]["message"]["content"])
             
         else:
             if not text:
-                if media_path and os.path.exists(media_path):
-                    os.remove(media_path)
                 return {}
                 
             headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
             data = {
-                "model": "openai/gpt-oss-120b",
+                "model": "llama-3.1-70b-versatile",
                 "messages": [
                     {"role": "system", "content": f"{SYSTEM_PROMPT} json:"},
                     {"role": "user", "content": text[:1500]}
@@ -127,19 +134,23 @@ def process_with_llm(text: str, media_path: str = None) -> dict:
                 }
                 resp = requests.post(OPENAI_URL, headers=headers_oai, json=data_oai, timeout=15)
             elif resp.status_code != 200:
-                data["model"] = "qwen/qwen3.6-27b"
+                data["model"] = "mixtral-8x7b-32768"
                 resp = requests.post(GROQ_URL, headers=headers, json=data, timeout=10)
                 
             if resp.status_code != 200:
                 llm_data = rule_based_fallback_parser(text)
             else:
-                llm_data = json.loads(resp.json()["choices"][0]["message"]["content"])
+                llm_data = clean_json_response(resp.json()["choices"][0]["message"]["content"])
             
     except Exception as e:
         logger.warning(f"LLM API rate-limited or error ({e}). Using Rule-Based OSINT Fallback Parser.")
         llm_data = rule_based_fallback_parser(text)
+    finally:
         if media_path and os.path.exists(media_path):
-            os.remove(media_path)
+            try:
+                os.remove(media_path)
+            except Exception as e:
+                logger.error(f"Failed to remove media file {media_path}: {e}")
             
     return llm_data
 
