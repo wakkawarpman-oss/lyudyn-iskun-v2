@@ -1,0 +1,29 @@
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+
+def get_main_keyboard():
+    builder = ReplyKeyboardBuilder()
+    builder.button(text="😳 ДАША?")
+    builder.button(text="🔄 АКТУАЛІЗАЦІЯ ПОДІЙ")
+    builder.button(text="🎯 Прогноз загроз")
+    builder.button(text="🛸 Радар Контур")
+    builder.button(text="📊 Аналітика")
+    builder.button(text="🔥 ТОП подій")
+    builder.button(text="💥 Резонанс")
+    builder.button(text="📋 Звіт (12 год)")
+    builder.button(text="🗺️ Веб-карта")
+    builder.button(text="📡 Статус системи")
+    builder.button(text="💎 Premium")
+    builder.button(text="🐾 ТУПО МЯВ")
+    builder.adjust(1, 2, 2, 2, 2, 2, 1)
+    return builder.as_markup(resize_keyboard=True)
+
+def get_meme_keyboard():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🔄 Ще один", callback_data="meme_more")
+    builder.button(text="🖤 Жорсткіше", callback_data="meme_harder")
+    builder.button(text="🐈 Про котика", callback_data="meme_cat")
+    builder.button(text="🍆 Про мужика", callback_data="meme_man")
+    builder.button(text="💡 Про зиму", callback_data="meme_winter")
+    builder.button(text="🏖 На дачу", callback_data="meme_dacha")
+    builder.adjust(2, 2, 2)
+    return builder.as_markup()
