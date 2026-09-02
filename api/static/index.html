@@ -209,6 +209,57 @@
             .leaflet-tile-pane {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
+
+        /* Factchecking Status Badges */
+        .verif-badge-confirmed {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .verif-badge-official {
+            background: rgba(14, 165, 233, 0.15);
+            border: 1px solid #0ea5e9;
+            color: #0ea5e9;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .verif-badge-single {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .verif-badge-ipso {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
 </style>
 </head>
 <body>
@@ -548,9 +599,14 @@
                     const marker = L.marker([e.lat, e.lon], { icon: customIcon });
 
                     const logicBadge = e.geocoding_logic || '🗺️ Текстова прив\'язка топоніма (OSINT)';
-                    const statusBadge = (e.sources_count >= 2 || e.is_official) 
-                        ? `<span style="color:#16a34a; font-weight:700;">🟢 ВЕРИФІКОВАНО (${e.sources_count} дж.)</span>` 
-                        : `<span style="color:#d97706; font-weight:700;">🟡 ОДИНАРНЕ ДЖЕРЕЛО</span>`;
+                    let statusBadge = `<span class="verif-badge-single">🟡 ОДИНАРНЕ ДЖЕРЕЛО (Потребує підтвердження)</span>`;
+                    if (e.is_official || (e.verification_status === "OFFICIAL")) {
+                        statusBadge = `<span class="verif-badge-official">🏛️ ОФІЦІЙНЕ ПІДТВЕРДЖЕННЯ (ОВА / ДСНС / Мер)</span>`;
+                    } else if (e.sources_count >= 2 || (e.verification_status === "VERIFIED")) {
+                        statusBadge = `<span class="verif-badge-confirmed">🟢 ВЕРИФІКОВАНО (Консенсус ${e.sources_count} дж.)</span>`;
+                    } else if (e.verification_status === "POSSIBLE_IPSO") {
+                        statusBadge = `<span class="verif-badge-ipso">🚨 УВАГА: СУМНІВНЕ / МОЖЛИВИЙ ВКАТ</span>`;
+                    }
 
                     const formatSrc = s => { s = s.trim().replace(/^@/, ''); return s.replace(/-/g, '').match(/^\d+$/) ? `ID:${s}` : `@${s}`; };
                     const sourcesStr = e.sources_list ? e.sources_list.split(',').map(formatSrc).join(', ') : formatSrc(e.source_channel);
