@@ -16,15 +16,15 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 celery_app = Celery('worker', broker=REDIS_URL)
 
 async def perform_sync(client, valid_channels):
-    """Fetches the latest messages from the last 12 hours from all target channels."""
-    threshold_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=12)
+    """Fetches the latest messages from the last 24 hours from all target channels."""
+    threshold_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
     backfilled_count = 0
 
-    print(f"🚀 Performing on-demand sync for {len(valid_channels)} channels...")
+    print(f"🚀 Performing deep on-demand sync for {len(valid_channels)} channels...")
     for entity in valid_channels:
         try:
             ch_name = getattr(entity, 'username', None) or str(entity.id)
-            recent_msgs = await client.get_messages(entity, limit=12)
+            recent_msgs = await client.get_messages(entity, limit=30)
             for msg in recent_msgs:
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
                     payload = {
