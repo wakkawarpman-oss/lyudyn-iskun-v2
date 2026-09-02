@@ -72,8 +72,7 @@ def format_kyiv_time(dt: datetime.datetime) -> str:
 
 def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
-    builder.button(text="🖤 ЧОРНИЙ ГУМОР")
-    builder.button(text="ДАША?")
+    builder.button(text="😳 ДАША?")
     builder.button(text="\U0001f504 АКТУАЛІЗАЦІЯ ПОДІЙ")
     builder.button(text="\U0001f4cd Найближче укриття")
     builder.button(text="\U0001f3af Прогноз загроз")
@@ -86,7 +85,7 @@ def get_main_keyboard():
     builder.button(text="\U0001f4e1 Статус системи")
     builder.button(text="\U0001f48e Premium")
     builder.button(text="\U0001f43e ТУПО МЯВ")
-    builder.adjust(2, 2, 2, 2, 2, 2, 2)
+    builder.adjust(1, 2, 2, 2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -1300,50 +1299,6 @@ DASHA_MEMES = [
     "<b>40. ФІНАЛЬНИЙ ПРОГНОЗ ВІД ЛЮДИН ІСКУН</b>\nСаваслейка: щось робить.\nАрмпо: знову танці.\nКиїв: знову тривога.\nСільпо: знову зачинене.\nРейв: знову скасований.\nКокаїну: немає.\nСвітла взимку: питання відкрите.\nТемпература: буде дубак.\nДаша: на дачі.\nКотик: у теплі.\nМужик: пошук триває.\n<b>Людин іскун:</b> «Зафіксовано стабільність обстановки»."
 ]
 
-@router.message(Command("dasha"))
-@router.message(F.text == "ДАША?")
-@router.message(F.text == "👱‍♀️ ДАША (40 МЕМІВ) 🚗💨")
-@router.message(F.text == "👱‍♀️ ДАША?")
-@router.message(F.text.ilike("%даша%"))
-@router.message(F.text.ilike("%dasha%"))
-async def cmd_dasha_memes(message: types.Message):
-    import random
-    m1, m2 = random.sample(DASHA_MEMES, 2)
-    inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="🎲 Ще меми про Дашу", callback_data="more_dasha_memes")
-    inline_kb.adjust(1)
-    
-    msg_text = (
-        "👱‍♀️ <b>ХРОНІКИ ДАШІ ТА ЛЮДИН ІСКУН (40 ЗОЛОТИХ МЕМІВ)</b> 🚗💨\n\n"
-        f"{m1}\n\n"
-        "───────────────\n\n"
-        f"{m2}"
-    )
-    await safe_send(message, msg_text, reply_markup=inline_kb.as_markup())
-
-@router.callback_query(F.data == "more_dasha_memes")
-async def cb_more_dasha(call: types.CallbackQuery):
-    import random
-    m1, m2 = random.sample(DASHA_MEMES, 2)
-    inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="🎲 Ще меми про Дашу", callback_data="more_dasha_memes")
-    inline_kb.adjust(1)
-    
-    msg_text = (
-        "👱‍♀️ <b>ХРОНІКИ ДАШІ ТА ЛЮДИН ІСКУН (40 ЗОЛОТИХ МЕМІВ)</b> 🚗💨\n\n"
-        f"{m1}\n\n"
-        "───────────────\n\n"
-        f"{m2}"
-    )
-    try:
-        await call.message.edit_text(msg_text, parse_mode=ParseMode.HTML, reply_markup=inline_kb.as_markup())
-    except Exception:
-        await call.message.answer(msg_text, parse_mode=ParseMode.HTML, reply_markup=inline_kb.as_markup())
-    await call.answer()
-
-
-# ──────────────────────── 🖤 МЕМОГЕНЕРАТОР ЧОРНОГО ГУМОРУ ─────────────────────────
-
 MEME_DATABASE = {
     "dacha": [
         "<b>[ОФІЦІЙНИЙ ЛОГ ЛЮДИН ІСКУН]</b>\n[01:32] Кацап на Саваслейці перднув.\n[01:33] <b>Людин:</b> «Даша, це не навчальна...»\n[01:34] <b>Даша:</b> «Я ЗНАЮ. Я ВЖЕ ЗА КИЄВОМ НА ДАЧІ. НАМ ВСІМ ПІЗДАААААА!»",
@@ -1394,30 +1349,34 @@ def get_meme_keyboard():
     builder.adjust(2, 2, 2)
     return builder.as_markup()
 
+@router.message(Command("dasha"))
 @router.message(Command("humor"))
+@router.message(F.text == "😳 ДАША?")
+@router.message(F.text == "ДАША?")
 @router.message(F.text == "🖤 ЧОРНИЙ ГУМОР")
-@router.message(F.text.ilike("%чорний гумор%"))
-@router.message(F.text.ilike("%гумор%"))
-async def cmd_black_humor(message: types.Message):
+@router.message(F.text == "👱‍♀️ ДАША (40 МЕМІВ) 🚗💨")
+async def cmd_dasha_humor_combined(message: types.Message):
     import random
-    all_memes = [m for cat in MEME_DATABASE.values() for m in cat]
-    chosen = random.choice(all_memes)
+    all_combined = DASHA_MEMES + [m for cat in MEME_DATABASE.values() for m in cat]
+    m1, m2 = random.sample(all_combined, 2)
     
-    header = "🖤 <b>МЕМОГЕНЕРАТОР ЛЮДИН ІСКУН (УРОВЕНЬ 4-5)</b> ⚡\n\n"
-    await safe_send(message, header + chosen, reply_markup=get_meme_keyboard())
+    header = "😳 <b>ХРОНІКИ ДАШІ ТА ЧОРНИЙ ГУМОР ЛЮДИН ІСКУН</b> 🚗💨\n\n"
+    msg_text = f"{header}{m1}\n\n───────────────\n\n{m2}"
+    await safe_send(message, msg_text, reply_markup=get_meme_keyboard())
 
+@router.callback_query(F.data == "more_dasha_memes")
 @router.callback_query(F.data.startswith("meme_"))
 async def cb_meme_filter(call: types.CallbackQuery):
     import random
-    action = call.data.replace("meme_", "")
+    action = call.data.replace("meme_", "").replace("more_dasha_memes", "more")
     
     if action in MEME_DATABASE:
         chosen = random.choice(MEME_DATABASE[action])
     else:
-        all_memes = [m for cat in MEME_DATABASE.values() for m in cat]
-        chosen = random.choice(all_memes)
+        all_combined = DASHA_MEMES + [m for cat in MEME_DATABASE.values() for m in cat]
+        chosen = random.choice(all_combined)
         
-    header = "🖤 <b>МЕМОГЕНЕРАТОР ЛЮДИН ІСКУН (УРОВЕНЬ 4-5)</b> ⚡\n\n"
+    header = "😳 <b>ХРОНІКИ ДАШІ ТА ЧОРНИЙ ГУМОР ЛЮДИН ІСКУН</b> ⚡\n\n"
     msg_text = header + chosen
     
     try:
