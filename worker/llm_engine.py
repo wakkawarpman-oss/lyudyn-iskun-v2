@@ -32,6 +32,11 @@ SYSTEM_PROMPT = """Ти професійний OSINT-аналітик війсь
 
 def clean_json_response(text: str) -> dict:
     import json
+    import re
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # 1. Clean markdown blocks explicitly
     cleaned = text.strip()
     if cleaned.startswith('```json'):
         cleaned = cleaned[7:]
@@ -39,7 +44,31 @@ def clean_json_response(text: str) -> dict:
         cleaned = cleaned[3:]
     if cleaned.endswith('```'):
         cleaned = cleaned[:-3]
-    return json.loads(cleaned.strip())
+    cleaned = cleaned.strip()
+    
+    # 2. Fix Python boolean capitalization (True/False to true/false)
+    # This prevents json.loads from crashing if LLM outputs Python booleans
+    cleaned = cleaned.replace(": True", ": true").replace(": False", ": false")
+    cleaned = cleaned.replace(":True", ": true").replace(":False", ": false")
+
+    # 3. Try parsing directly first
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+        
+    # 4. Deep fallback: Use regex to extract everything between { and }
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        json_str = match.group(0)
+        json_str = json_str.replace(": True", ": true").replace(": False", ": false")
+        try:
+            return json.loads(json_str)
+        except Exception as e:
+            logger.error(f"Failed regex JSON decode: {e} | Raw text: {text}")
+    
+    logger.error(f"Completely failed to decode JSON. Raw text: {text}")
+    return {}
 
 def rule_based_fallback_parser(raw_text: str) -> dict:
     if not raw_text:
