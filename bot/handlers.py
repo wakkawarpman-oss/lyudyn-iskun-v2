@@ -73,7 +73,7 @@ def format_kyiv_time(dt: datetime.datetime) -> str:
 def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text="🖤 ЧОРНИЙ ГУМОР")
-    builder.button(text="👱‍♀️ ДАША (40 МЕМІВ) 🚗💨")
+    builder.button(text="ДАША?")
     builder.button(text="\U0001f504 АКТУАЛІЗАЦІЯ ПОДІЙ")
     builder.button(text="\U0001f4cd Найближче укриття")
     builder.button(text="\U0001f3af Прогноз загроз")
@@ -1301,6 +1301,7 @@ DASHA_MEMES = [
 ]
 
 @router.message(Command("dasha"))
+@router.message(F.text == "ДАША?")
 @router.message(F.text == "👱‍♀️ ДАША (40 МЕМІВ) 🚗💨")
 @router.message(F.text == "👱‍♀️ ДАША?")
 @router.message(F.text.ilike("%даша%"))
