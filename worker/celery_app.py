@@ -28,4 +28,8 @@ app.conf.beat_schedule = {
         'task': 'worker.tasks.cleanup_old_events',
         'schedule': crontab(hour=3, minute=0), # Run every night at 03:00 UTC
     },
+    'watchdog-health-check': {
+        'task': 'worker.tasks.run_watchdog',
+        'schedule': 900.0, # Every 15 minutes (15 * 60 seconds)
+    },
 }

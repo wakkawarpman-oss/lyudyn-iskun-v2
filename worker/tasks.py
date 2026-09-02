@@ -255,3 +255,9 @@ def cleanup_old_events():
         logger.error(f"Cleanup Error: {e}")
     finally:
         db.close()
+
+
+@shared_task(name="worker.tasks.run_watchdog")
+def run_watchdog():
+    from worker.watchdog import run_health_check
+    run_health_check()
