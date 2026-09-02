@@ -11,6 +11,23 @@ import requests
 import base64
 import asyncio
 import html
+
+def format_source_display(src):
+    if not src: return "невідомо"
+    src = str(src).strip()
+    if src.replace('-', '').isdigit():
+        return f"ID:{src}"
+    return f"@{src.lstrip('@')}"
+
+def format_source_link(src, msg_id):
+    if not src: return ""
+    src = str(src).strip()
+    if src.replace('-', '').isdigit():
+        # Private channel format: t.me/c/1234567/msg_id
+        clean_id = src.replace('-100', '')
+        return f"https://t.me/c/{clean_id}/{msg_id}"
+    return f"https://t.me/{src.lstrip('@')}/{msg_id}"
+
 import logging
 from aiogram import Bot
 
@@ -540,7 +557,7 @@ async def cmd_radar_kontur(message: types.Message):
         for e in events:
             t_str = format_kyiv_time(e.detected_at)
             snippet = clean_event_snippet(e.message_text, 90)
-            recent_radar_events.append(f"• <b>[{t_str}]</b> @{e.source_channel}: {snippet}")
+            recent_radar_events.append(f"• <b>[{t_str}]</b> {format_source_display(e.source_channel)}: {snippet}")
     except Exception as ex:
         logger.error(f"Radar query error: {ex}")
     finally:
@@ -625,7 +642,7 @@ async def cmd_analytics(message: types.Message):
             
         lines.append("\n\U0001f4e1 <b>Топ джерел моніторингу:</b>")
         for ch, count in sources_raw:
-            lines.append(f"\u2022 @{ch}: <b>{count}</b> повід.")
+            lines.append(f"\u2022 {format_source_display(ch)}: <b>{count}</b> повід.")
             
         lines.append(f"\n\U0001f5fa\ufe0f <b>Інтерактивна мапа та дашборд:</b>\n\U0001f449 <a href='{DASHBOARD_URL}'>Відкрити OSINT Мапу</a>")
         
@@ -794,7 +811,7 @@ async def cmd_report_12h(message: types.Message):
                 f"📍 <b>Локація:</b> {html.escape(loc)}\n"
                 f"🛡️ {badge}\n"
                 f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='https://t.me/{src}/{mid}'>Першоджерело @{src}</a>\n"
+                f"🔗 <a href='{format_source_link(src, mid)}'>Першоджерело {format_source_display(src)}</a>\n"
             )
 
         if len(events) > 10:
@@ -812,7 +829,7 @@ async def cmd_report_12h(message: types.Message):
 async def cmd_top_events(message: types.Message):
     db = SessionLocal()
     try:
-        threshold_24h = datetime.utcnow() - timedelta(hours=24)
+        threshold_24h = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
         raw_events = (
             db.query(DetectedEvent)
             .filter(
@@ -845,7 +862,7 @@ async def cmd_top_events(message: types.Message):
                 f"📍 <b>Локація:</b> {html.escape(loc)}\n"
                 f"🛡️ {badge}\n"
                 f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='https://t.me/{src}/{mid}'>Джерело @{src}</a>\n"
+                f"🔗 <a href='{format_source_link(src, mid)}'>Джерело {format_source_display(src)}</a>\n"
             )
 
         await safe_send(message, "\n".join(lines), disable_web_page_preview=True)
@@ -900,7 +917,7 @@ async def cmd_resonance(message: types.Message):
                 f"📍 <b>Локація:</b> {html.escape(loc)}\n"
                 f"🛡️ {badge}\n"
                 f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='https://t.me/{src}/{mid}'>Джерело @{src}</a>\n"
+                f"🔗 <a href='{format_source_link(src, mid)}'>Джерело {format_source_display(src)}</a>\n"
             )
 
         lines.append("<i>⏱️ Стрічка дедублікована та відображає унікальні події за останні 60 хвилин.</i>")
@@ -958,7 +975,7 @@ async def cmd_analytics(message: types.Message):
             source_counts[ch] = source_counts.get(ch, 0) + 1
             
         sorted_sources = sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        sources_str = "\n".join([f"• @{ch}: <b>{cnt} повідомлень</b>" for ch, cnt in sorted_sources]) or "• Немає даних"
+        sources_str = "\n".join([f"• {format_source_display(ch)}: <b>{cnt} повідомлень</b>" for ch, cnt in sorted_sources]) or "• Немає даних"
 
         text = (
             "📊 <b>ОПЕРАТИВНА OSINT-АНАЛІТИКА КИЄВА ТА ОБЛАСТІ (24г)</b>\n\n"
