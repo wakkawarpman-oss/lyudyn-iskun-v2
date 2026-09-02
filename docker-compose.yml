@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: iskun
+      POSTGRES_PASSWORD: iskunpass
+      POSTGRES_DB: iskun
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  listener:
+    build: .
+    restart: unless-stopped
+    command: python -m listener.telethon_client
+    env_file: .env
+    depends_on:
+      - redis
+    volumes:
+      - media_data:/app/media
+
+  ai_worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A worker.celery_app worker --loglevel=info -c 2
+    env_file: .env
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - media_data:/app/media
+
+  bot_ui:
+    build: .
+    restart: unless-stopped
+    command: python -m bot.main
+    env_file: .env
+    depends_on:
+      - redis
+      - db
+
+
+  web_api:
+    build: .
+    restart: unless-stopped
+    command: uvicorn api.main:app --host 0.0.0.0 --port 80
+    ports:
+      - "80:80"
+    env_file: .env
+    depends_on:
+      - db
+
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://web_api:80
+    restart: unless-stopped
+    depends_on:
+      - web_api
+
+volumes:
+  redis_data:
+  postgres_data:
+  media_data:

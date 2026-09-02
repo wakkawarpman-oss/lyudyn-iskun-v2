@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Людин Іскун V2 | Тактичний GEOINT Дашборд</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0e14; color: #fff; overflow: hidden; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+
+        /* Top Mobile Floating Bar */
+        .top-bar {
+            position: absolute;
+            top: 12px; left: 12px; right: 12px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+        
+        .brand-badge {
+            background: rgba(15, 20, 31, 0.92);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #00e5ff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            pointer-events: auto;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .hud-btn {
+            background: rgba(15, 20, 31, 0.92);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            transition: all 0.2s ease;
+        }
+        .hud-btn:active { transform: scale(0.95); background: rgba(0, 229, 255, 0.2); }
+
+        /* Floating Collapsible Panel (Drawer) */
+        .panel {
+            position: absolute;
+            top: 60px; left: 12px;
+            z-index: 1000;
+            background: rgba(15, 20, 31, 0.95);
+            backdrop-filter: blur(16px);
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.75);
+            border: 1px solid rgba(255,255,255,0.12);
+            width: 320px;
+            max-width: calc(100vw - 24px);
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .panel.collapsed {
+            transform: translateY(-20px) scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 8px;
+        }
+        .panel-title { font-size: 14px; font-weight: 700; color: #00e5ff; text-transform: uppercase; letter-spacing: 0.5px; }
+        .close-btn { background: none; border: none; color: #8a94a6; font-size: 18px; cursor: pointer; padding: 0 4px; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+        .stat-val { font-size: 16px; font-weight: 700; color: #00e5ff; }
+        .stat-lbl { font-size: 10px; color: #8a94a6; text-transform: uppercase; }
+
+        /* Layer Switchers */
+        .section-label { font-size: 11px; color: #8a94a6; text-transform: uppercase; margin: 10px 0 6px 0; font-weight: 600; }
+        .layer-box {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+        }
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .layer-item:last-child { border-bottom: none; }
+        
+        /* Modern Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333d4b;
+            transition: .3s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #00e5ff; }
+        input:checked + .slider:before { transform: translateX(16px); }
+
+        /* Legend */
+        .legend { font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+        .legend-item { display: flex; align-items: center; justify-content: space-between; color: #d1d5db; }
+        .legend-left { display: flex; align-items: center; }
+        .legend-color { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+        .live-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: #00e676;
+            margin-top: 10px;
+        }
+        .live-dot {
+            width: 6px; height: 6px;
+            background: #00e676;
+            border-radius: 50%;
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.4); }
+            100% { opacity: 1; transform: scale(1); }
+        @keyframes pulse-icon {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 var(--pulse-color); }
+            70% { transform: scale(1.18); box-shadow: 0 0 0 12px rgba(0, 0, 0, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+        }
+
+        .tactical-icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-icon 1.6s infinite;
+            backdrop-filter: blur(4px);
+        }
+
+        .tactical-icon-wrap span {
+            font-size: 19px;
+            line-height: 1;
+        }
+
+        .custom-tactical-leaflet {
+            background: transparent !important;
+            border: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Mobile Control Bar -->
+    <div class="top-bar">
+        <div class="brand-badge">
+            <span>🛰️ Людин Іскун V2</span>
+        </div>
+        <div class="action-btns">
+            <button class="hud-btn" id="btn-gps" title="Знайти мою геопозицію">
+                <span>🎯 Де я?</span>
+            </button>
+            <button class="hud-btn" id="btn-layers">
+                <span>⚙️ Шари</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Collapsible Tactical Control Panel -->
+    <div class="panel" id="hud-panel">
+        <div class="panel-header">
+            <div class="panel-title">🛡️ Керування Шарами</div>
+            <button class="close-btn" id="btn-close">✕</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-val" id="stat-total">--</div>
+                <div class="stat-lbl">Інциденти (24г)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="stat-shelters">1,197</div>
+                <div class="stat-lbl">Укриття Києва</div>
+            </div>
+        </div>
+
+        <div class="section-label">Активні Шари Карти</div>
+        <div class="layer-box">
+            <label class="layer-item">
+                <span>🔴 Підтверджені Прильоти / Вибухи</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-events" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
+            <label class="layer-item">
+                <span>💥 Зони Ураження (50 / 180 / 450м)</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-zones" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
+            <label class="layer-item">
+                <span>🛡️ Укриття та Станції Метро</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-shelters" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
+            <label class="layer-item">
+                <span>🛰️ Супутниковий шар (ESRI)</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-satellite">
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
+
+        <div class="section-label">📋 Повна Тактична Легенда</div>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-left"><span>🛸</span> <b>БпЛА / Радарний трек</b></div>
+                <span style="color:#f59e0b; font-weight:700;">🛸 Дрон</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>💥</span> <b>Приліт / Вибух / Ракета</b></div>
+                <span style="color:#ef4444; font-weight:700;">💥 Вибух</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>🔥</span> <b>Пожежа / Руйнування</b></div>
+                <span style="color:#f97316; font-weight:700;">🔥 Пожежа</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>🛡️</span> <b>Робота ППО / Збиття</b></div>
+                <span style="color:#22c55e; font-weight:700;">🛡️ ППО</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>⚔️</span> <b>Спецінцидент / Перестрілка</b></div>
+                <span style="color:#a855f7; font-weight:700;">⚔️ Подія</span>
+            </div>
+
+            <div style="border-top:1px solid #334155; margin:6px 0; padding-top:6px; font-size:11px; color:#94a3b8; font-weight:600;">
+                🎯 Зони небезпеки вибуху (Blast Radii):
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><div class="legend-color" style="background: rgba(239,68,68,0.7);"></div>🔴 <b>Епіцентр (50м)</b></div>
+                <span style="font-size:10px; color:#ef4444;">Фатальний вибух</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><div class="legend-color" style="background: rgba(249,115,22,0.7);"></div>🟠 <b>Ударна хвиля (180м)</b></div>
+                <span style="font-size:10px; color:#f97316;">Руйнування стін</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><div class="legend-color" style="background: rgba(234,179,8,0.7);"></div>🟡 <b>Розліт уламків (450м)</b></div>
+                <span style="font-size:10px; color:#eab308;">Розбите скло</span>
+            </div>
+
+            <div style="border-top:1px solid #334155; margin:6px 0; padding-top:6px; font-size:11px; color:#94a3b8; font-weight:600;">
+                🛡️ Цивільний захист:
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><div class="legend-color" style="background: #18dcff;"></div>🔷 <b>Укриття та Метро Києва</b></div>
+                <span>1,197 точок</span>
+            </div>
+        </div>
+
+        <div class="live-tag">
+            <span class="live-dot"></span> Живе оновлення (кожні 30с)
+        </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map', { zoomControl: false }).setView([50.4501, 30.5234], 12);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Basemaps
+        const darkBasemap = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const satBasemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '&copy; Esri',
+            maxZoom: 19
+        });
+
+        // Layer Groups
+        const eventsLayer = L.layerGroup().addTo(map);
+        const zonesLayer = L.layerGroup().addTo(map);
+        const sheltersLayer = L.layerGroup().addTo(map);
+        let userMarker = null;
+
+        // HUD Toggle
+        const hudPanel = document.getElementById('hud-panel');
+        document.getElementById('btn-layers').addEventListener('click', () => {
+            hudPanel.classList.toggle('collapsed');
+        });
+        document.getElementById('btn-close').addEventListener('click', () => {
+            hudPanel.classList.add('collapsed');
+        });
+
+        // Layer Toggles
+        document.getElementById('toggle-events').addEventListener('change', (e) => {
+            if (e.target.checked) map.addLayer(eventsLayer);
+            else map.removeLayer(eventsLayer);
+        });
+
+        document.getElementById('toggle-zones').addEventListener('change', (e) => {
+            if (e.target.checked) map.addLayer(zonesLayer);
+            else map.removeLayer(zonesLayer);
+        });
+
+        document.getElementById('toggle-shelters').addEventListener('change', (e) => {
+            if (e.target.checked) map.addLayer(sheltersLayer);
+            else map.removeLayer(sheltersLayer);
+        });
+
+        document.getElementById('toggle-satellite').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.removeLayer(darkBasemap);
+                map.addLayer(satBasemap);
+            } else {
+                map.removeLayer(satBasemap);
+                map.addLayer(darkBasemap);
+            }
+        });
+
+        // GPS Geolocation
+        document.getElementById('btn-gps').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('Геолокація не підтримується вашим браузером.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    map.setView([lat, lon], 15);
+
+                    if (userMarker) map.removeLayer(userMarker);
+                    userMarker = L.circleMarker([lat, lon], {
+                        radius: 9,
+                        fillColor: '#00e5ff',
+                        color: '#ffffff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(map);
+
+                    userMarker.bindPopup('<b>📍 Ви тут</b><br>Шукаємо найближчі укриття поруч...').openPopup();
+                },
+                (err) => {
+                    alert('Не вдалося отримати вашу геопозицію. Будь ласка, надайте дозвіл у налаштуваннях.');
+                },
+                { enableHighAccuracy: true }
+            );
+        });
+
+        async function loadShelters() {
+            try {
+                const res = await fetch('/api/shelters');
+                const shelters = await res.json();
+                sheltersLayer.clearLayers();
+                
+                const statSheltersEl = document.getElementById('stat-shelters');
+                if (statSheltersEl) statSheltersEl.textContent = shelters.length.toLocaleString();
+                
+                shelters.forEach(s => {
+                    const isMetro = s.type === 'metro_station';
+                    const iconMarker = L.circleMarker([s.lat, s.lon], {
+                        radius: isMetro ? 8 : 5,
+                        fillColor: isMetro ? '#18dcff' : '#a855f7',
+                        color: '#ffffff',
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillOpacity: 0.85
+                    });
+
+                    iconMarker.bindPopup(`
+                        <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:200px; line-height:1.4;">
+                            <div style="font-size:11px; color:#0284c7; font-weight:700; text-transform:uppercase; margin-bottom:2px;">
+                                ${isMetro ? '🚇 Станція Метро (Укриття)' : '🛡️ Бомбосховище'}
+                            </div>
+                            <h4 style="margin:0 0 4px 0; font-size:13px; color:#0f172a; font-weight:700;">${s.name}</h4>
+                            <p style="margin:0 0 4px 0; font-size:12px; color:#334155;">📍 ${s.address || 'Київ'}</p>
+                            <p style="margin:0 0 8px 0; font-size:11px; color:#64748b;">👥 Місткість: <b>${s.capacity} осіб</b></p>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" style="font-size:11px; color:#0284c7; font-weight:600; text-decoration:none; background:#e0f2fe; padding:4px 8px; border-radius:4px; display:inline-block;">🧭 Прокласти маршрут Google Maps →</a>
+                        </div>
+                    `);
+                    sheltersLayer.addLayer(iconMarker);
+                });
+            } catch (err) {
+                console.error('Shelters error:', err);
+            }
+        }
+
+        function getEventIconSpec(type) {
+            type = (type || "").toLowerCase();
+            if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav')) {
+                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'БпЛА / Радарний трек' };
+            }
+            if (type.includes('fire') || type.includes('destruction')) {
+                return { emoji: '🔥', bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', shadow: '#f97316', title: 'Пожежа / Руйнування' };
+            }
+            if (type.includes('strike') || type.includes('explosion') || type.includes('shelling')) {
+                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Приліт / Вибух' };
+            }
+            if (type.includes('air_defense')) {
+                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Робота ППО' };
+            }
+            if (type.includes('armed_conflict') || type.includes('special')) {
+                return { emoji: '⚔️', bg: 'rgba(168, 85, 247, 0.25)', border: '#a855f7', shadow: '#a855f7', title: 'Збройна подія' };
+            }
+            return { emoji: '📍', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Загальна подія' };
+        }
+
+        async function loadShelters() {
+            try {
+                const res = await fetch('/api/shelters');
+                const shelters = await res.json();
+                sheltersLayer.clearLayers();
+                
+                shelters.forEach(s => {
+                    const isMetro = s.type === 'metro_station';
+                    const iconMarker = L.circleMarker([s.lat, s.lon], {
+                        radius: isMetro ? 6 : 4,
+                        fillColor: isMetro ? '#18dcff' : '#7d5fff',
+                        color: '#fff',
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.85
+                    });
+
+                    iconMarker.bindPopup(`
+                        <div style="color:#111; font-family:-apple-system,sans-serif; min-width:180px;">
+                            <h4 style="margin:0 0 4px 0; font-size:13px; color:#0284c7;">${s.name}</h4>
+                            <p style="margin:0 0 4px 0; font-size:12px;">📍 ${s.address || 'Київ'}</p>
+                            <p style="margin:0 0 6px 0; font-size:11px; color:#64748b;">👥 Місткість: <b>${s.capacity} осіб</b></p>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}" target="_blank" style="font-size:11px; color:#0284c7; font-weight:600; text-decoration:none;">🧭 Прокласти маршрут →</a>
+                        </div>
+                    `);
+                    sheltersLayer.addLayer(iconMarker);
+                });
+            } catch (err) {
+                console.error('Shelters error:', err);
+            }
+        }
+
+        async function loadData() {
+            try {
+                // 1. Events
+                const resEvents = await fetch('/api/events');
+                const events = await resEvents.json();
+                eventsLayer.clearLayers();
+
+                const popupMap = {};
+
+                events.forEach(e => {
+                    const spec = getEventIconSpec(e.event_type);
+                    const iconHtml = `
+                        <div class="tactical-icon-wrap" style="
+                            background: ${spec.bg}; 
+                            border: 2px solid ${spec.border}; 
+                            --pulse-color: ${spec.shadow};
+                        " title="${spec.title}">
+                            <span style="filter: drop-shadow(0 0 4px ${spec.border});">${spec.emoji}</span>
+                        </div>
+                    `;
+
+                    const customIcon = L.divIcon({
+                        html: iconHtml,
+                        className: 'custom-tactical-leaflet',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18]
+                    });
+
+                    const marker = L.marker([e.lat, e.lon], { icon: customIcon });
+
+                    const logicBadge = e.geocoding_logic || '🗺️ Текстова прив\'язка топоніма (OSINT)';
+                    const statusBadge = (e.sources_count >= 2 || e.is_official) 
+                        ? `<span style="color:#16a34a; font-weight:700;">🟢 ВЕРИФІКОВАНО (${e.sources_count} дж.)</span>` 
+                        : `<span style="color:#d97706; font-weight:700;">🟡 ОДИНАРНЕ ДЖЕРЕЛО</span>`;
+
+                    const sourcesStr = e.sources_list ? e.sources_list.split(',').map(s => '@' + s.trim()).join(', ') : ('@' + e.source_channel);
+
+                    const popupContent = `
+                        <div style="color:#0f172a; min-width:230px; font-family:-apple-system,sans-serif; line-height:1.4;">
+                            <div style="font-size:11px; margin-bottom:4px;">${statusBadge}</div>
+                            <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${e.event_type}</h3>
+                            <p style="margin:0 0 6px 0; font-size:12px;"><b>📍 Локація:</b> ${e.location_text}</p>
+                            
+                            <div style="margin:0 0 6px 0; font-size:11px; background:#f8fafc; border:1px solid #e2e8f0; padding:6px; border-radius:6px;">
+                                <div style="margin-bottom:3px; color:#334155;"><b>🧩 Визначення точки:</b></div>
+                                <div style="color:#0284c7; font-weight:600;">${logicBadge}</div>
+                            </div>
+
+                            <div style="margin:0 0 8px 0; font-size:11px; color:#475569;">
+                                📡 <b>Джерела:</b> ${sourcesStr}
+                            </div>
+
+                            <p style="margin:0; font-size:11px;"><a href="https://t.me/${e.source_channel}/${e.message_id}" target="_blank" style="color:#0284c7; text-decoration:none; font-weight:600; background:#e0f2fe; padding:4px 8px; border-radius:4px; display:inline-block;">🔗 Перейти до допису @${e.source_channel} →</a></p>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupContent);
+                    eventsLayer.addLayer(marker);
+                    popupMap[e.id] = popupContent;
+                });
+
+                // 2. Tactical Blast Danger Zones
+                const resZones = await fetch('/api/geoint/zones');
+                const zones = await resZones.json();
+                zonesLayer.clearLayers();
+
+                zones.forEach(z => {
+                    const center = [z.center.lat, z.center.lon];
+                    const popupContent = popupMap[z.event_id] || `<div style="color:#0f172a; font-family:-apple-system,sans-serif;"><b>📍 ${z.location_text}</b><br>💥 Зона ураження вибуху: ${z.shrapnel_zone_m}м</div>`;
+
+                    // Shrapnel zone (Yellow 450m)
+                    const c3 = L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 });
+                    c3.bindPopup(popupContent);
+                    c3.addTo(zonesLayer);
+
+                    // Shockwave zone (Orange 180m)
+                    const c2 = L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 });
+                    c2.bindPopup(popupContent);
+                    c2.addTo(zonesLayer);
+
+                    // Fatal epicenter zone (Red 50m)
+                    const c1 = L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 });
+                    c1.bindPopup(popupContent);
+                    c1.addTo(zonesLayer);
+                });
+
+                // 3. Stats
+                const resStats = await fetch('/api/stats');
+                const stats = await resStats.json();
+                document.getElementById('stat-total').textContent = stats.events_24h || 0;
+                
+                let strikes = 0, fires = 0;
+                for (const [k, v] of Object.entries(stats.categories || {})) {
+                    const lk = k.toLowerCase();
+                    if (lk.includes('strike') || lk.includes('explosion')) strikes += v;
+                    else if (lk.includes('fire') || lk.includes('destruction')) fires += v;
+                }
+                document.getElementById('badge-strike').textContent = strikes;
+                document.getElementById('badge-fire').textContent = fires;
+
+            } catch (err) {
+                console.error('Data error:', err);
+            }
+        }
+
+        // Initialize
+        loadShelters();
+        loadData();
+        setInterval(loadData, 30000);
+
+        // Auto collapse panel on mobile after 3 seconds so map is 100% visible
+        if (window.innerWidth <= 600) {
+            setTimeout(() => {
+                hudPanel.classList.add('collapsed');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
