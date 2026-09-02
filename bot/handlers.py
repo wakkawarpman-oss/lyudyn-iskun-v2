@@ -325,18 +325,16 @@ def geocode_kyiv_street(query_text: str):
     return None, None, None
 
 
-MAIN_MENU_TEXTS = {
-    "🌐 веб-карта", "🗺️ веб-карта", "💥 резонанс", "🔥 топ подій", 
-    "📊 аналітика", "📊 оперативна аналітика", "🎯 прогноз загроз", 
-    "🛸 радар контур", "📡 статус системи", "🐾 тупо мяв", "тупо мяв", 
-    "💎 premium", "📍 найближче укриття", "🔙 назад до меню", "назад до меню"
+MAIN_MENU_KEYWORDS = {
+    "звіт", "резонанс", "топ", "аналітика", "прогноз", "радар", "статус",
+    "карта", "веб-карта", "мяв", "шип", "мур", "premium", "меню", "актуалізація"
 }
 
 def is_shelter_text_query(message: types.Message) -> bool:
     if not message.text or message.text.startswith('/'):
         return False
     txt = message.text.strip().lower()
-    if txt in MAIN_MENU_TEXTS or txt.startswith("sk-"):
+    if any(k in txt for k in MAIN_MENU_KEYWORDS) or txt.startswith("sk-"):
         return False
     return len(txt) >= 2
 
@@ -676,11 +674,8 @@ CONFIRMED_INCIDENT_TYPES = ['direct_strike', 'explosion', 'fire', 'destruction',
 # ──────────────────────── /report ─────────────────────────────────
 
 @router.message(Command("report"))
-@router.message(F.text == "\U0001f4cb Звіт (12 год)")
-@router.message(Command("report"))
-@router.message(F.text == "\U0001f4cb Звіт (12 год)")
-@router.message(F.text == "\U0001f4ca Звіт (12 год)")
-@router.message(F.text.ilike("%звіт (12 год)%"))
+@router.message(F.text.contains("Звіт"))
+@router.message(F.text.contains("звіт"))
 async def cmd_report_12h(message: types.Message):
     db = SessionLocal()
     try:
