@@ -74,7 +74,6 @@ def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.button(text="😳 ДАША?")
     builder.button(text="\U0001f504 АКТУАЛІЗАЦІЯ ПОДІЙ")
-    builder.button(text="\U0001f4cd Найближче укриття")
     builder.button(text="\U0001f3af Прогноз загроз")
     builder.button(text="\U0001f6f8 Радар Контур")
     builder.button(text="\U0001f4ca Аналітика")
