@@ -14,7 +14,8 @@ def get_main_keyboard():
     builder.button(text="📡 Статус системи")
     builder.button(text="💎 Premium")
     builder.button(text="🐾 ТУПО МЯВ")
-    builder.adjust(1, 2, 2, 2, 2, 2, 1)
+    builder.button(text="🔍 Глибокий OSINT")
+    builder.adjust(1, 2, 2, 2, 2, 2, 2)
     return builder.as_markup(resize_keyboard=True)
 
 def get_meme_keyboard():

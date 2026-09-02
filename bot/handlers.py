@@ -91,6 +91,67 @@ async def safe_send(message: types.Message, text: str, **kwargs):
 
 # ──────────────────────── /start & /sync ───────────────────────────
 
+
+
+
+
+@router.message(F.text == "🔍 Глибокий OSINT")
+async def cmd_deep_osint(message: types.Message):
+    db = SessionLocal()
+    try:
+        user_key = db.query(UserApiKey).filter(UserApiKey.user_id == message.from_user.id).first()
+        if not user_key or not user_key.openai_api_key:
+            await message.answer("🔒 Для глибокого OSINT-аналізу потрібен OpenAI API Key (Vision).\nВстановіть його командою:\n`/key sk-...`", parse_mode=ParseMode.MARKDOWN)
+            return
+            
+        api_key = user_key.openai_api_key
+        
+        # Get strikes in last 12 hours
+        threshold = datetime.utcnow() - timedelta(hours=12)
+        events = db.query(DetectedEvent).filter(
+            DetectedEvent.detected_at >= threshold,
+            DetectedEvent.event_type.in_(['direct_strike', 'explosion', 'fire', 'destruction'])
+        ).order_by(DetectedEvent.detected_at.desc()).all()
+        
+        if not events:
+            await message.answer("ℹ️ За останні 12 годин не знайдено серйозних інцидентів для аналізу.")
+            return
+            
+        await message.answer("⏳ Збираю дані за останні 12 годин та відправляю на аналіз ШІ...")
+        
+        # Prepare context for LLM
+        context_text = "Зведення інцидентів за останні 12 годин:\n"
+        for ev in events:
+            context_text += f"[{ev.detected_at.strftime('%H:%M')}] {ev.location_text} - {ev.event_type}: {ev.message_text}\n"
+            
+        prompt = "Ти старший OSINT-аналітик. Проаналізуй наступні сирі дані про прильоти та вибухи в Київській області за останні 12 годин. Зроби професійний звіт: 1) Оцінка масштабу атаки. 2) Ймовірні цілі. 3) Ступінь підтвердження інформації. 4) Загальний висновок. Пиши сухо, військовою мовою, українською.\n\n" + context_text
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        data = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "Ти OSINT AI."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2
+        }
+        
+        resp = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=30)
+        
+        if resp.status_code == 200:
+            analysis = resp.json()["choices"][0]["message"]["content"]
+            await safe_send(message, f"🔍 **ГЛИБОКИЙ OSINT ЗВІТ** 🔍\n\n{analysis}")
+        else:
+            await message.answer(f"❌ Сталася помилка API: {resp.status_code}\n{resp.text[:200]}")
+            
+    except Exception as e:
+        await message.answer(f"❌ Помилка: {e}")
+    finally:
+        db.close()
+
 @router.message(Command("start"))
 @router.message(F.text == "\u25b6\ufe0f Розпочати")
 async def cmd_start(message: types.Message):
