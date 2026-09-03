@@ -72,7 +72,7 @@ class HealthMonitor:
         if last_alert and now - last_alert < timedelta(minutes=60):
             return
         
-        text = "🚨 *АЛЕРТ ЗДОРОВ'Я ЛЮДИН ІСКУН*\n\n" + "\n".join(issues)
+        text = "🚨 *АЛЕРТ ЗДОРОВ'Я ОКІНТ-ПРО*\n\n" + "\n".join(issues)
         text += f"\n\n⏰ {now.strftime('%H:%M')} UTC"
         
         try:

@@ -147,7 +147,7 @@ def build_cot_event_element(e) -> ET.Element:
     conf = getattr(e, "confidence_score", 50) or 50
     src_cnt = getattr(e, "sources_count", 1) or 1
     remarks_text = (
-        f"Загроза: {sig}/100 | Довіра: {conf}/100 | Консенсус: {src_cnt} дж. | Людин Іскун C4ISR"
+        f"Загроза: {sig}/100 | Довіра: {conf}/100 | Консенсус: {src_cnt} дж. | ОКІНТ-ПРО C4ISR"
     )
     remarks_elem = ET.SubElement(detail, "remarks")
     remarks_elem.text = remarks_text
