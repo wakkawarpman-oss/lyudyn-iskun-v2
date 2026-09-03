@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from bot.alert_monitor import (
     format_all_clear_banner,
     format_active_alert_banner,
+    format_stop_monitoring_banner,
     register_vidbiy_subscriber,
     unregister_vidbiy_subscriber,
     get_vidbiy_subscribers,
@@ -35,6 +36,14 @@ def test_format_active_alert_banner_content():
     assert "🟥" in banner
     assert "ПОВІТРЯНА ТРИВОГА!" in banner
     assert "РЕЖИМ МОНІТОРИНГУ ВІДБОЮ АКТИВОВАНО" in banner
+
+
+def test_format_stop_monitoring_banner():
+    banner = format_stop_monitoring_banner("м. Київ та Київська область")
+    assert "🛑" in banner
+    assert "МОНІТОРИНГ ВІДБОЮ ЗУПИНЕНО" in banner
+    assert "м. Київ та Київська область" in banner
+    assert "не надсилатиме" in banner
 
 
 def test_subscriber_management_lifecycle():

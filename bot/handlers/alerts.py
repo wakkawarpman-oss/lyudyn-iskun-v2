@@ -3,14 +3,18 @@ import os
 from datetime import datetime, timedelta
 from aiogram import Router, types, F
 from aiogram.filters import Command
+from aiogram.enums import ParseMode
 from sqlalchemy import func
 
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.keyboards import get_main_keyboard
 from bot.alert_monitor import (
     get_current_kyiv_alert_status,
     format_all_clear_banner,
     format_active_alert_banner,
-    register_vidbiy_subscriber
+    format_stop_monitoring_banner,
+    register_vidbiy_subscriber,
+    unregister_vidbiy_subscriber
 )
 from bot.handlers.utils import safe_send, admin_only, logger
 from database.models import SessionLocal, DetectedEvent
@@ -88,10 +92,40 @@ async def cmd_vidbiy_monitoring(message: types.Message):
             event_time=status.get("timestamp"),
             threat_info="Загроза ударних БпЛА / ракетної небезпеки"
         )
+        inline_kb = InlineKeyboardBuilder()
+        inline_kb.button(text="🛑 СТОП МОНІТОРИНГ", callback_data="vidbiy:stop")
+        inline_kb.adjust(1)
+        await safe_send(message, msg_text, reply_markup=inline_kb.as_markup())
     else:
         msg_text = format_all_clear_banner(
             region="м. Київ та Київська область",
             event_time=status.get("timestamp"),
             source=status.get("source", "КМВА / Офіційний моніторинг тривог (@kyiv_alarm)")
         )
-    await safe_send(message, msg_text)
+        await safe_send(message, msg_text)
+
+
+@router.callback_query(F.data == "vidbiy:stop")
+async def cb_stop_vidbiy_monitoring(callback: types.CallbackQuery):
+    unregister_vidbiy_subscriber(callback.message.chat.id)
+    stop_banner = format_stop_monitoring_banner()
+    await callback.answer("🛑 Моніторинг відбою зупинено!", show_alert=False)
+    try:
+        await callback.message.edit_text(
+            f"{callback.message.html_text}\n\n➖➖➖➖➖➖➖➖➖➖\n{stop_banner}",
+            parse_mode=ParseMode.HTML
+        )
+    except Exception:
+        await callback.message.answer(stop_banner, parse_mode=ParseMode.HTML)
+
+
+@router.message(Command("stop_vidbiy"))
+@router.message(Command("stop_monitoring"))
+@router.message(F.text == "🛑 СТОП МОНІТОРИНГ")
+@router.message(F.text == "СТОП МОНІТОРИНГ")
+@router.message(F.text.ilike("%стоп моніторинг%"))
+@router.message(F.text.ilike("%зупинити моніторинг%"))
+async def cmd_stop_vidbiy(message: types.Message):
+    unregister_vidbiy_subscriber(message.chat.id)
+    stop_banner = format_stop_monitoring_banner()
+    await safe_send(message, stop_banner)

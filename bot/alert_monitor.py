@@ -110,6 +110,16 @@ def format_active_alert_banner(
     )
 
 
+def format_stop_monitoring_banner(region: str = "м. Київ та Київська область") -> str:
+    """Formats confirmation banner when user stops all-clear monitoring."""
+    return (
+        "🛑 <b>МОНІТОРИНГ ВІДБОЮ ЗУПИНЕНО</b>\n"
+        f"📍 <b>Регіон:</b> {region}\n\n"
+        "Ви успішно зупинили моніторинг. Система <b>не надсилатиме</b> сповіщення, коли пролунає відбій.\n\n"
+        "<i>Щоб відновити моніторинг, натисніть кнопку «🟢 ВІДБІЙ МОНІТОРИНГ».</i>"
+    )
+
+
 def get_current_kyiv_alert_status() -> Dict[str, any]:
     """
     Checks the latest air raid alert status for Kyiv and Kyiv Oblast.
