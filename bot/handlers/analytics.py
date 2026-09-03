@@ -5,10 +5,10 @@ import re
 from datetime import datetime, timedelta
 from aiogram import Router, types, F
 from aiogram.filters import Command
+from aiogram.enums import ParseMode
 
 from bot.export import generate_csv_export
 from bot.graph_generator import generate_analytics_graph
-from bot.map_generator import generate_static_map
 from bot.threat_report import generate_live_threat_assessment
 from bot.ui_formatter import format_human_event_card, format_source_display
 from bot.handlers.utils import (

@@ -37,7 +37,7 @@ jobs:
       - name: Lint (unused imports / redefinitions)
         run: |
           pip install ruff==0.6.9
-          ruff check . --select F401,F811
+          ruff check . --select F401,F811,F821
 
       - name: Syntax-check every Python file
         run: |
