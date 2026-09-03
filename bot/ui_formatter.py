@@ -98,7 +98,7 @@ def format_event_type_human(event_type: Optional[str]) -> str:
     et = (event_type or "other").lower()
 
     labels = {
-        "radar_track": "🛸 <b>БпЛА / Повітряна ціль</b>",
+        "radar_track": "✈️ <b>БпЛА / Радарна ціль</b>",
         "explosion": "💥 <b>Вибух</b>",
         "direct_strike": "💥 <b>Влучання / Наслідки атаки</b>",
         "shelling": "💣 <b>Обстріл</b>",

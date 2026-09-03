@@ -392,56 +392,6 @@
             box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Tactical Live Warning Banner - Ultra-Compact & Non-Intrusive */
-        .tactical-alert-banner {
-            position: fixed;
-            top: 48px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1002;
-            background: rgba(220, 38, 38, 0.94);
-            backdrop-filter: blur(8px);
-            border: 1px solid #ef4444;
-            box-shadow: 0 2px 14px rgba(239, 68, 68, 0.45);
-            border-radius: 16px;
-            padding: 3px 10px;
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            animation: pulse-banner 2s infinite;
-            transition: all 0.25s ease;
-            max-width: 92vw;
-            height: 24px;
-            box-sizing: border-box;
-            cursor: pointer;
-        }
-        .tactical-alert-banner.hidden {
-            display: none !important;
-        }
-        .alert-banner-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: calc(90vw - 36px);
-        }
-        .banner-dismiss-btn {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 13px;
-            line-height: 1;
-            padding: 0 0 0 2px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-        }
-        .banner-dismiss-btn:hover {
-            color: #fff;
-        }
-
         /* Large Tactical Vidbiy / All-Clear Monitor Banner */
         .vidbiy-large-banner {
             position: fixed;
@@ -673,13 +623,9 @@
             .hud-btn span.btn-label-long { display: none; }
             .hud-btn span.btn-label-short { display: inline; }
 
-            /* Compact Alert Banner on Mobile */
-            .tactical-alert-banner {
-                top: 46px;
-                padding: 2px 8px;
-                font-size: 9.5px;
-                height: 22px;
-                max-width: 94vw;
+            /* Strictly suppress Leaflet desktop popups on mobile so they never overflow at top */
+            .leaflet-popup {
+                display: none !important;
             }
 
             .live-osint-ticker {
@@ -1175,13 +1121,6 @@
         <button id="btn-vidbiy-action" class="vidbiy-action-btn">🛑 Зупинити моніторинг</button>
     </div>
 
-    <!-- Compact Tactical Threat Banner -->
-    <div id="tactical-alert-banner" class="tactical-alert-banner hidden">
-        <span class="live-dot" style="background:#fff; width:6px; height:6px; flex-shrink:0;"></span>
-        <span id="alert-banner-text" class="alert-banner-text">⚠️ ТАКТИЧНЕ СПОВІЩЕННЯ</span>
-        <button id="btn-dismiss-banner" class="banner-dismiss-btn" title="Приховати">✕</button>
-    </div>
-
     <!-- Live OSINT News Ticker -->
     <div id="live-osint-ticker" class="live-osint-ticker hidden">
         <span style="color:#00e5ff; font-weight:700;">📡 ОСТАННЯ ПОДІЯ:</span>
@@ -1284,7 +1223,7 @@
             <label class="layer-item">
                 <span>🛡️ Укриття та Метро <span class="layer-badge" id="badge-shelters">1197</span></span>
                 <label class="switch">
-                    <input type="checkbox" id="toggle-shelters" checked>
+                    <input type="checkbox" id="toggle-shelters">
                     <span class="slider"></span>
                 </label>
             </label>
@@ -1296,7 +1235,7 @@
                 </label>
             </label>
             <label class="layer-item">
-                <span>🛸 Живий радар цілей (Neptun) <span class="layer-badge radar" id="badge-radar">0</span></span>
+                <span>📡 Радар повітряних цілей (Neptun) <span class="layer-badge radar" id="badge-radar">0</span></span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-radar" checked>
                     <span class="slider"></span>
@@ -1328,8 +1267,8 @@
         <div class="section-label">📋 Тактична Легенда</div>
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-left"><span>🛸</span> <b>БпЛА Shahed / Дрон</b></div>
-                <span style="color:#ff0055; font-weight:700;">🛸 Neptun</span>
+                <div class="legend-left"><span>✈️</span> <b>БпЛА Shahed / Дрон</b></div>
+                <span style="color:#ff0055; font-weight:700;">📡 Neptun</span>
             </div>
             <div class="legend-item">
                 <div class="legend-left"><span>🚀</span> <b>Крилата / Балістична ракета</b></div>
@@ -1434,7 +1373,7 @@
         // Layer Groups
         const eventsLayer = L.layerGroup().addTo(map);
         const zonesLayer = L.layerGroup().addTo(map);
-        const sheltersLayer = L.layerGroup().addTo(map);
+        const sheltersLayer = L.layerGroup(); // Not added to map on load to prevent cluttering
         const radarLayer = L.layerGroup().addTo(map);
         const thermalLayer = L.layerGroup().addTo(map);
         const infraLayer = L.layerGroup().addTo(map);
@@ -1982,25 +1921,28 @@
             }
         }
 
-        // Icon Taxonomy Specs
+        // Tactical Military Icon Taxonomy Specs
         function getEventIconSpec(type) {
             type = (type || "").toLowerCase();
-            if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav')) {
-                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'БпЛА / Повітряна ціль' };
+            if (type.includes('missile') || type.includes('ракета') || type.includes('ballistic') || type.includes('cruise')) {
+                return { emoji: '🚀', bg: 'rgba(239, 68, 68, 0.3)', border: '#ef4444', shadow: '#ef4444', title: 'Крилата / Балістична ракета' };
             }
-            if (type.includes('strike') || type.includes('shelling')) {
-                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Влучання / Наслідки атаки' };
+            if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav') || type.includes('бпла')) {
+                return { emoji: '✈️', bg: 'rgba(249, 115, 22, 0.3)', border: '#f97316', shadow: '#f97316', title: 'БпЛА Shahed / Дрон' };
             }
-            if (type.includes('explosion')) {
-                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Вибух' };
+            if (type.includes('strike') || type.includes('shelling') || type.includes('приліт') || type.includes('влучан')) {
+                return { emoji: '💥', bg: 'rgba(220, 38, 38, 0.35)', border: '#dc2626', shadow: '#dc2626', title: 'Влучання / Удар' };
             }
-            if (type.includes('fire') || type.includes('destruction')) {
-                return { emoji: '🔥', bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', shadow: '#f97316', title: 'Пожежа / Руйнування' };
+            if (type.includes('explosion') || type.includes('вибух')) {
+                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.3)', border: '#ef4444', shadow: '#ef4444', title: 'Вибух' };
             }
-            if (type.includes('air_defense')) {
-                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Робота сил ППО' };
+            if (type.includes('fire') || type.includes('destruction') || type.includes('пожеж')) {
+                return { emoji: '🔥', bg: 'rgba(249, 115, 22, 0.3)', border: '#ea580c', shadow: '#ea580c', title: 'Пожежа / Займання' };
             }
-            return { emoji: '⚠️', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Повітряна загроза' };
+            if (type.includes('air_defense') || type.includes('ппо') || type.includes('збитт')) {
+                return { emoji: '🛡️', bg: 'rgba(16, 185, 129, 0.3)', border: '#10b981', shadow: '#10b981', title: 'Робота сил ППО' };
+            }
+            return { emoji: '⚠️', bg: 'rgba(234, 179, 8, 0.25)', border: '#eab308', shadow: '#eab308', title: 'Повітряна тривога' };
         }
 
         // High-Performance In-Memory Filtering (Zero DOM reflows / Zero lag)
@@ -2180,9 +2122,16 @@
                         </div>
                     `;
 
-                    marker.bindPopup(popupContent);
-                    marker.on('click', () => {
+                    if (window.innerWidth > 768) {
+                        marker.bindPopup(popupContent);
+                    }
+                    marker.on('click', (ev) => {
                         if (window.innerWidth <= 768) {
+                            if (ev && ev.originalEvent) {
+                                ev.originalEvent.preventDefault();
+                                ev.originalEvent.stopPropagation();
+                            }
+                            map.closePopup();
                             showTacticalBottomSheet(e, spec, dt, statusBadge, statusDesc, srcDisplay, srcLink);
                             const pt = map.project([e.lat, e.lon], map.getZoom()).subtract([0, 140]);
                             map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.4 });
@@ -2201,15 +2150,23 @@
                     const popupContent = popupMap[z.event_id] || `<div style="color:#f1f5f9; font-family:-apple-system,sans-serif;"><b>📍 ${z.location_text}</b><br>💥 Зона ураження вибуху: ${z.shrapnel_zone_m}м</div>`;
 
                     const group = L.layerGroup();
-                    // 450m Shrapnel
-                    L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).bindPopup(popupContent).addTo(group);
-                    // 180m Shockwave
-                    L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).bindPopup(popupContent).addTo(group);
-                    // 50m Fatal
-                    L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).bindPopup(popupContent).addTo(group);
+                    if (window.innerWidth > 768) {
+                        L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).bindPopup(popupContent).addTo(group);
+                        L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).bindPopup(popupContent).addTo(group);
+                        L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).bindPopup(popupContent).addTo(group);
+                    } else {
+                        L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).addTo(group);
+                        L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).addTo(group);
+                        L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).addTo(group);
+                    }
 
-                    group.on('click', () => {
+                    group.on('click', (ev) => {
                         if (window.innerWidth <= 768 && popupEventMap[z.event_id]) {
+                            if (ev && ev.originalEvent) {
+                                ev.originalEvent.preventDefault();
+                                ev.originalEvent.stopPropagation();
+                            }
+                            map.closePopup();
                             const p = popupEventMap[z.event_id];
                             showTacticalBottomSheet(p.e, p.spec, p.dt, p.statusBadge, p.statusDesc, p.srcDisplay, p.srcLink);
                             const pt = map.project(center, map.getZoom()).subtract([0, 140]);
@@ -2439,7 +2396,7 @@
                     marker.bindPopup(`
                         <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:190px; font-size:12px;">
                             <div style="font-weight:700; color:${targetColor}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px;">
-                                🛸 ${d.label}
+                                ✈️ ${d.label}
                             </div>
                             <div>📍 <b>Локація:</b> ${d.place || d.region || 'Невідомо'}</div>
                             <div>🎯 <b>До Києва:</b> ~${d.distance_to_kyiv_km} км</div>

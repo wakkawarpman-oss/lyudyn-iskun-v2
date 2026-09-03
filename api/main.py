@@ -72,10 +72,21 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
         DetectedEvent.detected_at >= threshold
     ).order_by(DetectedEvent.detected_at.desc()).all()
     
+    AIR_DEFENSE_KEYWORDS = (
+        'тривог', 'шахед', 'бпла', 'дрон', 'ракет', 'вибух', 'приліт', 'влучан',
+        'ппо', 'збитт', 'уламк', 'баліст', 'пуск', 'авіаці', 'каб', 'укритт', 'відбій',
+        'артобстріл', 'загроза', 'shahed', 'ракета', 'повітрян'
+    )
     result = []
     for e in events:
         if e.is_fallback_geo:
             continue
+
+        # Tactical hygiene filter: Drop non-military city news (drugs, petty crime, traffic)
+        if e.event_type in ('general_alert', 'alert') and not e.is_official:
+            msg_lower = (e.message_text or '').lower()
+            if not any(k in msg_lower for k in AIR_DEFENSE_KEYWORDS):
+                continue
 
         prec = getattr(e, "geo_precision", "settlement") or "settlement"
         rad = getattr(e, "geo_radius_m", 2000) or 2000
