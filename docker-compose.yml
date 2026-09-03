@@ -68,6 +68,8 @@ services:
     ports:
     - 80:80
     restart: unless-stopped
+    volumes:
+    - ./api:/app/api
 volumes:
   media_data: null
   postgres_data: null
