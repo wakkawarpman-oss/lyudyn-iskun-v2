@@ -962,9 +962,16 @@
             </div>
             <div class="oblast-selector-wrap">
                 <select id="oblast-select" class="oblast-select-pill" title="Вибір області моніторингу">
-                    <option value="kyiv">🏙️ Київська обл. / Київ</option>
+                    <option value="kyiv_city">🏙️ м. Київ</option>
+                    <option value="kyiv_oblast">🌲 Київська обл.</option>
                     <option value="dnipropetrovsk">🏭 Дніпропетровська обл.</option>
                     <option value="zaporizhzhia">⚡ Запорізька обл.</option>
+                    <option value="kharkiv">🛡️ Харківська обл.</option>
+                    <option value="odesa">⚓ Одеська обл.</option>
+                    <option value="mykolaiv">🌊 Миколаївська обл.</option>
+                    <option value="poltava">🌾 Полтавська обл.</option>
+                    <option value="sumy">🚜 Сумська обл.</option>
+                    <option value="chernihiv">🏰 Чернігівська обл.</option>
                     <option value="all">🇺🇦 Вся Україна</option>
                 </select>
             </div>
@@ -1292,11 +1299,17 @@
     <script>
         // ─── 0. Oblast Administration Registry ───
         const OBLAST_CONFIG = {
-            'kyiv': {
-                name: 'Київська обл. / Київ',
-                title: 'Київщини',
+            'kyiv_city': {
+                name: 'м. Київ',
+                title: 'Києва',
                 center: [50.4501, 30.5234],
-                zoom: 10
+                zoom: 11
+            },
+            'kyiv_oblast': {
+                name: 'Київська обл.',
+                title: 'Київщини',
+                center: [50.3500, 30.2000],
+                zoom: 9
             },
             'dnipropetrovsk': {
                 name: 'Дніпропетровська обл.',
@@ -1310,6 +1323,42 @@
                 center: [47.8388, 35.1396],
                 zoom: 9
             },
+            'kharkiv': {
+                name: 'Харківська обл.',
+                title: 'Харківщини',
+                center: [49.9935, 36.2304],
+                zoom: 9
+            },
+            'odesa': {
+                name: 'Одеська обл.',
+                title: 'Одещини',
+                center: [46.4825, 30.7233],
+                zoom: 9
+            },
+            'mykolaiv': {
+                name: 'Миколаївська обл.',
+                title: 'Миколаївщини',
+                center: [46.9750, 31.9946],
+                zoom: 9
+            },
+            'poltava': {
+                name: 'Полтавська обл.',
+                title: 'Полтавщини',
+                center: [49.5883, 34.5514],
+                zoom: 9
+            },
+            'sumy': {
+                name: 'Сумська обл.',
+                title: 'Сумщини',
+                center: [50.9077, 34.7981],
+                zoom: 9
+            },
+            'chernihiv': {
+                name: 'Чернігівська обл.',
+                title: 'Чернігівщини',
+                center: [51.4982, 31.2893],
+                zoom: 9
+            },
             'all': {
                 name: 'Вся Україна',
                 title: 'України',
@@ -1318,8 +1367,9 @@
             }
         };
 
-        let currentOblast = localStorage.getItem('c4isr_active_oblast') || 'kyiv';
-        if (!OBLAST_CONFIG[currentOblast]) currentOblast = 'kyiv';
+        let currentOblast = localStorage.getItem('c4isr_active_oblast') || 'kyiv_city';
+        if (currentOblast === 'kyiv') currentOblast = 'kyiv_city';
+        if (!OBLAST_CONFIG[currentOblast]) currentOblast = 'kyiv_city';
         const initOblast = OBLAST_CONFIG[currentOblast];
 
         // ─── 1. Map Initialization ───
@@ -1508,6 +1558,7 @@
         }
 
         function switchOblast(code, skipFly = false) {
+            if (code === 'kyiv') code = 'kyiv_city';
             if (!OBLAST_CONFIG[code]) return;
             currentOblast = code;
             localStorage.setItem('c4isr_active_oblast', code);
@@ -1521,7 +1572,8 @@
             if (map.hasLayer(infraLayer)) {
                 fetchInfrastructurePOIs();
             }
-            updateThreatBanner();
+            fetchEventsAndZones();
+            fetchRadarDrones();
         }
 
         document.getElementById('btn-locate')?.addEventListener('click', () => {
@@ -1640,28 +1692,17 @@
             const peekDrones = document.getElementById('peek-drones');
             const statValDrones = document.getElementById('stat-val-drones');
 
-            let relevantDrones = [];
-            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
-
-            if (currentOblast === 'kyiv') {
-                relevantDrones = activeDrones.filter(d => d.is_kyiv_threat);
-            } else if (currentOblast === 'dnipropetrovsk') {
-                relevantDrones = activeDrones.filter(d => d.is_dnipro_threat);
-            } else if (currentOblast === 'zaporizhzhia') {
-                relevantDrones = activeDrones.filter(d => d.is_zaporizhzhia_threat);
-            } else {
-                relevantDrones = activeDrones;
-            }
-            const count = relevantDrones.length;
+            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv_city'];
+            const count = activeDrones.length;
 
             if (peekDrones) peekDrones.textContent = `${count} цілей`;
             if (statValDrones) statValDrones.textContent = count;
 
             if (count > 0) {
                 threatBanner.classList.remove('hidden');
-                const closest = relevantDrones[0];
+                const closest = activeDrones[0];
                 let distStr = '';
-                if (currentOblast === 'kyiv' && closest.distance_to_kyiv_km) {
+                if (currentOblast.includes('kyiv') && closest.distance_to_kyiv_km) {
                     distStr = `, ~${closest.distance_to_kyiv_km} км`;
                 } else if (currentOblast === 'dnipropetrovsk' && closest.distance_to_dnipro_km) {
                     distStr = `, ~${closest.distance_to_dnipro_km} км`;
@@ -1676,7 +1717,8 @@
 
         async function fetchRadarDrones() {
             try {
-                const res = await fetch('/api/v1/radar/drones');
+                const obParam = currentOblast === 'all' ? '' : `?oblast=${currentOblast}`;
+                const res = await fetch(`/api/v1/radar/drones${obParam}`);
                 if (!res.ok) return;
                 const data = await res.json();
                 const drones = data.drones || [];
@@ -1722,22 +1764,17 @@
 
         // Tap Threat Banner -> Fly to nearest drone in active oblast
         document.getElementById('threat-banner')?.addEventListener('click', () => {
-            let relevant = [];
-            if (currentOblast === 'kyiv') relevant = activeDrones.filter(d => d.is_kyiv_threat);
-            else if (currentOblast === 'dnipropetrovsk') relevant = activeDrones.filter(d => d.is_dnipro_threat);
-            else if (currentOblast === 'zaporizhzhia') relevant = activeDrones.filter(d => d.is_zaporizhzhia_threat);
-            else relevant = activeDrones;
-
-            const threat = relevant[0] || activeDrones[0];
+            const threat = activeDrones[0];
             if (threat) map.flyTo([threat.lat, threat.lng], 12, { duration: 1 });
         });
 
         // ─── 4. Clustered Events & Blast Zones ───
         async function fetchEventsAndZones() {
             try {
+                const obParam = currentOblast === 'all' ? '' : `&oblast=${currentOblast}`;
                 const [eRes, zRes] = await Promise.all([
-                    fetch('/api/events?hours=72'),
-                    fetch('/api/geoint/zones?hours=72')
+                    fetch(`/api/events?hours=72${obParam}`),
+                    fetch(`/api/geoint/zones?hours=72${obParam}`)
                 ]);
                 rawEvents = await eRes.json();
                 rawZones = await zRes.json();

@@ -51,78 +51,6 @@
       "tier": 2
     }
   ],
-  "kyiv": [
-    {
-      "username": "VA_Kyiv",
-      "title": "КМВА (Київська міська військова адміністрація)",
-      "tier": 1
-    },
-    {
-      "username": "KyivCityOfficial",
-      "title": "КМДА Офіційний",
-      "tier": 1
-    },
-    {
-      "username": "dsns_kyiv_region",
-      "title": "ДСНС Київська область",
-      "tier": 1
-    },
-    {
-      "username": "dsns_telegram",
-      "title": "ДСНС України",
-      "tier": 1
-    },
-    {
-      "username": "kyivoperat",
-      "title": "Київ Оперативний",
-      "tier": 2
-    },
-    {
-      "username": "KyivOperativ",
-      "title": "Київ Оператив",
-      "tier": 2
-    },
-    {
-      "username": "kyiv24",
-      "title": "Київ 24 Новини",
-      "tier": 2
-    },
-    {
-      "username": "babel_ua",
-      "title": "Бабель",
-      "tier": 2
-    },
-    {
-      "username": "up_stryimka",
-      "title": "УП Стрічка",
-      "tier": 2
-    },
-    {
-      "username": "pravda_gerashchenko",
-      "title": "Правда Геращенко",
-      "tier": 2
-    },
-    {
-      "username": "ssternenko",
-      "title": "Сергій Стерненко",
-      "tier": 2
-    },
-    {
-      "username": "CensorNet",
-      "title": "Цензор.НЕТ",
-      "tier": 2
-    },
-    {
-      "username": "rbc_ukraina",
-      "title": "РБК-Україна",
-      "tier": 2
-    },
-    {
-      "username": "kievreal1",
-      "title": "Реальний Київ",
-      "tier": 2
-    }
-  ],
   "dnipropetrovsk": [
     {
       "username": "dnipropetrovskaoda",
@@ -204,6 +132,172 @@
     {
       "username": "etozp",
       "title": "Це Запоріжжя",
+      "tier": 2
+    }
+  ],
+  "kyiv_city": [
+    {
+      "username": "VA_Kyiv",
+      "title": "КМВА (Київська міська військова адміністрація)",
+      "tier": 1
+    },
+    {
+      "username": "KyivCityOfficial",
+      "title": "КМДА Офіційний",
+      "tier": 1
+    },
+    {
+      "username": "kyivoperat",
+      "title": "Київ Оперативний",
+      "tier": 2
+    },
+    {
+      "username": "KyivOperativ",
+      "title": "Київ Оператив",
+      "tier": 2
+    },
+    {
+      "username": "kyiv24",
+      "title": "Київ 24 Новини",
+      "tier": 2
+    },
+    {
+      "username": "kievreal1",
+      "title": "Реальний Київ",
+      "tier": 2
+    }
+  ],
+  "kyiv_oblast": [
+    {
+      "username": "dsns_kyiv_region",
+      "title": "ДСНС Київська область",
+      "tier": 1
+    },
+    {
+      "username": "dsns_telegram",
+      "title": "ДСНС України",
+      "tier": 1
+    },
+    {
+      "username": "babel_ua",
+      "title": "Бабель",
+      "tier": 2
+    },
+    {
+      "username": "up_stryimka",
+      "title": "УП Стрічка",
+      "tier": 2
+    },
+    {
+      "username": "pravda_gerashchenko",
+      "title": "Правда Геращенко",
+      "tier": 2
+    },
+    {
+      "username": "ssternenko",
+      "title": "Сергій Стерненко",
+      "tier": 2
+    },
+    {
+      "username": "CensorNet",
+      "title": "Цензор.НЕТ",
+      "tier": 2
+    },
+    {
+      "username": "rbc_ukraina",
+      "title": "РБК-Україна",
+      "tier": 2
+    }
+  ],
+  "kharkiv": [
+    {
+      "username": "synegubov",
+      "title": "Олег Синєгубов / Харківська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "ihor_terekhov",
+      "title": "Ігор Терехов / Мер Харкова",
+      "tier": 1
+    },
+    {
+      "username": "kharkiv_alerts",
+      "title": "Тривога Харків",
+      "tier": 1
+    },
+    {
+      "username": "suspilnekharkiv",
+      "title": "Суспільне Харків",
+      "tier": 2
+    }
+  ],
+  "odesa": [
+    {
+      "username": "odesaoblgov",
+      "title": "Олег Кіпер / Одеська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "dumskaya_net",
+      "title": "Думська / Одеса",
+      "tier": 2
+    },
+    {
+      "username": "suspilneodesa",
+      "title": "Суспільне Одеса",
+      "tier": 2
+    }
+  ],
+  "mykolaiv": [
+    {
+      "username": "mykolaivskaODA",
+      "title": "Віталій Кім / Миколаївська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "senkevichonline",
+      "title": "Олександр Сєнкевич / Мер Миколаєва",
+      "tier": 1
+    },
+    {
+      "username": "suspilnemykolaiv",
+      "title": "Суспільне Миколаїв",
+      "tier": 2
+    }
+  ],
+  "poltava": [
+    {
+      "username": "PoltavskaODA",
+      "title": "Полтавська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnepoltava",
+      "title": "Суспільне Полтава",
+      "tier": 2
+    }
+  ],
+  "sumy": [
+    {
+      "username": "Zhyvytskyy",
+      "title": "Сумська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnesumy",
+      "title": "Суспільне Суми",
+      "tier": 2
+    }
+  ],
+  "chernihiv": [
+    {
+      "username": "Chaus_Viacheslav",
+      "title": "В’ячеслав Чаус / Чернігівська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnechernihiv",
+      "title": "Суспільне Чернігів",
       "tier": 2
     }
   ]
