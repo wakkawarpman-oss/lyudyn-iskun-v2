@@ -57,6 +57,7 @@ def get_events(db: Session = Depends(get_db)):
         DetectedEvent.sources_list,
         DetectedEvent.is_official,
         DetectedEvent.has_media,
+        DetectedEvent.is_fallback_geo,
         DetectedEvent.message_text,
         func.ST_Y(DetectedEvent.geom).label('lat'),
         func.ST_X(DetectedEvent.geom).label('lon')
@@ -68,11 +69,12 @@ def get_events(db: Session = Depends(get_db)):
     
     result = []
     for e in events:
-        loc_clean = (e.location_text or "").strip().lower()
-        is_maidan_fallback = (abs(e.lat - 50.4500336) < 0.005 and abs(e.lon - 30.5241361) < 0.005)
-        is_specific_maidan = "майдан" in loc_clean or "хрещатик" in loc_clean
-        
-        if is_maidan_fallback and not is_specific_maidan:
+        # is_fallback_geo (set by the worker's canonical-toponym resolver) is
+        # the real signal for "we don't know where this is, defaulting to the
+        # city center" — the old distance-to-Maidan-centroid heuristic hid
+        # every genuine Maidan-area incident that didn't literally say
+        # "майдан"/"хрещатик" in the text.
+        if e.is_fallback_geo:
             continue
 
         if e.has_media:
@@ -189,6 +191,7 @@ def get_danger_zones(db: Session = Depends(get_db)):
         DetectedEvent.event_type,
         DetectedEvent.location_text,
         DetectedEvent.resonance_score,
+        DetectedEvent.is_fallback_geo,
         func.ST_Y(DetectedEvent.geom).label('lat'),
         func.ST_X(DetectedEvent.geom).label('lon')
     ).filter(
@@ -200,12 +203,9 @@ def get_danger_zones(db: Session = Depends(get_db)):
     zones = []
     for st in strikes:
         if st.lat and st.lon:
-            loc_clean = (st.location_text or "").strip().lower()
-            is_maidan_fallback = (abs(st.lat - 50.4500336) < 0.005 and abs(st.lon - 30.5241361) < 0.005)
-            is_specific_maidan = "майдан" in loc_clean or "хрещатик" in loc_clean
-            
-            # Exclude generic "Київ" fallback from localized blast circles
-            if is_maidan_fallback and not is_specific_maidan:
+            # Exclude generic "Київ" fallback centroid from localized blast
+            # circles — see the same is_fallback_geo check in /api/events.
+            if st.is_fallback_geo:
                 continue
 
             zone_data = geoint_engine.get_tactical_danger_zones(st.lat, st.lon, st.event_type, st.resonance_score)

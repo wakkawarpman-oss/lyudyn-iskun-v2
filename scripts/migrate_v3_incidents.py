@@ -45,7 +45,7 @@ def migrate_and_normalize():
 
     for e in events:
         # Canonicalize location
-        canon_loc, lat, lon = resolve_canonical_toponym(e.location_text)
+        canon_loc, lat, lon, _is_fallback_geo = resolve_canonical_toponym(e.location_text)
         e.location_text = canon_loc
         if lat is not None and lon is not None and e.geom is None:
             e.geom = WKTElement(f"POINT({lon} {lat})", srid=4326)

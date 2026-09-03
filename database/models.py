@@ -44,6 +44,11 @@ class DetectedEvent(Base):
     last_seen_at = Column(DateTime, default=datetime.utcnow)
     
     has_media = Column(Boolean, default=False)
+    # True when geom is a generic city/region-centroid guess (no specific
+    # toponym matched in the text), not an actual named location. Lets
+    # consumers exclude "we don't know where this is" points near the
+    # Maidan-area centroid without also hiding real Maidan-area incidents.
+    is_fallback_geo = Column(Boolean, default=False, server_default="false")
     raw_message = Column(String) # JSON snapshot of the Telethon message
     
     # Autonomous Factchecking & Multi-Source Consensus
