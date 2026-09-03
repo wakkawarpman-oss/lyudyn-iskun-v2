@@ -821,8 +821,68 @@
             }
             .mobile-dock-btn:active {
                 transform: scale(0.95);
-                background: rgba(0, 229, 255, 0.25);
-            }
+        /* Tactical Radar Drone Live Blip Styling */
+        .tactical-drone-icon-wrap {
+            background: transparent !important;
+            border: none !important;
+        }
+        .radar-drone-blip {
+            position: relative;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .radar-drone-ping {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #ff3366;
+            background: rgba(255, 51, 102, 0.2);
+            animation: radarPulseAnim 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+            pointer-events: none;
+        }
+        @keyframes radarPulseAnim {
+            0% { transform: scale(0.4); opacity: 1; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
+        .radar-drone-core {
+            position: relative;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ff3366;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px #ff3366, 0 0 18px rgba(255, 51, 102, 0.7);
+            z-index: 2;
+        }
+        .radar-drone-heading {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            pointer-events: none;
+            z-index: 3;
+            transition: transform 0.4s ease-out;
+        }
+        .radar-drone-badge {
+            position: absolute;
+            top: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid rgba(255, 51, 102, 0.8);
+            border-radius: 8px;
+            padding: 1px 6px;
+            font-size: 9px;
+            font-weight: 700;
+            white-space: nowrap;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 4;
         }
     </style>
 </head>
@@ -1901,38 +1961,54 @@
                         }).addTo(radarLayer);
                     }
 
-                    // Forward projected trajectory cone in Live Mode (10-minute projection)
-                    if (d.speed_kmh && typeof d.heading === 'number') {
-                        const projM = (d.speed_kmh * 1000 / 3600.0) * 600.0; // 10 min
-                        const rad = (d.heading * Math.PI) / 180.0;
-                        const projLat = d.lat + (projM * Math.cos(rad)) / 111139.0;
-                        const projLng = d.lng + (projM * Math.sin(rad)) / (111139.0 * Math.cos((d.lat * Math.PI) / 180.0));
-                        L.polyline([[d.lat, d.lng], [projLat, projLng]], {
-                            color: d.color || '#ff3366',
-                            weight: 1.5,
-                            opacity: isLiveMode ? 0.85 : 0.4,
-                            dashArray: '3, 6'
-                        }).addTo(radarLayer);
-                    }
+                    const effectiveSpeed = (d.speed_kmh && d.speed_kmh > 0) ? Math.round(d.speed_kmh) : 185;
+                    const heading = typeof d.heading === 'number' ? Math.round(d.heading) : 0;
+                    const targetColor = d.color || '#ff3366';
+                    const cleanLabel = (d.label || 'Ціль').replace('БПЛА ', '');
 
-                    // Drone pulse marker
-                    const marker = L.circleMarker([d.lat, d.lng], {
-                        radius: 8,
-                        fillColor: d.color || '#ff3366',
-                        color: '#ffffff',
+                    // Forward projected trajectory in Live Mode (10-minute projection)
+                    const projM = (effectiveSpeed * 1000.0 / 3600.0) * 600.0; // 10 min projection
+                    const rad = (heading * Math.PI) / 180.0;
+                    const projLat = d.lat + (projM * Math.cos(rad)) / 111139.0;
+                    const projLng = d.lng + (projM * Math.sin(rad)) / (111139.0 * Math.cos((d.lat * Math.PI) / 180.0));
+                    L.polyline([[d.lat, d.lng], [projLat, projLng]], {
+                        color: targetColor,
                         weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.9
+                        opacity: isLiveMode ? 0.9 : 0.45,
+                        dashArray: '4, 6'
+                    }).addTo(radarLayer);
+
+                    // Dynamic tactical blip marker with pulsing ring, directional chevron and HUD tag
+                    const droneIcon = L.divIcon({
+                        className: 'tactical-drone-icon-wrap',
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 17],
+                        html: `
+                            <div class="radar-drone-blip">
+                                <div class="radar-drone-ping" style="border-color:${targetColor}; background:${targetColor}33;"></div>
+                                <div class="radar-drone-heading" style="transform: rotate(${heading}deg);">
+                                    <svg viewBox="0 0 24 24" width="26" height="26" style="fill:${targetColor}; filter:drop-shadow(0 0 4px ${targetColor});">
+                                        <path d="M12 2L4 21l8-4 8 4L12 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="radar-drone-core" style="background:${targetColor};"></div>
+                                <div class="radar-drone-badge" style="border-color:${targetColor}; color:#fff;">
+                                    ${cleanLabel} ${heading ? `${heading}°` : ''}
+                                </div>
+                            </div>
+                        `
                     });
+
+                    const marker = L.marker([d.lat, d.lng], { icon: droneIcon });
                     marker._droneId = d.id;
 
-                    const speedStr = d.speed_kmh ? `<div>⚡ <b>Швидкість:</b> ~${Math.round(d.speed_kmh)} км/год</div>` : '';
-                    const headStr = d.heading !== undefined ? `<div>🧭 <b>Курс:</b> ${Math.round(d.heading)}°</div>` : '';
+                    const speedStr = `<div>⚡ <b>Швидкість:</b> ~${effectiveSpeed} км/год ${d.speed_kmh ? '' : '(крейсерська)'}</div>`;
+                    const headStr = `<div>🧭 <b>Курс:</b> ${heading}°</div>`;
                     const confStr = d.confidence ? `<div>🛡 <b>Впевненість:</b> ${d.confidence}%</div>` : '';
 
                     marker.bindPopup(`
                         <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:190px; font-size:12px;">
-                            <div style="font-weight:700; color:${d.color || '#ff3366'}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px;">
+                            <div style="font-weight:700; color:${targetColor}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px;">
                                 🛸 ${d.label}
                             </div>
                             <div>📍 <b>Локація:</b> ${d.place || d.region || 'Невідомо'}</div>
@@ -1940,7 +2016,7 @@
                             ${speedStr}
                             ${headStr}
                             ${confStr}
-                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live ${isLiveMode ? '(LIVE активний)' : ''}</div>
+                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live (LIVE активний)</div>
                         </div>
                     `);
 
