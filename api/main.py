@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, and_, not_
 from database.models import SessionLocal, DetectedEvent
 import datetime
 import os
@@ -12,6 +12,20 @@ import redis
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.Redis.from_url(REDIS_URL)
+
+OBLAST_BOUNDS = {
+    "kyiv_city": {"min_lat": 50.25, "max_lat": 50.60, "min_lon": 30.20, "max_lon": 30.85},
+    "kyiv_oblast": {"min_lat": 49.18, "max_lat": 51.55, "min_lon": 29.25, "max_lon": 32.18, "exclude_city": True},
+    "kyiv": {"min_lat": 49.18, "max_lat": 51.55, "min_lon": 29.25, "max_lon": 32.18},
+    "dnipropetrovsk": {"min_lat": 47.45, "max_lat": 49.25, "min_lon": 33.00, "max_lon": 36.90},
+    "zaporizhzhia": {"min_lat": 46.35, "max_lat": 48.15, "min_lon": 34.50, "max_lon": 37.30},
+    "kharkiv": {"min_lat": 48.50, "max_lat": 50.50, "min_lon": 35.10, "max_lon": 38.30},
+    "odesa": {"min_lat": 45.10, "max_lat": 48.25, "min_lon": 29.20, "max_lon": 31.40},
+    "mykolaiv": {"min_lat": 46.35, "max_lat": 48.20, "min_lon": 30.90, "max_lon": 33.20},
+    "poltava": {"min_lat": 48.75, "max_lat": 50.60, "min_lon": 32.05, "max_lon": 35.50},
+    "sumy": {"min_lat": 50.00, "max_lat": 52.40, "min_lon": 33.00, "max_lon": 35.70},
+    "chernihiv": {"min_lat": 50.40, "max_lat": 52.40, "min_lon": 30.50, "max_lon": 33.50},
+}
 
 def get_cached(key):
     try:
@@ -42,14 +56,14 @@ def get_db():
         db.close()
 
 @app.get("/api/events")
-def get_events(hours: int = 72, db: Session = Depends(get_db)):
-    cache_key = f"api:events:{hours}"
+def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depends(get_db)):
+    cache_key = f"api:events:{hours}:{oblast or 'all'}"
     cached = get_cached(cache_key)
     if cached:
         return cached
 
     threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
-    events = db.query(
+    query = db.query(
         DetectedEvent.id,
         DetectedEvent.source_channel,
         DetectedEvent.message_id,
@@ -71,7 +85,28 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
         DetectedEvent.geom.isnot(None),
         DetectedEvent.source_channel.not_ilike('test%'),
         DetectedEvent.detected_at >= threshold
-    ).order_by(DetectedEvent.detected_at.desc()).all()
+    )
+
+    if oblast and oblast != "all" and oblast in OBLAST_BOUNDS:
+        b = OBLAST_BOUNDS[oblast]
+        query = query.filter(
+            func.ST_Y(DetectedEvent.geom) >= b["min_lat"],
+            func.ST_Y(DetectedEvent.geom) <= b["max_lat"],
+            func.ST_X(DetectedEvent.geom) >= b["min_lon"],
+            func.ST_X(DetectedEvent.geom) <= b["max_lon"]
+        )
+        if b.get("exclude_city"):
+            cb = OBLAST_BOUNDS["kyiv_city"]
+            query = query.filter(
+                not_(and_(
+                    func.ST_Y(DetectedEvent.geom) >= cb["min_lat"],
+                    func.ST_Y(DetectedEvent.geom) <= cb["max_lat"],
+                    func.ST_X(DetectedEvent.geom) >= cb["min_lon"],
+                    func.ST_X(DetectedEvent.geom) <= cb["max_lon"]
+                ))
+            )
+
+    events = query.order_by(DetectedEvent.detected_at.desc()).all()
     
     AIR_DEFENSE_KEYWORDS = (
         'тривог', 'шахед', 'бпла', 'дрон', 'ракет', 'вибух', 'приліт', 'влучан',
@@ -215,10 +250,10 @@ def get_map_shelters(db: Session = Depends(get_db)):
     ]
 
 @app.get("/api/geoint/zones")
-def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
+def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session = Depends(get_db)):
     from worker.osint.geoint_engine import geoint_engine
     threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
-    strikes = db.query(
+    query = db.query(
         DetectedEvent.id,
         DetectedEvent.event_type,
         DetectedEvent.location_text,
@@ -231,7 +266,28 @@ def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
         DetectedEvent.geom.isnot(None),
         DetectedEvent.detected_at >= threshold,
         DetectedEvent.event_type.in_(['direct_strike', 'explosion', 'fire', 'destruction', 'casualties', 'armed_conflict'])
-    ).all()
+    )
+
+    if oblast and oblast != "all" and oblast in OBLAST_BOUNDS:
+        b = OBLAST_BOUNDS[oblast]
+        query = query.filter(
+            func.ST_Y(DetectedEvent.geom) >= b["min_lat"],
+            func.ST_Y(DetectedEvent.geom) <= b["max_lat"],
+            func.ST_X(DetectedEvent.geom) >= b["min_lon"],
+            func.ST_X(DetectedEvent.geom) <= b["max_lon"]
+        )
+        if b.get("exclude_city"):
+            cb = OBLAST_BOUNDS["kyiv_city"]
+            query = query.filter(
+                not_(and_(
+                    func.ST_Y(DetectedEvent.geom) >= cb["min_lat"],
+                    func.ST_Y(DetectedEvent.geom) <= cb["max_lat"],
+                    func.ST_X(DetectedEvent.geom) >= cb["min_lon"],
+                    func.ST_X(DetectedEvent.geom) <= cb["max_lon"]
+                ))
+            )
+
+    strikes = query.all()
     
     zones = []
     for st in strikes:
@@ -248,9 +304,9 @@ def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
     return zones
 
 @app.get("/api/v1/radar/drones")
-def get_radar_drones():
+def get_radar_drones(oblast: Optional[str] = None):
     from worker.osint.neptun_radar import get_live_radar_threats
-    return get_live_radar_threats()
+    return get_live_radar_threats(oblast=oblast)
 
 @app.get("/api/v1/radar/thermal")
 def get_radar_thermal():
@@ -297,8 +353,13 @@ def get_critical_infrastructure(oblast: Optional[str] = None):
         "railway", "airport", "bridge"
     }
     for name, data in POI_DATABASE.items():
-        if oblast and oblast != "all" and data.get("oblast") and data.get("oblast") != oblast:
-            continue
+        ob_val = data.get("oblast", "")
+        if oblast and oblast != "all":
+            if oblast == "kyiv":
+                if ob_val not in ("kyiv_city", "kyiv_oblast", "kyiv"):
+                    continue
+            elif ob_val != oblast:
+                continue
 
         cat = data.get("category", "")
         if cat in critical_categories and "lat" in data and "lon" in data:
@@ -314,7 +375,7 @@ def get_critical_infrastructure(oblast: Optional[str] = None):
                     "category": cat,
                     "category_label": INFRASTRUCTURE_CATEGORY_LABELS.get(cat, "Стратегічний об'єкт"),
                     "address": data.get("address", display_name),
-                    "oblast": data.get("oblast", "kyiv")
+                    "oblast": ob_val or "all"
                 }
             })
     return {
@@ -329,12 +390,20 @@ def get_supported_oblasts():
     return {
         "oblasts": [
             {
-                "code": "kyiv",
-                "name": "Київська область та м. Київ",
-                "short_name": "Київ / Область",
-                "icon": "fa-building-shield",
+                "code": "kyiv_city",
+                "name": "м. Київ (Столиця)",
+                "short_name": "м. Київ",
+                "icon": "fa-city",
                 "center": [50.4501, 30.5234],
-                "zoom": 10
+                "zoom": 11
+            },
+            {
+                "code": "kyiv_oblast",
+                "name": "Київська область",
+                "short_name": "Київщина",
+                "icon": "fa-tree",
+                "center": [50.3500, 30.2000],
+                "zoom": 9
             },
             {
                 "code": "dnipropetrovsk",
@@ -350,6 +419,54 @@ def get_supported_oblasts():
                 "short_name": "Запоріжжя",
                 "icon": "fa-bolt-lightning",
                 "center": [47.8388, 35.1396],
+                "zoom": 9
+            },
+            {
+                "code": "kharkiv",
+                "name": "Харківська область",
+                "short_name": "Харківщина",
+                "icon": "fa-shield-halved",
+                "center": [49.9935, 36.2304],
+                "zoom": 9
+            },
+            {
+                "code": "odesa",
+                "name": "Одеська область",
+                "short_name": "Одещина",
+                "icon": "fa-anchor",
+                "center": [46.4825, 30.7233],
+                "zoom": 9
+            },
+            {
+                "code": "mykolaiv",
+                "name": "Миколаївська область",
+                "short_name": "Миколаївщина",
+                "icon": "fa-water",
+                "center": [46.9750, 31.9946],
+                "zoom": 9
+            },
+            {
+                "code": "poltava",
+                "name": "Полтавська область",
+                "short_name": "Полтавщина",
+                "icon": "fa-wheat-awn",
+                "center": [49.5883, 34.5514],
+                "zoom": 9
+            },
+            {
+                "code": "sumy",
+                "name": "Сумська область",
+                "short_name": "Сумщина",
+                "icon": "fa-tower-observation",
+                "center": [50.9077, 34.7981],
+                "zoom": 9
+            },
+            {
+                "code": "chernihiv",
+                "name": "Чернігівська область",
+                "short_name": "Чернігівщина",
+                "icon": "fa-chess-rook",
+                "center": [51.4982, 31.2893],
                 "zoom": 9
             },
             {
