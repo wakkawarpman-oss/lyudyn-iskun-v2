@@ -9,11 +9,11 @@ import re
 # Canonical settlements & district mappings with high-precision PostGIS coordinates (WGS84)
 CANONICAL_TOPONYMS: Dict[str, Dict] = {
     # ── Kyiv Capital & Districts ──
-    "київ": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "city"},
-    "kyiv": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "city"},
-    "м. київ": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "city"},
-    "столиц": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "city"},
-    "столиця": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "city"},
+    "київ": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "region"},
+    "kyiv": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "region"},
+    "м. київ": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "region"},
+    "столиц": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "region"},
+    "столиця": {"canonical": "Київ", "lat": 50.450034, "lon": 30.524136, "type": "region"},
     "київ та область": {"canonical": "Київ та область", "lat": 50.450034, "lon": 30.524136, "type": "region"},
     "київська область": {"canonical": "Київська область", "lat": 50.178595, "lon": 30.492488, "type": "region"},
     "київщина": {"canonical": "Київська область", "lat": 50.178595, "lon": 30.492488, "type": "region"},
