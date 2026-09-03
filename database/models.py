@@ -91,9 +91,8 @@ SECRET_SALT: str = os.getenv("SECRET_KEY") or ""
 if not SECRET_SALT:
     raise RuntimeError("SECRET_KEY env is REQUIRED — refusing to start with a weak default")
 
-# Legacy default salt, kept ONLY so decrypt_key can still read keys that were
-# encrypted before SECRET_KEY became mandatory. Never used for encryption.
-_OLD_SECRET_SALT = "iskun_master_secret_salt_2026"
+# Optional legacy salt for backward compatibility migrations only (default empty)
+LEGACY_SECRET_SALT: str = os.getenv("LEGACY_SECRET_SALT", "")
 
 
 def _fernet_for(salt: str):
@@ -112,22 +111,18 @@ def encrypt_key(raw_key: str) -> str:
         return base64.b64encode(raw_key.strip().encode()).decode()
 
 def decrypt_key(stored_key: str) -> str:
-    """Safely decrypts user API key.
-
-    Tries the current SECRET_KEY first, then falls back to the legacy
-    hardcoded salt for keys encrypted before rotation (soft-rotation:
-    callers should re-encrypt and save on successful legacy decrypt).
-    """
+    """Safely decrypts user API key using SECRET_KEY."""
     if not stored_key:
         return ""
     try:
         return _fernet_for(SECRET_SALT).decrypt(stored_key.encode()).decode()
     except Exception:
         pass
-    try:
-        return _fernet_for(_OLD_SECRET_SALT).decrypt(stored_key.encode()).decode()
-    except Exception:
-        pass
+    if LEGACY_SECRET_SALT:
+        try:
+            return _fernet_for(LEGACY_SECRET_SALT).decrypt(stored_key.encode()).decode()
+        except Exception:
+            pass
     try:
         return base64.b64decode(stored_key.encode()).decode()
     except Exception:

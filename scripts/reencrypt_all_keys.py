@@ -27,8 +27,10 @@ from database.models import (
     encrypt_key,
     _fernet_for,
     SECRET_SALT,
-    _OLD_SECRET_SALT,
+    LEGACY_SECRET_SALT,
 )
+
+_OLD_SECRET_SALT = LEGACY_SECRET_SALT or "iskun_master_secret_salt_2026"
 
 
 def _try_decrypt(stored_key: str):
@@ -36,7 +38,10 @@ def _try_decrypt(stored_key: str):
     current nor the legacy salt can decrypt it via Fernet."""
     if not stored_key:
         return None
-    for salt, label in ((SECRET_SALT, "current"), (_OLD_SECRET_SALT, "legacy")):
+    salts = [(SECRET_SALT, "current")]
+    if _OLD_SECRET_SALT:
+        salts.append((_OLD_SECRET_SALT, "legacy"))
+    for salt, label in salts:
         try:
             return _fernet_for(salt).decrypt(stored_key.encode()).decode(), label
         except Exception:

@@ -46,27 +46,56 @@ def _get_tier_info(channel: str) -> tuple:
 exif_extractor = EXIFExtractor()
 
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+redis_client = redis.from_url(REDIS_URL)
+
+import hashlib
 import threading
 
 _geocode_lock = threading.Lock()
-
 _GEO_CACHE = {}
 
-def _internal_geocode(query):
+def _geocode_cache_key(query: str) -> str:
+    h = hashlib.sha256(query.strip().lower().encode("utf-8")).hexdigest()[:16]
+    return f"geo:{h}"
+
+def _internal_geocode(query: str):
+    if not query:
+        return None
+    cache_key = _geocode_cache_key(query)
+    # 1. Try Redis cache
+    try:
+        val = redis_client.get(cache_key)
+        if val:
+            if isinstance(val, bytes):
+                val = val.decode("utf-8")
+            logger.debug(f"[CACHE_HIT] Geocoding cache hit for '{query}': {val}")
+            return val
+    except Exception as e:
+        logger.warning(f"Redis geocode cache get error: {e}")
+
+    # 2. Try In-memory cache
     if query in _GEO_CACHE:
         return _GEO_CACHE[query]
+
+    # 3. External geocoding
     try:
         geo = geolocator.geocode(query)
         if geo:
             res = f"POINT({geo.longitude} {geo.latitude})"
+            # Set in Redis (24-hour TTL)
+            try:
+                redis_client.setex(cache_key, 86400, res)
+            except Exception as ex:
+                logger.warning(f"Redis geocode cache set error: {ex}")
             if len(_GEO_CACHE) < 2000:
                 _GEO_CACHE[query] = res
             return res
     except Exception as e:
-        logger.error(f"Geocoding Error: {e}")
+        logger.error(f"Geocoding Error for '{query}': {e}")
     return None
 
-def cached_geocode(query):
+def cached_geocode(query: str):
     with _geocode_lock:
         return _internal_geocode(query)
 

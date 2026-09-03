@@ -4,7 +4,7 @@ import datetime
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import json
-from celery import Celery
+from worker.celery_app import app as celery_app
 import redis.asyncio as aioredis
 
 API_ID = int(os.getenv("API_ID", "0"))
@@ -14,8 +14,6 @@ SESSION_STRINGS_RAW = os.getenv("SESSION_STRING", "")
 SESSION_STRINGS = [s.strip() for s in SESSION_STRINGS_RAW.split(",") if s.strip()]
 TARGET_CHANNELS = [ch.strip() for ch in os.getenv("TARGET_CHANNELS", "").split(",") if ch.strip()]
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-
-celery_app = Celery('worker', broker=REDIS_URL)
 
 async def perform_sync(client, valid_channels):
     """Fetches the latest messages from the last 24 hours from all target channels."""

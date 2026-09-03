@@ -8,8 +8,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.models import Base, UserApiKey, encrypt_key, _fernet_for, SECRET_SALT, _OLD_SECRET_SALT
-from scripts.reencrypt_all_keys import run
+from database.models import Base, UserApiKey, encrypt_key, _fernet_for, SECRET_SALT
+from scripts.reencrypt_all_keys import run, _OLD_SECRET_SALT
 
 
 @pytest.fixture
