@@ -2,7 +2,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
-    builder.button(text="😳 ДАША?")
+    builder.button(text="🟢 ВІДБІЙ МОНІТОРИНГ")
     builder.button(text="🔄 АКТУАЛІЗАЦІЯ ПОДІЙ")
     builder.button(text="🎯 Прогноз загроз")
     builder.button(text="🛸 Радар Контур")

@@ -172,7 +172,7 @@ KYIV_REGION_FILTER = or_(
 
 # ──────────────────────────── Keyboard ────────────────────────────
 
-from bot.keyboards import get_main_keyboard, get_meme_keyboard
+from bot.keyboards import get_main_keyboard
 
 
 
@@ -1373,46 +1373,38 @@ async def handle_photo(message: types.Message, bot: Bot):
         await message.answer(f"❌ Помилка під час аналізу: {str(e)}")
 
 
-# ──────────────────────── 👱‍♀️ ДАША? (40 МЕМІВ) ─────────────────────────
-from bot.memes_db import DASHA_MEMES, MEME_DATABASE
+# ──────────────────────── 🟢 ВІДБІЙ МОНІТОРИНГ ─────────────────────────
+from bot.alert_monitor import (
+    get_current_kyiv_alert_status,
+    format_all_clear_banner,
+    format_active_alert_banner,
+    register_vidbiy_subscriber
+)
 
-
-
-@router.message(Command("dasha"))
-@router.message(Command("humor"))
-@router.message(F.text == "😳 ДАША?")
-@router.message(F.text == "ДАША?")
-@router.message(F.text == "🖤 ЧОРНИЙ ГУМОР")
-@router.message(F.text == "👱‍♀️ ДАША (40 МЕМІВ) 🚗💨")
-async def cmd_dasha_humor_combined(message: types.Message):
-    import random
-    all_combined = DASHA_MEMES + [m for cat in MEME_DATABASE.values() for m in cat]
-    m1, m2 = random.sample(all_combined, 2)
-    
-    header = "😳 <b>ХРОНІКИ ДАШІ, ЛЮДИ ТА ІСКУНА (ЧОРНИЙ ГУМОР)</b> 🚗💨\n\n"
-    msg_text = f"{header}{m1}\n\n───────────────\n\n{m2}"
-    await safe_send(message, msg_text, reply_markup=get_meme_keyboard())
-
-@router.callback_query(F.data == "more_dasha_memes")
-@router.callback_query(F.data.startswith("meme_"))
-async def cb_meme_filter(call: types.CallbackQuery):
-    import random
-    action = call.data.replace("meme_", "").replace("more_dasha_memes", "more")
-    
-    if action in MEME_DATABASE:
-        chosen = random.choice(MEME_DATABASE[action])
+@router.message(Command("vidbiy"))
+@router.message(Command("all_clear"))
+@router.message(F.text == "🟢 ВІДБІЙ МОНІТОРИНГ")
+@router.message(F.text == "ВІДБІЙ МОНІТОРИНГ")
+@router.message(F.text == "🟢 ВІДБІЙ")
+@router.message(F.text == "ВІДБІЙ")
+async def cmd_vidbiy_monitoring(message: types.Message):
+    status = get_current_kyiv_alert_status()
+    if status["is_alert"]:
+        # Alert is active: inform user, subscribe them for instant all-clear push
+        register_vidbiy_subscriber(message.chat.id)
+        msg_text = format_active_alert_banner(
+            region="м. Київ та Київська область",
+            event_time=status.get("timestamp"),
+            threat_info="Загроза ударних БпЛА / ракетної небезпеки"
+        )
     else:
-        all_combined = DASHA_MEMES + [m for cat in MEME_DATABASE.values() for m in cat]
-        chosen = random.choice(all_combined)
-        
-    header = "😳 <b>ХРОНІКИ ДАШІ, ЛЮДИ ТА ІСКУНА (ЧОРНИЙ ГУМОР)</b> ⚡\n\n"
-    msg_text = header + chosen
-    
-    try:
-        await call.message.edit_text(msg_text, parse_mode=ParseMode.HTML, reply_markup=get_meme_keyboard())
-    except Exception:
-        await call.message.answer(msg_text, parse_mode=ParseMode.HTML, reply_markup=get_meme_keyboard())
-    await call.answer()
+        # Clear: send large green banner immediately
+        msg_text = format_all_clear_banner(
+            region="м. Київ та Київська область",
+            event_time=status.get("timestamp"),
+            source=status.get("source", "КМВА / Офіційний моніторинг тривог (@kyiv_alarm)")
+        )
+    await safe_send(message, msg_text)
 
 
 # ──────────────────────── 🐾 ТУПО МЯВ, ШИПІННЯ ТА МУРКОТІННЯ ────────

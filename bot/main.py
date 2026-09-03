@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 from bot.health_check import HealthMonitor
 from bot.auto_backup import DatabaseBackup
 from bot.critical_alerts import CriticalAlertSystem
+from bot.alert_monitor import AlertMonitor
 from bot.broadcaster import init_broadcaster
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -45,11 +46,13 @@ async def main():
     health = HealthMonitor(bot)
     backup = DatabaseBackup(bot)
     alerts = CriticalAlertSystem(bot)
+    alert_monitor = AlertMonitor(bot)
     
     logger.info("Starting background tasks...")
     asyncio.create_task(health.run())
     asyncio.create_task(backup.run())
     asyncio.create_task(alerts.run())
+    asyncio.create_task(alert_monitor.run())
     
     logger.info("Dropping pending updates and starting bot polling...")
     try:
