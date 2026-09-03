@@ -244,6 +244,24 @@ async def handle_photo(message: types.Message, bot: Bot):
             logger.warning(f"EXIF extraction error: {exc}")
 
         try:
+            from worker.osint.image_dedup import compute_phash, find_similar_event
+            phash = compute_phash(temp_path)
+            if phash:
+                dup_db = SessionLocal()
+                try:
+                    duplicate_of = await asyncio.to_thread(find_similar_event, dup_db, phash)
+                finally:
+                    dup_db.close()
+                if duplicate_of:
+                    parts.append(
+                        f"⚠️ <b>АРХІВНЕ/ПОВТОРНЕ ФОТО (Anti-IPSO):</b> схоже на вже відомий "
+                        f"інцидент {duplicate_of.incident_id or duplicate_of.id} "
+                        f"({duplicate_of.location_text or 'Київ'}, {duplicate_of.detected_at.strftime('%Y-%m-%d')})."
+                    )
+        except Exception as exc:
+            logger.warning(f"pHash dedup check error: {exc}")
+
+        try:
             from worker.osint.ai_geolocation import ai_geo
             geospy = await asyncio.to_thread(ai_geo.analyze_image, temp_path)
             if geospy and geospy.get("coordinates"):

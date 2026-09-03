@@ -49,6 +49,10 @@ class DetectedEvent(Base):
     # consumers exclude "we don't know where this is" points near the
     # Maidan-area centroid without also hiding real Maidan-area incidents.
     is_fallback_geo = Column(Boolean, default=False, server_default="false")
+    # Perceptual hash (imagehash.phash, 16 hex chars) of the photo/video-frame
+    # attached to this event, if any. Lets the pipeline flag a recycled or
+    # archival image reposted as a "new" incident (anti-IPSO).
+    image_phash = Column(String, nullable=True, index=True)
     raw_message = Column(String) # JSON snapshot of the Telethon message
     
     # Autonomous Factchecking & Multi-Source Consensus

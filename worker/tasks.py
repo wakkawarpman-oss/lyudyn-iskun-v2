@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from worker.osint.exif_extractor import EXIFExtractor
 from worker.osint.ai_geolocation import ai_geo
 from worker.osint.sentiment import sentiment_analyzer
+from worker.osint.image_dedup import compute_phash, find_similar_event
 
 
 geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
@@ -124,8 +125,10 @@ def pipeline_extract(self, payload_str):
         
     geom_wkt = None
     osint_location = None
-    
+    image_phash = None
+
     if media_path and os.path.exists(media_path):
+        image_phash = compute_phash(media_path) or None
         try:
             exif_data = exif_extractor.extract(media_path)
             if exif_data.get("has_gps") and exif_data.get("latitude") and exif_data.get("longitude"):
@@ -194,6 +197,7 @@ def pipeline_extract(self, payload_str):
         "geom_wkt": geom_wkt,
         "osint_location": osint_location,
         "sentiment": sentiment,
+        "image_phash": image_phash,
     }
 
 from worker.canonical_geo import resolve_canonical_toponym
@@ -280,6 +284,7 @@ def pipeline_cluster_and_save(self, data):
     llm_data = data["llm_data"]
     geom_wkt = data["geom_wkt"]
     is_fallback_geo = data.get("is_fallback_geo", False)
+    image_phash = data.get("image_phash")
     sentiment = data.get("sentiment") or {}
     is_panic = sentiment_analyzer.should_boost_alert(sentiment)
     osint_location = data.get("osint_location")
@@ -405,6 +410,21 @@ def pipeline_cluster_and_save(self, data):
         loc_slug = re.sub(r'[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]', '', location)[:10].upper() or "KYIV"
         new_incident_id = f"INC-{msg_date.strftime('%Y%m%d%H%M')}-{loc_slug}"
 
+        # Anti-IPSO: flag (not drop) a photo/video-frame that perceptually
+        # matches one already seen — recycled/archival images passed off as
+        # a fresh incident. POSSIBLE_IPSO already exists as a
+        # verification_status value in this model, so reuse it rather than
+        # add a new column.
+        verification_status = "OFFICIAL" if is_official_src else ("VERIFIED" if conf_score >= 80 else "UNVERIFIED_SINGLE_SOURCE")
+        if image_phash:
+            duplicate_of = find_similar_event(db, image_phash)
+            if duplicate_of:
+                verification_status = "POSSIBLE_IPSO"
+                logger.warning(
+                    f"image_phash match: incident {new_incident_id} photo resembles "
+                    f"existing incident {duplicate_of.incident_id} (id={duplicate_of.id})"
+                )
+
         event = DetectedEvent(
             incident_id=new_incident_id,
             source_channel=channel,
@@ -414,6 +434,7 @@ def pipeline_cluster_and_save(self, data):
             location_text=final_location_text,
             geom=WKTElement(geom_wkt, srid=4326) if geom_wkt else None,
             is_fallback_geo=is_fallback_geo,
+            image_phash=image_phash,
             geo_precision=data.get("precision_tier", "settlement"),
             geo_radius_m=data.get("precision_radius_m", 2000),
             significance_score=sig_score,
@@ -424,7 +445,7 @@ def pipeline_cluster_and_save(self, data):
             last_seen_at=msg_date,
             has_media=has_media,
             raw_message=payload_str,
-            verification_status="OFFICIAL" if is_official_src else ("VERIFIED" if conf_score >= 80 else "UNVERIFIED_SINGLE_SOURCE"),
+            verification_status=verification_status,
             sources_count=1,
             sources_list=channel,
             is_official=is_official_src,
