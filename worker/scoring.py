@@ -19,7 +19,12 @@ SIGNIFICANCE_TABLE = {
     "other": 30
 }
 
-def calculate_significance_score(event_type: str, has_media: bool = False, message_text: str = "") -> int:
+def calculate_significance_score(
+    event_type: str,
+    has_media: bool = False,
+    message_text: str = "",
+    is_panic: bool = False,
+) -> int:
     """
     Computes Physical Significance (0 - 100).
     Measures the destructive kinetic impact, lethality, and tactical severity.
@@ -36,6 +41,11 @@ def calculate_significance_score(event_type: str, has_media: bool = False, messa
         boost += 5
     if has_media and et in ["direct_strike", "explosion", "fire", "destruction"]:
         boost += 5
+    # worker/osint/sentiment.py flags eyewitness text as panicked (score <= 2/5) —
+    # a modest signal that the incident is more severe than the bare event_type
+    # alone suggests, not a substitute for the keyword boosters above.
+    if is_panic:
+        boost += 8
 
     return min(100, max(15, base + boost))
 

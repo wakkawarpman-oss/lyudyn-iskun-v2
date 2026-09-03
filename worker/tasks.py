@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 from worker.osint.exif_extractor import EXIFExtractor
 from worker.osint.ai_geolocation import ai_geo
+from worker.osint.sentiment import sentiment_analyzer
 
 
 geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
@@ -175,13 +176,24 @@ def pipeline_extract(self, payload_str):
     if not is_confirmed and not is_radar and not is_alert:
         return {"skip": True, "reason": "not_confirmed"}
 
+    # Only score sentiment for confirmed incidents, not every radar_track/
+    # general_alert — those are the bulk of traffic and this is an extra
+    # Groq call per message.
+    sentiment = None
+    if is_confirmed:
+        try:
+            sentiment = sentiment_analyzer.analyze(text)
+        except Exception as e:
+            logger.warning(f"Sentiment analysis error: {e}")
+
     return {
         "skip": False,
         "payload": payload,
         "payload_str": payload_str,
         "llm_data": llm_data,
         "geom_wkt": geom_wkt,
-        "osint_location": osint_location
+        "osint_location": osint_location,
+        "sentiment": sentiment,
     }
 
 from worker.canonical_geo import resolve_canonical_toponym
@@ -268,6 +280,8 @@ def pipeline_cluster_and_save(self, data):
     llm_data = data["llm_data"]
     geom_wkt = data["geom_wkt"]
     is_fallback_geo = data.get("is_fallback_geo", False)
+    sentiment = data.get("sentiment") or {}
+    is_panic = sentiment_analyzer.should_boost_alert(sentiment)
     osint_location = data.get("osint_location")
     payload_str = data["payload_str"]
     
@@ -296,7 +310,7 @@ def pipeline_cluster_and_save(self, data):
     final_message_text = llm_data.get("short_summary") or text[:2000]
 
     has_media = payload.get("has_media", False)
-    sig_score = calculate_significance_score(event_type, has_media, text)
+    sig_score = calculate_significance_score(event_type, has_media, text, is_panic=is_panic)
     conf_score = calculate_confidence_score([channel], is_official_src, has_media)
     res_score = compute_composite_resonance(sig_score, conf_score)
 
