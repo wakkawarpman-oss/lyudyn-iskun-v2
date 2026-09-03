@@ -183,8 +183,9 @@ async def cmd_web_map(message: types.Message):
     await safe_send(message, text, reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)
 
 
-@router.message(F.photo)
-async def handle_photo(message: types.Message, bot: Bot):
+async def _get_effective_openai_key(message: types.Message):
+    """Returns (user_api_key_or_None, effective_key_or_None). Shared by
+    handle_photo and handle_video — same admin/own-key gate for both."""
     db = SessionLocal()
     user_api_key = None
     try:
@@ -193,39 +194,17 @@ async def handle_photo(message: types.Message, bot: Bot):
             user_api_key = decrypt_key(uk.openai_api_key)
     finally:
         db.close()
+    return user_api_key, (user_api_key or OPENAI_API_KEY)
 
-    if not user_api_key and not is_admin(message.from_user.id):
-        await safe_send(
-            message,
-            "🔒 <b>Photo OSINT потребує ключа OpenAI.</b>\n\n"
-            "Підключіть власний токен командою:\n"
-            "<code>/key sk-ваш_ключ</code>\n\n"
-            "Де взяти: <a href='https://platform.openai.com/api-keys'>platform.openai.com</a>",
-            disable_web_page_preview=True,
-        )
-        return
 
-    effective_key = user_api_key or OPENAI_API_KEY
-
-    await safe_send(
-        message,
-        "⏳ <b>Ініційовано глибокий OSINT-аналіз...</b>\n"
-        "1. Витягую EXIF-метадані...\n"
-        "2. Запускаю GeoSpy AI для візуальної геолокації...\n"
-        "3. Аналізую техніку та руйнування через Vision AI...",
-    )
-
-    file_id = message.photo[-1].file_id
-    file = await bot.get_file(file_id)
-    file_path = file.file_path
-
-    downloaded_file = await bot.download_file(file_path)
-    file_bytes = downloaded_file.read()
-    base64_image = base64.b64encode(file_bytes).decode('utf-8')
-
-    temp_path = f"temp_{message.from_user.id}_{file_id}.jpg"
-    with open(temp_path, "wb") as f_temp:
-        f_temp.write(file_bytes)
+async def _run_photo_osint_analysis(message: types.Message, user_api_key, effective_key: str, temp_path: str):
+    """Runs EXIF/pHash/GeoSpy/Chrono + Vision AI BDA analysis on a jpg
+    already saved at temp_path, and sends the result. Shared by handle_photo
+    (temp_path is the uploaded photo) and handle_video (temp_path is a frame
+    extracted from the uploaded video) — from here on there is no
+    photo/video distinction, it's just an image file."""
+    with open(temp_path, "rb") as f:
+        base64_image = base64.b64encode(f.read()).decode('utf-8')
 
     parts = ["🔎 <b>РЕЗУЛЬТАТИ OSINT-АНАЛІЗУ</b>\n"]
     exif = {}
@@ -367,3 +346,84 @@ async def handle_photo(message: types.Message, bot: Bot):
     except Exception as e:
         logger.error(f"Vision AI error: {e}")
         await message.answer(f"❌ Помилка під час аналізу: {str(e)}")
+
+
+@router.message(F.photo)
+async def handle_photo(message: types.Message, bot: Bot):
+    user_api_key, effective_key = await _get_effective_openai_key(message)
+    if not user_api_key and not is_admin(message.from_user.id):
+        await safe_send(
+            message,
+            "🔒 <b>Photo OSINT потребує ключа OpenAI.</b>\n\n"
+            "Підключіть власний токен командою:\n"
+            "<code>/key sk-ваш_ключ</code>\n\n"
+            "Де взяти: <a href='https://platform.openai.com/api-keys'>platform.openai.com</a>",
+            disable_web_page_preview=True,
+        )
+        return
+
+    await safe_send(
+        message,
+        "⏳ <b>Ініційовано глибокий OSINT-аналіз...</b>\n"
+        "1. Витягую EXIF-метадані...\n"
+        "2. Запускаю GeoSpy AI для візуальної геолокації...\n"
+        "3. Аналізую техніку та руйнування через Vision AI...",
+    )
+
+    file_id = message.photo[-1].file_id
+    file = await bot.get_file(file_id)
+    downloaded_file = await bot.download_file(file.file_path)
+
+    temp_path = f"temp_{message.from_user.id}_{file_id}.jpg"
+    with open(temp_path, "wb") as f_temp:
+        f_temp.write(downloaded_file.read())
+
+    await _run_photo_osint_analysis(message, user_api_key, effective_key, temp_path)
+
+
+@router.message(F.video)
+async def handle_video(message: types.Message, bot: Bot):
+    """Mirrors handle_photo: same admin/own-key gate, then extracts one
+    representative frame and runs it through the same OSINT analysis.
+    Previously videos sent to the bot were silently ignored entirely."""
+    user_api_key, effective_key = await _get_effective_openai_key(message)
+    if not user_api_key and not is_admin(message.from_user.id):
+        await safe_send(
+            message,
+            "🔒 <b>Video OSINT потребує ключа OpenAI.</b>\n\n"
+            "Підключіть власний токен командою:\n"
+            "<code>/key sk-ваш_ключ</code>\n\n"
+            "Де взяти: <a href='https://platform.openai.com/api-keys'>platform.openai.com</a>",
+            disable_web_page_preview=True,
+        )
+        return
+
+    await safe_send(
+        message,
+        "⏳ <b>Ініційовано глибокий OSINT-аналіз відео...</b>\n"
+        "1. Витягую ключовий кадр...\n"
+        "2. Запускаю GeoSpy AI для візуальної геолокації...\n"
+        "3. Аналізую техніку та руйнування через Vision AI...",
+    )
+
+    from worker.osint.video_frame_extractor import extract_representative_frame
+
+    file_id = message.video.file_id
+    file = await bot.get_file(file_id)
+    downloaded_file = await bot.download_file(file.file_path)
+
+    video_temp_path = f"temp_{message.from_user.id}_{file_id}.mp4"
+    with open(video_temp_path, "wb") as f_temp:
+        f_temp.write(downloaded_file.read())
+
+    try:
+        frame_path = await asyncio.to_thread(extract_representative_frame, video_temp_path)
+    finally:
+        if os.path.exists(video_temp_path):
+            os.remove(video_temp_path)
+
+    if not frame_path:
+        await safe_send(message, "❌ Не вдалося витягнути кадр з відео для аналізу.")
+        return
+
+    await _run_photo_osint_analysis(message, user_api_key, effective_key, frame_path)

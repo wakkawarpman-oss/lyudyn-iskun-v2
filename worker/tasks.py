@@ -14,6 +14,7 @@ from worker.osint.exif_extractor import EXIFExtractor
 from worker.osint.ai_geolocation import ai_geo
 from worker.osint.sentiment import sentiment_analyzer
 from worker.osint.image_dedup import compute_phash, find_similar_event
+from worker.osint.video_frame_extractor import is_video_file, extract_representative_frame
 
 
 geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
@@ -126,6 +127,16 @@ def pipeline_extract(self, payload_str):
     geom_wkt = None
     osint_location = None
     image_phash = None
+
+    if media_path and is_video_file(media_path) and os.path.exists(media_path):
+        frame_path = extract_representative_frame(media_path)
+        if frame_path:
+            # From here on the rest of this function treats it as a photo —
+            # GeoSpy/Vision/phash all just take a jpg path. EXIF won't find
+            # GPS in a video-derived frame; that's expected, not a bug.
+            media_path = frame_path
+        else:
+            media_path = None
 
     if media_path and os.path.exists(media_path):
         image_phash = compute_phash(media_path) or None

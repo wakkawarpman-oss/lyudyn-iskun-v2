@@ -14,6 +14,8 @@ SESSION_STRINGS_RAW = os.getenv("SESSION_STRING", "")
 SESSION_STRINGS = [s.strip() for s in SESSION_STRINGS_RAW.split(",") if s.strip()]
 TARGET_CHANNELS = [ch.strip() for ch in os.getenv("TARGET_CHANNELS", "").split(",") if ch.strip()]
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+MAX_VIDEO_DURATION_S = 120
+MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
 async def perform_sync(client, valid_channels):
     """Fetches the latest messages from the last 24 hours from all target channels."""
@@ -140,6 +142,24 @@ async def main():
                     media_path = path
                 except Exception as e:
                     print(f"Failed to download media: {e}")
+            elif getattr(msg, 'video', None):
+                # Videos were previously ignored entirely (has_media=True but
+                # media_path stayed None, so no OSINT ever ran on them).
+                # Bound duration/size before downloading — strike footage is
+                # usually short; long videos aren't worth the bandwidth/disk
+                # for a single representative frame downstream.
+                try:
+                    duration = getattr(msg.file, 'duration', None) or 0
+                    size = getattr(msg.file, 'size', None) or 0
+                    if duration <= MAX_VIDEO_DURATION_S and size <= MAX_VIDEO_SIZE_BYTES:
+                        file_name = f"video_{msg.id}.mp4"
+                        path = f"/app/media/{file_name}"
+                        await msg.download_media(file=path)
+                        media_path = path
+                    else:
+                        print(f"Skipping oversized/long video msg {msg.id}: duration={duration}s size={size}B")
+                except Exception as e:
+                    print(f"Failed to download video: {e}")
 
             payload = {
                 "channel": event.chat.username or str(event.chat_id),
