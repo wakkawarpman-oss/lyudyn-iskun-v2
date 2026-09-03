@@ -166,7 +166,7 @@ async def cmd_status(message: types.Message):
         db.close()
 
 
-@router.message(F.text == "🗺️ Веб-карта")
+@router.message(F.text == "🌐 Веб-мапа")
 @router.message(Command("map"))
 async def cmd_web_map(message: types.Message):
     text = (

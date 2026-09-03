@@ -57,7 +57,7 @@ async def cmd_csv_export(message: types.Message):
 
 
 @router.message(Command("map_png"))
-@router.message(F.text == "🗺️ Згенерувати Мапу (.png)")
+@router.message(F.text == "🖼 PNG-мапа")
 async def cmd_static_map(message: types.Message):
     await message.answer("⏳ Рендеринг тактичної мапи...")
     try:

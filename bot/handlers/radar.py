@@ -117,7 +117,7 @@ async def cmd_reference(message: types.Message):
 
 
 @router.message(Command("top"))
-@router.message(F.text == "🔥 ТОП подій")
+@router.message(F.text == "🎖 Ключові інциденти")
 async def cmd_top_events(message: types.Message):
     db = SessionLocal()
     try:
@@ -182,7 +182,7 @@ async def cmd_resonance(message: types.Message):
                 message,
                 "💥 <b>АКТИВНІСТЬ ЗА ОСТАННЮ 1 ГОДИНУ (КИЇВ ТА ОБЛАСТЬ)</b>\n\n"
                 "<i>✅ За останні 60 хвилин нових підтверджених прильотів чи вибухів по Києву та області не зафіксовано (обстановка спокійна).</i>\n\n"
-                "👉 Натисніть <b>🔥 ТОП подій</b> або <b>📋 Звіт (12 год)</b> для перегляду зведень за весь день."
+                "👉 Натисніть <b>🎖 Ключові інциденти</b> або <b>📋 Звіт (12 год)</b> для перегляду зведень за весь день."
             )
             return
 

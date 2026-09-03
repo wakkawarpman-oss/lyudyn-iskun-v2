@@ -104,7 +104,7 @@ async def cmd_my_key(message: types.Message):
         db.close()
 
 
-@router.message(F.text == "💎 Premium")
+@router.message(F.text == "🔑 Мій ключ")
 async def cmd_premium(message: types.Message):
     db = SessionLocal()
     try:
