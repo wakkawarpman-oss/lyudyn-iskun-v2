@@ -722,62 +722,108 @@
                 font-size: 9px;
             }
         }
-        .network-modal.hidden { display: none !important; }
-        .network-header {
+        /* C2 Confirmation & Verification Flow Diagram */
+        .c2-diagram-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(0, 229, 255, 0.28);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin: 10px 0;
+            box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.05);
+        }
+        .c2-diagram-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(0, 229, 255, 0.25);
-            padding-bottom: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
-        .network-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #00e5ff;
+        .c2-diagram-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
         }
-        .network-body {
+        .c2-confidence-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid #10b981;
+        }
+        .c2-flow-track {
             display: flex;
-            flex: 1;
-            gap: 16px;
-            position: relative;
-            overflow: hidden;
-            border-radius: 12px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding: 6px 0 2px 0;
         }
-        #network-canvas {
-            flex: 1;
-            background: #080b11;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            position: relative;
-        }
-        .network-details-panel {
-            width: 320px;
-            background: rgba(15, 20, 31, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px;
-            color: #cbd5e1;
-            font-size: 12px;
+        .c2-flow-step {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            min-width: 58px;
         }
-        .network-stat-row {
+        .c2-step-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
             display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
         }
-        @media (max-width: 768px) {
-            .network-body { flex-direction: column; }
-            .network-details-panel { width: 100%; max-height: 180px; }
+        .c2-flow-step.passed .c2-step-circle {
+            background: rgba(2, 132, 199, 0.3);
+            border-color: #00e5ff;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+        }
+        .c2-flow-step.official .c2-step-circle {
+            background: rgba(16, 185, 129, 0.35);
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+        .c2-flow-step.waiting .c2-step-circle {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.12);
+            opacity: 0.5;
+        }
+        .c2-step-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: #e2e8f0;
+            white-space: nowrap;
+            margin-bottom: 2px;
+        }
+        .c2-step-desc {
+            font-size: 8px;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 68px;
+        }
+        .c2-arrow {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: -12px;
+        }
+        .c2-arrow.active {
+            color: #00e5ff;
+            text-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
         }
 
         /* Thumb-Friendly Floating Mobile Dock */
@@ -1164,10 +1210,6 @@
                 <span class="btn-label-long">Відбій-Монітор</span>
                 <span class="btn-label-short">Відбій</span>
             </button>
-            <button class="hud-btn" id="btn-network" title="Граф зв'язків ІПСО (Telerecon)">
-                <span class="btn-label-long">🕸️ Мережа</span>
-                <span class="btn-label-short">🕸️</span>
-            </button>
             <button class="hud-btn" id="btn-layers" title="Налаштування шарів карти">
                 <span class="btn-label-long">⚙️ Шари</span>
                 <span class="btn-label-short">⚙️</span>
@@ -1188,40 +1230,6 @@
             <div class="sheet-handle"></div>
         </div>
         <div class="sheet-body" id="sheet-body"></div>
-    </div>
-
-    <!-- Telerecon Network Modal -->
-    <div id="network-modal" class="network-modal hidden">
-        <div class="network-header">
-            <div class="network-title">
-                <span>🕸️ Граф пересилань та виявлення сіток ІПСО (Telerecon Core)</span>
-            </div>
-            <button class="close-btn" id="btn-close-network" style="font-size:22px; cursor:pointer;">✕</button>
-        </div>
-        <div class="network-body">
-            <div id="network-canvas"></div>
-            <div class="network-details-panel">
-                <div style="font-weight:700; color:#00e5ff; border-bottom:1px solid rgba(0,229,255,0.2); padding-bottom:6px;">
-                    📊 Метрики Мережі
-                </div>
-                <div class="network-stat-row">
-                    <span>Вузлів (каналів):</span>
-                    <b id="net-stat-nodes">0</b>
-                </div>
-                <div class="network-stat-row">
-                    <span>Зв'язків (репостів):</span>
-                    <b id="net-stat-edges">0</b>
-                </div>
-                <div style="margin-top:8px; font-weight:700; color:#f1f5f9;">
-                    🎯 Вибраний канал:
-                </div>
-                <div id="net-selected-channel" style="color:#38bdf8; font-family:monospace; font-size:13px;">
-                    Клікніть на вузол графа
-                </div>
-                <div id="net-lineage-details" style="font-size:11px; color:#94a3b8; display:flex; flex-direction:column; gap:6px;">
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Collapsible Tactical Control Panel -->
@@ -1808,6 +1816,52 @@
             const body = document.getElementById('sheet-body');
             if (!sheet || !body) return;
 
+            // Build Dynamic C2 Information Flow & Confirmation Pipeline
+            const isOfficial = e.is_official || e.verification_status === "OFFICIAL";
+            const hasMultipleSources = (e.sources_count || 1) >= 2 || e.verification_status === "VERIFIED";
+            const confidenceScore = isOfficial ? 98 : (hasMultipleSources ? Math.min(94, 75 + (e.sources_count || 2) * 5) : 60);
+
+            const c2DiagramHtml = `
+                <div class="c2-diagram-card">
+                    <div class="c2-diagram-header">
+                        <span class="c2-diagram-title">🛡️ C2-ЛАНЦЮГ ПІДТВЕРДЖЕННЯ ТА ЗВ'ЯЗКІВ</span>
+                        <span class="c2-confidence-badge">C2 Довіра: ${confidenceScore}%</span>
+                    </div>
+                    <div class="c2-flow-track">
+                        <!-- Step 1: Ingestion Signal -->
+                        <div class="c2-flow-step passed">
+                            <div class="c2-step-circle">📡</div>
+                            <div class="c2-step-title">Джерело</div>
+                            <div class="c2-step-desc">${srcDisplay}</div>
+                        </div>
+                        <div class="c2-arrow active">➔</div>
+
+                        <!-- Step 2: Cross-Source Corroboration -->
+                        <div class="c2-flow-step ${hasMultipleSources ? 'passed' : 'waiting'}">
+                            <div class="c2-step-circle">🔄</div>
+                            <div class="c2-step-title">Консенсус</div>
+                            <div class="c2-step-desc">${hasMultipleSources ? `${e.sources_count} джерела` : '1 джерело'}</div>
+                        </div>
+                        <div class="c2-arrow ${hasMultipleSources ? 'active' : ''}">➔</div>
+
+                        <!-- Step 3: Spatial GEOINT Validation -->
+                        <div class="c2-flow-step passed">
+                            <div class="c2-step-circle">🎯</div>
+                            <div class="c2-step-title">Геолокація</div>
+                            <div class="c2-step-desc">${e.geo_precision || 'Топонім'}</div>
+                        </div>
+                        <div class="c2-arrow ${isOfficial ? 'active' : (hasMultipleSources ? 'active' : '')}">➔</div>
+
+                        <!-- Step 4: C2 Tactical Verification -->
+                        <div class="c2-flow-step ${isOfficial ? 'official' : (hasMultipleSources ? 'passed' : 'waiting')}">
+                            <div class="c2-step-circle">${isOfficial ? '🏛️' : (hasMultipleSources ? '🟢' : '⏳')}</div>
+                            <div class="c2-step-title">C2 Статус</div>
+                            <div class="c2-step-desc">${isOfficial ? 'Офіційно КМВА' : (hasMultipleSources ? 'Підтверджено' : 'Уточнюється')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
             body.innerHTML = `
                 <div class="sheet-header-row">
                     ${statusBadge}
@@ -1822,6 +1876,9 @@
                 <div class="sheet-location">
                     📍 <b>${e.location_text || 'Київ та область'}</b>
                 </div>
+
+                ${c2DiagramHtml}
+
                 <div class="sheet-chips-row">
                     <div class="sheet-chip">🕒 <b>${dt.timeStr}</b> (${dt.dateStr})</div>
                     <div class="sheet-chip">🎯 <b>${e.geocoding_logic || 'Топонім'}</b></div>
@@ -2059,6 +2116,44 @@
                     const srcDisplay = e.source_channel ? (e.source_channel.replace(/-/g, '').match(/^\d+$/) ? `ID:${e.source_channel}` : `@${e.source_channel.replace(/^@/, '')}`) : 'невідомо';
                     const srcLink = e.source_channel && !e.source_channel.replace(/-/g, '').match(/^\d+$/) ? `https://t.me/${e.source_channel.replace(/^@/, '')}/${e.message_id || 0}` : '';
 
+                    const isOfficial = e.is_official || e.verification_status === "OFFICIAL";
+                    const hasMultipleSources = (e.sources_count || 1) >= 2 || e.verification_status === "VERIFIED";
+                    const confidenceScore = isOfficial ? 98 : (hasMultipleSources ? Math.min(94, 75 + (e.sources_count || 2) * 5) : 60);
+
+                    const c2DiagramHtml = `
+                        <div class="c2-diagram-card" style="margin:6px 0;">
+                            <div class="c2-diagram-header">
+                                <span class="c2-diagram-title">🛡️ C2-ЛАНЦЮГ ПІДТВЕРДЖЕННЯ</span>
+                                <span class="c2-confidence-badge">${confidenceScore}%</span>
+                            </div>
+                            <div class="c2-flow-track">
+                                <div class="c2-flow-step passed">
+                                    <div class="c2-step-circle">📡</div>
+                                    <div class="c2-step-title">Джерело</div>
+                                    <div class="c2-step-desc">${srcDisplay}</div>
+                                </div>
+                                <div class="c2-arrow active">➔</div>
+                                <div class="c2-flow-step ${hasMultipleSources ? 'passed' : 'waiting'}">
+                                    <div class="c2-step-circle">🔄</div>
+                                    <div class="c2-step-title">Консенсус</div>
+                                    <div class="c2-step-desc">${hasMultipleSources ? `${e.sources_count} дж.` : '1 дж.'}</div>
+                                </div>
+                                <div class="c2-arrow ${hasMultipleSources ? 'active' : ''}">➔</div>
+                                <div class="c2-flow-step passed">
+                                    <div class="c2-step-circle">🎯</div>
+                                    <div class="c2-step-title">Геолокація</div>
+                                    <div class="c2-step-desc">${e.geo_precision || 'Топонім'}</div>
+                                </div>
+                                <div class="c2-arrow ${isOfficial ? 'active' : (hasMultipleSources ? 'active' : '')}">➔</div>
+                                <div class="c2-flow-step ${isOfficial ? 'official' : (hasMultipleSources ? 'passed' : 'waiting')}">
+                                    <div class="c2-step-circle">${isOfficial ? '🏛️' : (hasMultipleSources ? '🟢' : '⏳')}</div>
+                                    <div class="c2-step-title">C2</div>
+                                    <div class="c2-step-desc">${isOfficial ? 'Офіційно' : (hasMultipleSources ? 'Оперативно' : 'Очікує')}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
                     const popupContent = `
                         <div style="color:#f1f5f9; min-width:240px; font-family:-apple-system,sans-serif; line-height:1.4;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -2068,6 +2163,8 @@
                             <h3 style="margin:0 0 4px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${spec.title}</h3>
                             <p style="margin:0 0 6px 0; font-size:12px; color:#e2e8f0;"><b>📍 ${e.location_text || 'Київ та область'}</b></p>
                             
+                            ${c2DiagramHtml}
+
                             <div style="background:rgba(255,255,255,0.06); border-radius:8px; padding:6px 8px; margin-bottom:6px; font-size:11px; border:1px solid rgba(255,255,255,0.12);">
                                 <div style="color:#38bdf8; font-weight:600; margin-bottom:2px;">🕒 <b>Час:</b> ${dt.timeStr} (${dt.dateStr})</div>
                                 <div style="color:#2dd4bf; font-weight:600; font-size:10px; margin-bottom:2px;">🎯 <b>Геоприв'язка:</b> ${e.geocoding_logic || 'Топонім'}</div>
@@ -2411,126 +2508,6 @@
                 });
             } catch (err) {
                 console.warn('Thermal anomalies load error:', err);
-            }
-        }
-
-        // ─── Telerecon Forward Graph (Network Modal) ───
-        const btnNetwork = document.getElementById('btn-network');
-        const btnCloseNetwork = document.getElementById('btn-close-network');
-        const networkModal = document.getElementById('network-modal');
-        let visNetworkInstance = null;
-
-        function openNetworkModal() {
-            networkModal.classList.remove('hidden');
-            loadNetworkGraph();
-        }
-
-        function closeNetworkModal() {
-            networkModal.classList.add('hidden');
-            if (window.location.hash === '#network') {
-                history.replaceState(null, null, ' ');
-            }
-        }
-
-        if (btnNetwork) btnNetwork.addEventListener('click', openNetworkModal);
-        if (btnCloseNetwork) btnCloseNetwork.addEventListener('click', closeNetworkModal);
-
-        if (window.location.hash === '#network') {
-            openNetworkModal();
-        }
-
-        async function loadNetworkGraph() {
-            const container = document.getElementById('network-canvas');
-            if (!container) return;
-
-            try {
-                const res = await fetch('/api/v1/network/forward-graph?hours=48&limit=80');
-                if (!res.ok) return;
-                const data = await res.json();
-
-                document.getElementById('net-stat-nodes').textContent = data.total_nodes || 0;
-                document.getElementById('net-stat-edges').textContent = data.total_edges || 0;
-
-                if (!data.nodes || data.nodes.length === 0) {
-                    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:14px;">ℹ️ Немає зафіксованих пересилань за останні 48 годин</div>';
-                    return;
-                }
-
-                const officialSet = new Set(['kpszsu', 'dsns_telegram', 'va_kyiv', 'kyivcityofficial', 'mvs_ua']);
-
-                const visNodes = new vis.DataSet(data.nodes.map(n => {
-                    const isOfficial = officialSet.has(n.id);
-                    const isTopOrigin = n.out_degree > n.in_degree;
-                    const color = isOfficial ? { background: '#00e5ff', border: '#ffffff' } :
-                                  (isTopOrigin ? { background: '#f59e0b', border: '#fbbf24' } :
-                                                 { background: '#8b5cf6', border: '#a78bfa' });
-                    return {
-                        id: n.id,
-                        label: n.label,
-                        shape: 'dot',
-                        size: Math.min(28, Math.max(12, 10 + (n.total_weight || 1) * 2)),
-                        color: color,
-                        font: { color: '#ffffff', size: 11, face: 'system-ui' }
-                    };
-                }));
-
-                const visEdges = new vis.DataSet(data.edges.map(e => ({
-                    from: e.from,
-                    to: e.to,
-                    arrows: 'to',
-                    width: Math.min(6, Math.max(1, e.weight)),
-                    color: { color: 'rgba(0, 229, 255, 0.4)', highlight: '#ff0055' },
-                    smooth: { type: 'curvedCW', roundness: 0.15 }
-                })));
-
-                const options = {
-                    physics: {
-                        stabilization: true,
-                        solver: 'forceAtlas2Based',
-                        forceAtlas2Based: {
-                            gravitationalConstant: -35,
-                            centralGravity: 0.015,
-                            springLength: 90,
-                            springConstant: 0.08
-                        }
-                    },
-                    interaction: { hover: true, tooltipDelay: 200 }
-                };
-
-                if (visNetworkInstance) visNetworkInstance.destroy();
-                visNetworkInstance = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
-
-                visNetworkInstance.on('click', async (params) => {
-                    if (params.nodes && params.nodes.length > 0) {
-                        const nodeId = params.nodes[0];
-                        document.getElementById('net-selected-channel').textContent = '@' + nodeId;
-                        
-                        try {
-                            const lRes = await fetch(`/api/v1/network/channel-lineage?channel=${nodeId}`);
-                            if (lRes.ok) {
-                                const lData = await lRes.json();
-                                let html = '';
-                                if (lData.sources && lData.sources.length > 0) {
-                                    html += '<div style="color:#38bdf8; font-weight:600; margin-top:6px;">⬅️ Звідки бере:</div>';
-                                    lData.sources.slice(0, 5).forEach(s => {
-                                        html += `<div>• @${s.source} (<b>${s.count}</b>)</div>`;
-                                    });
-                                }
-                                if (lData.amplifiers && lData.amplifiers.length > 0) {
-                                    html += '<div style="color:#f59e0b; font-weight:600; margin-top:6px;">➡️ Хто ретранслює:</div>';
-                                    lData.amplifiers.slice(0, 5).forEach(a => {
-                                        html += `<div>• @${a.target} (<b>${a.count}</b>)</div>`;
-                                    });
-                                }
-                                document.getElementById('net-lineage-details').innerHTML = html || '<i>Немає прямих зв\'язків</i>';
-                            }
-                        } catch (e) {
-                            console.warn('Lineage fetch error:', e);
-                        }
-                    }
-                });
-            } catch (err) {
-                console.warn('Network graph load error:', err);
             }
         }
 
