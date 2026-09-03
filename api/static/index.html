@@ -74,7 +74,7 @@
             border: 1px solid rgba(255,255,255,0.12);
             width: 320px;
             max-width: calc(100vw - 24px);
-            max-height: calc(100vh - 80px);
+            max-height: calc(100vh - 180px);
             overflow-y: auto;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
         }
@@ -207,11 +207,11 @@
             background: transparent !important;
             border: none !important;
         }
-            .leaflet-tile-pane {
+        .leaflet-tile-pane {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
 
-        /* Factchecking Status Badges */
+        /* 3-Tier Human Status Badges */
         .verif-badge-confirmed {
             background: rgba(34, 197, 94, 0.15);
             border: 1px solid #22c55e;
@@ -224,19 +224,7 @@
             align-items: center;
             gap: 4px;
         }
-        .verif-badge-official {
-            background: rgba(14, 165, 233, 0.15);
-            border: 1px solid #0ea5e9;
-            color: #0ea5e9;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .verif-badge-single {
+        .verif-badge-reported {
             background: rgba(245, 158, 11, 0.15);
             border: 1px solid #f59e0b;
             color: #f59e0b;
@@ -248,10 +236,10 @@
             align-items: center;
             gap: 4px;
         }
-        .verif-badge-ipso {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid #ef4444;
-            color: #ef4444;
+        .verif-badge-investigating {
+            background: rgba(148, 163, 184, 0.15);
+            border: 1px solid #94a3b8;
+            color: #cbd5e1;
             padding: 3px 6px;
             border-radius: 4px;
             font-size: 10px;
@@ -261,48 +249,160 @@
             gap: 4px;
         }
 
-
-        /* C2 Tactical Evidence Flow */
-        .c2-flow-box {
-            margin: 8px 0;
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 11px;
-            color: #f1f5f9;
+        /* ─── Bottom Timeline Scrubber HUD ─── */
+        .timeline-hud {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(15, 20, 31, 0.94);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 229, 255, 0.35);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85);
+            border-radius: 16px;
+            padding: 10px 16px;
+            width: 580px;
+            max-width: calc(100vw - 24px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            user-select: none;
         }
-        .c2-flow-title {
-            font-size: 10px;
-            color: #38bdf8;
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .timeline-title {
+            color: #00e5ff;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .c2-step {
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-bottom: 4px;
         }
-        .c2-step:last-child { margin-bottom: 0; }
-        .c2-step-num {
-            background: #1e293b;
-            color: #38bdf8;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 3px;
-        }
-        .c2-step-txt { color: #94a3b8; }
-        .c2-step-txt b { color: #f8fafc; }
-        .c2-arrow { color: #64748b; font-size: 10px; text-align: center; margin: 1px 0 1px 12px; }
 
-</style>
+        .timeline-status {
+            color: #f1f5f9;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .play-btn {
+            background: #00e5ff;
+            color: #0b0e14;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+            transition: all 0.15s ease;
+        }
+        .play-btn:active { transform: scale(0.92); }
+
+        .slider-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .time-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 4px;
+            background: #1e293b;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00e5ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00e5ff;
+            border: 2px solid #ffffff;
+            transition: transform 0.1s;
+        }
+        .time-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        .time-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00e5ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00e5ff;
+            border: 2px solid #ffffff;
+        }
+
+        /* Time Presets */
+        .time-presets {
+            display: flex;
+            justify-content: space-between;
+            gap: 4px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .preset-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .preset-btn.active {
+            background: rgba(0, 229, 255, 0.2);
+            border-color: #00e5ff;
+            color: #00e5ff;
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .timeline-hud {
+                bottom: 8px;
+                padding: 8px 12px;
+                border-radius: 12px;
+            }
+            .preset-btn {
+                padding: 3px 4px;
+                font-size: 9px;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Top Mobile Control Bar -->
@@ -330,7 +430,7 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-val" id="stat-total">--</div>
-                <div class="stat-lbl">Інциденти (24г)</div>
+                <div class="stat-lbl">Подій на мапі</div>
             </div>
             <div class="stat-card">
                 <div class="stat-val" id="stat-shelters">1,197</div>
@@ -341,7 +441,7 @@
         <div class="section-label">Активні Шари Карти</div>
         <div class="layer-box">
             <label class="layer-item">
-                <span>🔴 Підтверджені Прильоти / Вибухи</span>
+                <span>🔴 Підтверджені Події</span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-events" checked>
                     <span class="slider"></span>
@@ -370,27 +470,23 @@
             </label>
         </div>
 
-        <div class="section-label">📋 Повна Тактична Легенда</div>
+        <div class="section-label">📋 Тактична Легенда</div>
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-left"><span>🛸</span> <b>БпЛА / Радарний трек</b></div>
+                <div class="legend-left"><span>🛸</span> <b>БпЛА / Повітряна ціль</b></div>
                 <span style="color:#f59e0b; font-weight:700;">🛸 Дрон</span>
             </div>
             <div class="legend-item">
-                <div class="legend-left"><span>💥</span> <b>Приліт / Вибух / Ракета</b></div>
-                <span style="color:#ef4444; font-weight:700;">💥 Вибух</span>
+                <div class="legend-left"><span>💥</span> <b>Влучання / Вибух</b></div>
+                <span style="color:#ef4444; font-weight:700;">💥 Удар</span>
             </div>
             <div class="legend-item">
                 <div class="legend-left"><span>🔥</span> <b>Пожежа / Руйнування</b></div>
                 <span style="color:#f97316; font-weight:700;">🔥 Пожежа</span>
             </div>
             <div class="legend-item">
-                <div class="legend-left"><span>🛡️</span> <b>Робота ППО / Збиття</b></div>
+                <div class="legend-left"><span>🛡️</span> <b>Робота сил ППО</b></div>
                 <span style="color:#22c55e; font-weight:700;">🛡️ ППО</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-left"><span>⚔️</span> <b>Спецінцидент / Перестрілка</b></div>
-                <span style="color:#a855f7; font-weight:700;">⚔️ Подія</span>
             </div>
 
             <div style="border-top:1px solid #334155; margin:6px 0; padding-top:6px; font-size:11px; color:#94a3b8; font-weight:600;">
@@ -408,31 +504,49 @@
                 <div class="legend-left"><div class="legend-color" style="background: rgba(234,179,8,0.7);"></div>🟡 <b>Розліт уламків (450м)</b></div>
                 <span style="font-size:10px; color:#eab308;">Розбите скло</span>
             </div>
-
-            <div style="border-top:1px solid #334155; margin:6px 0; padding-top:6px; font-size:11px; color:#94a3b8; font-weight:600;">
-                🛡️ Цивільний захист:
-            </div>
-            <div class="legend-item">
-                <div class="legend-left"><div class="legend-color" style="background: #18dcff;"></div>🔷 <b>Укриття та Метро Києва</b></div>
-                <span>1,197 точок</span>
-            </div>
         </div>
 
         <div class="live-tag">
-            <span class="live-dot"></span> Живе оновлення (кожні 30с)
+            <span class="live-dot"></span> Автооновлення (кожні 30с)
         </div>
     </div>
     
+    <!-- Timeline Scrubber HUD -->
+    <div class="timeline-hud" id="timeline-hud">
+        <div class="timeline-header">
+            <div class="timeline-title">
+                <span>⏱️ ЧАСОВИЙ БІГУНОК</span>
+            </div>
+            <div class="timeline-status" id="timeline-status-label">Останні 24 год (0 подій)</div>
+        </div>
+        <div class="timeline-controls">
+            <button class="play-btn" id="btn-play-pause" title="Автоматичне відтворення таймлайну">▶</button>
+            <div class="slider-wrapper">
+                <input type="range" class="time-slider" id="time-slider" min="1" max="72" step="1" value="24">
+            </div>
+        </div>
+        <div class="time-presets">
+            <button class="preset-btn" data-hours="1">1 год</button>
+            <button class="preset-btn" data-hours="3">3 год</button>
+            <button class="preset-btn" data-hours="6">6 год</button>
+            <button class="preset-btn" data-hours="12">12 год</button>
+            <button class="preset-btn active" data-hours="24">24 год</button>
+            <button class="preset-btn" data-hours="48">48 год</button>
+            <button class="preset-btn" data-hours="72">Всі (72г)</button>
+        </div>
+    </div>
+
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map', { zoomControl: false }).setView([50.4501, 30.5234], 12);
+        // Leaflet Map Initialization with canvas acceleration
+        const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([50.4501, 30.5234], 12);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Basemaps: OpenStreetMap & Esri World Imagery (Clean, No Watermarks)
+        // Basemaps
         const darkBasemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
@@ -446,6 +560,41 @@
         const zonesLayer = L.layerGroup().addTo(map);
         const sheltersLayer = L.layerGroup().addTo(map);
         let userMarker = null;
+
+        // In-Memory Data Pools for Super-Fast Zero-Lag Timeline Filtering
+        let allRawEvents = [];
+        let allRawZones = [];
+        let cachedEventMarkers = [];
+        let cachedZoneCircles = [];
+        let selectedHoursWindow = 24;
+        let isPlaying = false;
+        let playInterval = null;
+
+        // Time Formatting Helpers (Kyiv Timezone & Relative Time)
+        function formatKyivDateTime(isoStr) {
+            if (!isoStr) return { dateStr: '--.--.----', timeStr: '--:--', relStr: '' };
+            const d = new Date(isoStr);
+            // Convert to Europe/Kyiv formatting
+            const optionsDate = { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', year: 'numeric' };
+            const optionsTime = { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hour12: false };
+            
+            const dateStr = d.toLocaleDateString('uk-UA', optionsDate);
+            const timeStr = d.toLocaleTimeString('uk-UA', optionsTime);
+
+            // Relative time calculation
+            const diffMs = Date.now() - d.getTime();
+            const diffMin = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+            let relStr = '';
+            if (diffMin < 1) relStr = 'щойно';
+            else if (diffMin < 60) relStr = `${diffMin} хв тому`;
+            else {
+                const diffHours = Math.floor(diffMin / 60);
+                if (diffHours < 24) relStr = `${diffHours} год тому`;
+                else relStr = `${Math.floor(diffHours / 24)} дн. тому`;
+            }
+
+            return { dateStr, timeStr, relStr };
+        }
 
         // HUD Toggle
         const hudPanel = document.getElementById('hud-panel');
@@ -513,6 +662,7 @@
             );
         });
 
+        // Shelters Loader (Cached in memory)
         async function loadShelters() {
             try {
                 const res = await fetch('/api/shelters');
@@ -551,45 +701,99 @@
             }
         }
 
+        // Icon Taxonomy Specs
         function getEventIconSpec(type) {
             type = (type || "").toLowerCase();
-            if (type.includes('debris')) {
-                return { emoji: '🧩', bg: 'rgba(168, 85, 247, 0.25)', border: '#a855f7', shadow: '#a855f7', title: 'Падіння уламків' };
-            }
             if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav')) {
-                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'Фіксація: Рух БпЛА' };
+                return { emoji: '🛸', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'БпЛА / Повітряна ціль' };
             }
-            if (type.includes('missile')) {
-                return { emoji: '🚀', bg: 'rgba(234, 179, 8, 0.25)', border: '#f59e0b', shadow: '#f59e0b', title: 'Фіксація: Рух ракети' };
+            if (type.includes('strike') || type.includes('shelling')) {
+                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Влучання / Наслідки атаки' };
+            }
+            if (type.includes('explosion')) {
+                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Вибух' };
             }
             if (type.includes('fire') || type.includes('destruction')) {
                 return { emoji: '🔥', bg: 'rgba(249, 115, 22, 0.25)', border: '#f97316', shadow: '#f97316', title: 'Пожежа / Руйнування' };
             }
-            if (type.includes('strike') || type.includes('explosion') || type.includes('shelling')) {
-                return { emoji: '💥', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'Підтверджено: Приліт / Вибух' };
-            }
             if (type.includes('air_defense')) {
-                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Підтверджено: Робота ППО' };
+                return { emoji: '🛡️', bg: 'rgba(34, 197, 94, 0.25)', border: '#22c55e', shadow: '#22c55e', title: 'Робота сил ППО' };
             }
-            if (type.includes('alert') || type.includes('general')) {
-                return { emoji: '⚠️', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Загальна загроза / Попередження' };
-            }
-            return { emoji: '📍', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Інцидент' };
+            return { emoji: '⚠️', bg: 'rgba(148, 163, 184, 0.25)', border: '#94a3b8', shadow: '#94a3b8', title: 'Повітряна загроза' };
         }
 
+        // High-Performance In-Memory Filtering (Zero DOM reflows / Zero lag)
+        function renderTimelineView(hours) {
+            selectedHoursWindow = hours;
+            const nowMs = Date.now();
+            const cutoffMs = nowMs - (hours * 3600 * 1000);
 
+            // Fast batch-clearing
+            eventsLayer.clearLayers();
+            zonesLayer.clearLayers();
 
+            let visibleCount = 0;
+
+            // Render matching event markers
+            for (let i = 0; i < cachedEventMarkers.length; i++) {
+                const item = cachedEventMarkers[i];
+                if (item.timestampMs >= cutoffMs) {
+                    eventsLayer.addLayer(item.marker);
+                    visibleCount++;
+                }
+            }
+
+            // Render matching zone circles
+            for (let i = 0; i < cachedZoneCircles.length; i++) {
+                const item = cachedZoneCircles[i];
+                if (item.timestampMs >= cutoffMs) {
+                    zonesLayer.addLayer(item.layer);
+                }
+            }
+
+            // Update UI Status Labels
+            const statusLabel = document.getElementById('timeline-status-label');
+            const totalStat = document.getElementById('stat-total');
+            if (statusLabel) {
+                const hoursText = hours >= 72 ? 'Всі (72 год)' : `Останні ${hours} год`;
+                statusLabel.textContent = `${hoursText} (${visibleCount} подій)`;
+            }
+            if (totalStat) {
+                totalStat.textContent = visibleCount;
+            }
+        }
+
+        // Debounced Slider Update
+        let animFrameId = null;
+        function onSliderChange(hours) {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            animFrameId = requestAnimationFrame(() => {
+                renderTimelineView(Number(hours));
+            });
+        }
+
+        // Event Data Loader
         async function loadData() {
             try {
-                // 1. Events
-                const resEvents = await fetch('/api/events');
-                const events = await resEvents.json();
-                eventsLayer.clearLayers();
+                // Fetch 72 hours of events for rich timeline scrubber
+                const [resEvents, resZones] = await Promise.all([
+                    fetch('/api/events?hours=72'),
+                    fetch('/api/geoint/zones?hours=72')
+                ]);
 
+                allRawEvents = await resEvents.json();
+                allRawZones = await resZones.json();
+
+                // Pre-build cached Leaflet markers
+                cachedEventMarkers = [];
+                cachedZoneCircles = [];
                 const popupMap = {};
 
-                events.forEach(e => {
+                allRawEvents.forEach(e => {
                     const spec = getEventIconSpec(e.event_type);
+                    const dt = formatKyivDateTime(e.detected_at);
+                    const timestampMs = e.detected_at ? new Date(e.detected_at).getTime() : 0;
+
                     const iconHtml = `
                         <div class="tactical-icon-wrap" style="
                             background: ${spec.bg}; 
@@ -609,109 +813,134 @@
 
                     const marker = L.marker([e.lat, e.lon], { icon: customIcon });
 
-                    const logicBadge = e.geocoding_logic || '🗺️ Текстова прив\'язка топоніма (OSINT)';
-                    let statusBadge = `<span class="verif-badge-single">🟡 ОДИНАРНЕ ДЖЕРЕЛО (Потребує підтвердження)</span>`;
+                    // Clean 3-Tier Human Status Badge
+                    let statusBadge = `<span class="verif-badge-reported">🟡 ПОВІДОМЛЯЄТЬСЯ</span>`;
+                    let statusDesc = "Є повідомлення з одного джерела, потребує уточнення";
                     if (e.is_official || (e.verification_status === "OFFICIAL")) {
-                        statusBadge = `<span class="verif-badge-official">🏛️ ОФІЦІЙНЕ ПІДТВЕРДЖЕННЯ (ОВА / ДСНС / Мер)</span>`;
+                        statusBadge = `<span class="verif-badge-confirmed">🟢 ПІДТВЕРДЖЕНО (Офіційно)</span>`;
+                        statusDesc = "Інформація надійшла з офіційного джерела";
                     } else if (e.sources_count >= 2 || (e.verification_status === "VERIFIED")) {
-                        statusBadge = `<span class="verif-badge-confirmed">🟢 ВЕРИФІКОВАНО (Консенсус ${e.sources_count} дж.)</span>`;
-                    } else if (e.verification_status === "POSSIBLE_IPSO") {
-                        statusBadge = `<span class="verif-badge-ipso">🚨 УВАГА: СУМНІВНЕ / МОЖЛИВИЙ ВКАТ</span>`;
+                        statusBadge = `<span class="verif-badge-confirmed">🟢 ПІДТВЕРДЖЕНО (${e.sources_count} дж.)</span>`;
+                        statusDesc = `Підтверджено кількома незалежними джерелами (${e.sources_count} дж.)`;
+                    } else if (e.verification_status === "INVESTIGATING" || e.verification_status === "PROVISIONAL") {
+                        statusBadge = `<span class="verif-badge-investigating">⚪ УТОЧНЮЄТЬСЯ</span>`;
+                        statusDesc = "Дані з різних джерел уточнюються";
                     }
 
-                    const formatSrc = s => { s = s.trim().replace(/^@/, ''); return s.replace(/-/g, '').match(/^\d+$/) ? `ID:${s}` : `@${s}`; };
-                    const sourcesStr = e.sources_list ? e.sources_list.split(',').map(formatSrc).join(', ') : formatSrc(e.source_channel);
+                    const srcDisplay = e.source_channel ? (e.source_channel.replace(/-/g, '').match(/^\d+$/) ? `ID:${e.source_channel}` : `@${e.source_channel.replace(/^@/, '')}`) : 'невідомо';
+                    const srcLink = e.source_channel && !e.source_channel.replace(/-/g, '').match(/^\d+$/) ? `https://t.me/${e.source_channel.replace(/^@/, '')}/${e.message_id || 0}` : '';
 
                     const popupContent = `
-                        <div style="color:#0f172a; min-width:230px; font-family:-apple-system,sans-serif; line-height:1.4;">
-                            <div style="font-size:11px; margin-bottom:4px;">${statusBadge}</div>
-                            <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${spec.title}</h3>
-                            <p style="margin:0 0 6px 0; font-size:12px;"><b>📍 Локація:</b> ${e.location_text}</p>
+                        <div style="color:#0f172a; min-width:240px; font-family:-apple-system,sans-serif; line-height:1.4;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                ${statusBadge}
+                                <span style="font-size:10px; color:#64748b; font-weight:600;">⏳ ${dt.relStr}</span>
+                            </div>
+                            <h3 style="margin:0 0 4px 0; font-size:13px; text-transform:uppercase; color:${spec.border}; font-weight:700;">${spec.emoji} ${spec.title}</h3>
+                            <p style="margin:0 0 6px 0; font-size:12px; color:#1e293b;"><b>📍 ${e.location_text || 'Київ та область'}</b></p>
                             
-                            <!-- C2 Intelligence Verification Scheme -->
-                            <div class="c2-flow-box">
-                                <div class="c2-flow-title">🛰️ C2 ТАКТИЧНИЙ ЛАНЦЮЖОК ВЕРИФІКАЦІЇ:</div>
-                                <div class="c2-step">
-                                    <span class="c2-step-num">1. ДЖЕРЕЛА</span>
-                                    <span class="c2-step-txt"><b>${e.sources_count || 1} дж.</b> (${sourcesStr})</span>
-                                </div>
-                                <div class="c2-arrow">↓</div>
-                                <div class="c2-step">
-                                    <span class="c2-step-num">2. ГЕО-СИНТЕЗ</span>
-                                    <span class="c2-step-txt"><b>${logicBadge}</b></span>
-                                </div>
-                                <div class="c2-arrow">↓</div>
-                                <div class="c2-step">
-                                    <span class="c2-step-num">3. КООРДИНАТИ</span>
-                                    <span class="c2-step-txt"><code>${Number(e.lat).toFixed(4)}, ${Number(e.lon).toFixed(4)}</code> (PostGIS GIST)</span>
-                                </div>
+                            <div style="background:#f1f5f9; border-radius:6px; padding:6px 8px; margin-bottom:6px; font-size:11px; border:1px solid #e2e8f0;">
+                                <div style="color:#0369a1; font-weight:600; margin-bottom:2px;">🕒 <b>Час події:</b> ${dt.timeStr} (за Києвом) · ${dt.dateStr}</div>
+                                <div style="color:#475569; font-size:10px;">🛡️ <i>${statusDesc}</i></div>
                             </div>
 
-                            <div style="margin:0 0 8px 0; font-size:11px; color:#475569;">
-                                📡 <b>Джерела:</b> ${sourcesStr}
-                            </div>
+                            ${e.message_text ? `<p style="margin:0 0 6px 0; font-size:11px; color:#334155; font-style:italic;">📝 ${e.message_text}</p>` : ''}
 
-                            <p style="margin:0; font-size:11px;"><a href="https://t.me/${e.source_channel}/${e.message_id}" target="_blank" style="color:#0284c7; text-decoration:none; font-weight:600; background:#e0f2fe; padding:4px 8px; border-radius:4px; display:inline-block;">🔗 Перейти до допису @${e.source_channel} →</a></p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                                <span style="font-size:10px; color:#64748b;">📡 Джерело: <b>${srcDisplay}</b></span>
+                                ${srcLink ? `<a href="${srcLink}" target="_blank" style="color:#0284c7; text-decoration:none; font-size:10px; font-weight:700; background:#e0f2fe; padding:3px 6px; border-radius:4px;">Допис →</a>` : ''}
+                            </div>
                         </div>
                     `;
 
                     marker.bindPopup(popupContent);
-                    eventsLayer.addLayer(marker);
+                    cachedEventMarkers.push({ marker, timestampMs, id: e.id });
                     popupMap[e.id] = popupContent;
                 });
 
-                // 2. Tactical Blast Danger Zones
-                const resZones = await fetch('/api/geoint/zones');
-                const zones = await resZones.json();
-                zonesLayer.clearLayers();
-
-                zones.forEach(z => {
+                // Pre-build cached Blast Danger Zones
+                allRawZones.forEach(z => {
                     const center = [z.center.lat, z.center.lon];
+                    const timestampMs = z.detected_at ? new Date(z.detected_at).getTime() : (Date.now() - 3600000);
                     const popupContent = popupMap[z.event_id] || `<div style="color:#0f172a; font-family:-apple-system,sans-serif;"><b>📍 ${z.location_text}</b><br>💥 Зона ураження вибуху: ${z.shrapnel_zone_m}м</div>`;
 
-                    // Shrapnel zone (Yellow 450m)
-                    const c3 = L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 });
-                    c3.bindPopup(popupContent);
-                    c3.addTo(zonesLayer);
+                    const group = L.layerGroup();
+                    // 450m Shrapnel
+                    L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).bindPopup(popupContent).addTo(group);
+                    // 180m Shockwave
+                    L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).bindPopup(popupContent).addTo(group);
+                    // 50m Fatal
+                    L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).bindPopup(popupContent).addTo(group);
 
-                    // Shockwave zone (Orange 180m)
-                    const c2 = L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 });
-                    c2.bindPopup(popupContent);
-                    c2.addTo(zonesLayer);
-
-                    // Fatal epicenter zone (Red 50m)
-                    const c1 = L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 });
-                    c1.bindPopup(popupContent);
-                    c1.addTo(zonesLayer);
+                    cachedZoneCircles.push({ layer: group, timestampMs, event_id: z.event_id });
                 });
 
-                // 3. Stats
-                const resStats = await fetch('/api/stats');
-                const stats = await resStats.json();
-                document.getElementById('stat-total').textContent = stats.events_24h || 0;
-                
-                let strikes = 0, fires = 0;
-                for (const [k, v] of Object.entries(stats.categories || {})) {
-                    const lk = k.toLowerCase();
-                    if (lk.includes('strike') || lk.includes('explosion')) strikes += v;
-                    else if (lk.includes('fire') || lk.includes('destruction')) fires += v;
-                }
-                const badgeStrike = document.getElementById('badge-strike');
-                if (badgeStrike) badgeStrike.textContent = strikes;
-                const badgeFire = document.getElementById('badge-fire');
-                if (badgeFire) badgeFire.textContent = fires;
+                // Render active time window
+                renderTimelineView(selectedHoursWindow);
 
             } catch (err) {
-                console.error('Data error:', err);
+                console.error('Data loading error:', err);
             }
         }
 
-        // Initialize
+        // Timeline Slider & Preset Controls
+        const sliderEl = document.getElementById('time-slider');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+        const playBtn = document.getElementById('btn-play-pause');
+
+        sliderEl.addEventListener('input', (e) => {
+            const val = Number(e.target.value);
+            presetBtns.forEach(b => {
+                b.classList.toggle('active', Number(b.dataset.hours) === val);
+            });
+            onSliderChange(val);
+        });
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const hours = Number(btn.dataset.hours);
+                sliderEl.value = hours;
+                presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                onSliderChange(hours);
+            });
+        });
+
+        // Play / Pause Timelapse Feature
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                // Pause
+                clearInterval(playInterval);
+                isPlaying = false;
+                playBtn.textContent = '▶';
+            } else {
+                // Start timelapse animation (from 1 hour expanding to 72 hours)
+                isPlaying = true;
+                playBtn.textContent = '⏸';
+                let currentH = 1;
+                sliderEl.value = currentH;
+                onSliderChange(currentH);
+
+                playInterval = setInterval(() => {
+                    currentH += 1;
+                    if (currentH > 72) {
+                        currentH = 1;
+                    }
+                    sliderEl.value = currentH;
+                    presetBtns.forEach(b => {
+                        b.classList.toggle('active', Number(b.dataset.hours) === currentH);
+                    });
+                    onSliderChange(currentH);
+                }, 400); // 400ms per step for smooth visual playback
+            }
+        });
+
+        // Initialize Map & Data
         loadShelters();
         loadData();
         setInterval(loadData, 30000);
 
-        // Auto collapse panel on mobile after 3 seconds so map is 100% visible
+        // Auto collapse layers panel on mobile
         if (window.innerWidth <= 600) {
             setTimeout(() => {
                 hudPanel.classList.add('collapsed');

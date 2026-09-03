@@ -40,12 +40,13 @@ def get_db():
         db.close()
 
 @app.get("/api/events")
-def get_events(db: Session = Depends(get_db)):
-    cached = get_cached("api:events")
+def get_events(hours: int = 72, db: Session = Depends(get_db)):
+    cache_key = f"api:events:{hours}"
+    cached = get_cached(cache_key)
     if cached:
         return cached
 
-    threshold_24h = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
     events = db.query(
         DetectedEvent.id,
         DetectedEvent.source_channel,
@@ -65,16 +66,11 @@ def get_events(db: Session = Depends(get_db)):
     ).filter(
         DetectedEvent.geom.isnot(None),
         DetectedEvent.source_channel.not_ilike('test%'),
-        DetectedEvent.detected_at >= threshold_24h
-    ).all()
+        DetectedEvent.detected_at >= threshold
+    ).order_by(DetectedEvent.detected_at.desc()).all()
     
     result = []
     for e in events:
-        # is_fallback_geo (set by the worker's canonical-toponym resolver) is
-        # the real signal for "we don't know where this is, defaulting to the
-        # city center" — the old distance-to-Maidan-centroid heuristic hid
-        # every genuine Maidan-area incident that didn't literally say
-        # "майдан"/"хрещатик" in the text.
         if e.is_fallback_geo:
             continue
 
@@ -94,20 +90,17 @@ def get_events(db: Session = Depends(get_db)):
             "event_type": e.event_type,
             "location_text": e.location_text,
             "resonance_score": e.resonance_score,
-            "detected_at": e.detected_at.isoformat(),
+            "detected_at": e.detected_at.isoformat() if e.detected_at else None,
             "lat": e.lat,
             "lon": e.lon,
             "verification_status": e.verification_status or "UNVERIFIED_SINGLE_SOURCE",
             "sources_count": e.sources_count or 1,
-            # sources_list (the actual monitored Telegram channel names) is
-            # intentionally NOT exposed here — it's the OSINT source list,
-            # not something a public endpoint should hand out. sources_count
-            # already conveys cross-source consensus without naming sources.
             "is_official": e.is_official or False,
             "has_media": e.has_media or False,
-            "geocoding_logic": logic
+            "geocoding_logic": logic,
+            "message_text": e.message_text[:140] if e.message_text else ""
         })
-    set_cached("api:events", result, ttl=30)
+    set_cached(cache_key, result, ttl=30)
     return result
 
 @app.get("/api/stats")
@@ -194,14 +187,15 @@ def get_map_shelters(db: Session = Depends(get_db)):
     ]
 
 @app.get("/api/geoint/zones")
-def get_danger_zones(db: Session = Depends(get_db)):
+def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
     from worker.osint.geoint_engine import geoint_engine
-    threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
     strikes = db.query(
         DetectedEvent.id,
         DetectedEvent.event_type,
         DetectedEvent.location_text,
         DetectedEvent.resonance_score,
+        DetectedEvent.detected_at,
         DetectedEvent.is_fallback_geo,
         func.ST_Y(DetectedEvent.geom).label('lat'),
         func.ST_X(DetectedEvent.geom).label('lon')
@@ -214,14 +208,13 @@ def get_danger_zones(db: Session = Depends(get_db)):
     zones = []
     for st in strikes:
         if st.lat and st.lon:
-            # Exclude generic "Київ" fallback centroid from localized blast
-            # circles — see the same is_fallback_geo check in /api/events.
             if st.is_fallback_geo:
                 continue
 
             zone_data = geoint_engine.get_tactical_danger_zones(st.lat, st.lon, st.event_type, st.resonance_score)
             zone_data["event_id"] = st.id
             zone_data["location_text"] = st.location_text
+            zone_data["detected_at"] = st.detected_at.isoformat() if st.detected_at else None
             zones.append(zone_data)
             
     return zones
