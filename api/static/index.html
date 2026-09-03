@@ -1143,8 +1143,8 @@
         let isPlaying = false;
         let playInterval = null;
 
-        // Live Mode & Real-Time Motion State
-        let isLiveMode = false;
+        // Live Mode & Real-Time Motion State (Enabled by default)
+        let isLiveMode = true;
         let isBannerDismissed = false;
         let liveRadarInterval = null;
         let liveEventsInterval = null;
@@ -1285,42 +1285,53 @@
         function toggleLiveMode(forceState = null) {
             isLiveMode = forceState !== null ? forceState : !isLiveMode;
 
+            const mBtn = document.getElementById('m-btn-live');
+
             if (isLiveMode) {
-                liveBtn.classList.add('active');
-                const labelLong = liveBtn.querySelector('.btn-label-long');
-                const labelShort = liveBtn.querySelector('.btn-label-short');
+                liveBtn?.classList.add('active');
+                const labelLong = liveBtn?.querySelector('.btn-label-long');
+                const labelShort = liveBtn?.querySelector('.btn-label-short');
                 if (labelLong) labelLong.textContent = 'LIVE: УВІМК';
                 if (labelShort) labelShort.textContent = 'LIVE 🟢';
 
-                // High-frequency polling
+                if (mBtn) {
+                    mBtn.textContent = '🟢 Live';
+                    mBtn.style.color = '#34d399';
+                }
+
+                // High-frequency live polling
                 clearInterval(defaultRadarInterval);
                 clearInterval(liveRadarInterval);
-                liveRadarInterval = setInterval(loadRadarDrones, 4000);
+                liveRadarInterval = setInterval(loadRadarDrones, 3000);
 
                 clearInterval(defaultDataInterval);
                 clearInterval(liveEventsInterval);
-                liveEventsInterval = setInterval(loadLiveOsintStream, 5000);
+                liveEventsInterval = setInterval(loadLiveOsintStream, 4000);
 
                 // 1-second dead-reckoning extrapolation loop
                 clearInterval(deadReckoningInterval);
                 deadReckoningInterval = setInterval(stepTargetDeadReckoning, 1000);
 
                 showLiveOsintTicker('🟢 LIVE режим активовано: розрахунок переміщення цілей та живий моніторинг');
-                playTacticalBeep(784, 0.12);
             } else {
-                liveBtn.classList.remove('active');
-                const labelLong = liveBtn.querySelector('.btn-label-long');
-                const labelShort = liveBtn.querySelector('.btn-label-short');
+                liveBtn?.classList.remove('active');
+                const labelLong = liveBtn?.querySelector('.btn-label-long');
+                const labelShort = liveBtn?.querySelector('.btn-label-short');
                 if (labelLong) labelLong.textContent = 'LIVE: ВИМК';
                 if (labelShort) labelShort.textContent = 'LIVE';
+
+                if (mBtn) {
+                    mBtn.textContent = '⚡ Live';
+                    mBtn.style.color = '#f1f5f9';
+                }
 
                 clearInterval(liveRadarInterval);
                 clearInterval(liveEventsInterval);
                 clearInterval(deadReckoningInterval);
 
                 // Restore default intervals
-                defaultDataInterval = setInterval(loadData, 30000);
-                defaultRadarInterval = setInterval(loadRadarDrones, 15000);
+                defaultDataInterval = setInterval(loadData, 10000);
+                defaultRadarInterval = setInterval(loadRadarDrones, 8000);
 
                 document.getElementById('live-osint-ticker')?.classList.add('hidden');
             }
@@ -1477,6 +1488,7 @@
                     const text = latest.message_text ? latest.message_text.slice(0, 60) + '...' : latest.event_type;
                     showLiveOsintTicker(`⚡ [${loc}]: ${text}`);
                     playTacticalBeep(988, 0.15);
+                    loadData(); // Immediately draw the new pulse marker on the map!
                 }
             } catch (err) {}
         }
@@ -2232,10 +2244,10 @@
         loadData();
         loadRadarDrones();
         loadThermalAnomalies();
-        defaultDataInterval = setInterval(loadData, 30000);
-        defaultRadarInterval = setInterval(loadRadarDrones, 15000);
-        setInterval(loadThermalAnomalies, 60000);
-        setInterval(loadEwInterference, 60000);
+        // Activate LIVE mode immediately by default (1s motion, 3s radar, 4s events)
+        toggleLiveMode(true);
+        setInterval(loadThermalAnomalies, 30000);
+        setInterval(loadEwInterference, 45000);
 
         // Auto collapse layers panel on mobile
         if (window.innerWidth <= 600) {

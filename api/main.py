@@ -341,5 +341,15 @@ def api_drone_raycast(req: DroneRaycastRequest):
         "confidence": res.confidence
     }
 
-# Serve the static HTML frontend
+# Serve the static HTML frontend with explicit no-cache headers to prevent stale mobile webview caches
+from fastapi.responses import FileResponse
+
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    response = FileResponse("api/static/index.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")
