@@ -187,30 +187,76 @@ def pipeline_extract(self, payload_str):
 from worker.canonical_geo import resolve_canonical_toponym
 from worker.scoring import calculate_significance_score, calculate_confidence_score, compute_composite_resonance
 from worker.source_registry import get_source_metadata
+from worker.geo_extractors.address_parser import extract_addresses
+from worker.geo_extractors.poi_matcher import match_poi
 
 @shared_task(name="worker.tasks.pipeline_geocode", bind=True, time_limit=15, autoretry_for=(Exception,), retry_backoff=True, max_retries=2)
 def pipeline_geocode(self, data):
     if data.get("skip"):
         return data
-        
+
+    payload = data["payload"]
     llm_data = data["llm_data"]
+    text = payload.get("text", "")
     geom_wkt = data.get("geom_wkt")
-    
-    raw_location = llm_data.get("location") or "Київ та область"
-    canonical_name, lat, lon, is_fallback_geo = resolve_canonical_toponym(raw_location)
+    osint_location = data.get("osint_location")
 
-    # Store normalized canonical name
-    llm_data["location"] = canonical_name
+    precision_tier = "settlement"
+    precision_radius_m = 2000
+    is_fallback_geo = False
 
-    if lat is not None and lon is not None:
-        geom_wkt = f"POINT({lon} {lat})"
+    # Tier 1: EXIF GPS (Highest precision: ±10m)
+    if geom_wkt and osint_location and "EXIF" in osint_location:
+        precision_tier = "exact"
+        precision_radius_m = 10
+        is_fallback_geo = False
     elif not geom_wkt:
-        # is_fallback_geo is already True here — resolve_canonical_toponym
-        # only returns lat=lon=None (forcing this branch) when it fell back.
-        geom_wkt = cached_geocode(f"{canonical_name}, Київська область, Україна")
+        # Tier 2: Tactical POI Match (Building-level: ±50m)
+        poi = match_poi(text)
+        if poi:
+            geom_wkt = f"POINT({poi.lon} {poi.lat})"
+            precision_tier = poi.precision  # "building"
+            precision_radius_m = 50
+            is_fallback_geo = False
+            llm_data["location"] = poi.name
+            osint_location = f"POI: {poi.name} ({poi.address})"
+        else:
+            # Tier 3 & 4: Deterministic Regex Address (Address ±100m, Street ±300m)
+            parsed_addrs = extract_addresses(text)
+            if parsed_addrs:
+                best_addr = max(parsed_addrs, key=lambda a: (a.building is not None, len(a.street)))
+                geo_pt = cached_geocode(best_addr.normalized_query)
+                if geo_pt:
+                    geom_wkt = geo_pt
+                    precision_tier = best_addr.precision  # "address" or "street"
+                    precision_radius_m = 100 if best_addr.building else 300
+                    is_fallback_geo = False
+                    loc_display = f"{best_addr.street}{', ' + best_addr.building if best_addr.building else ''}, {best_addr.city}"
+                    llm_data["location"] = loc_display
+                    osint_location = f"Address: {loc_display}"
+
+    # Tier 5: Canonical Toponym Fallback (Settlement ±2000m, Region ±10000m)
+    if not geom_wkt:
+        raw_location = llm_data.get("location") or "Київ та область"
+        canonical_name, lat, lon, is_fallback = resolve_canonical_toponym(raw_location)
+        llm_data["location"] = canonical_name
+        is_fallback_geo = is_fallback
+        if lat is not None and lon is not None:
+            geom_wkt = f"POINT({lon} {lat})"
+            precision_tier = "settlement" if not is_fallback_geo else "region"
+            precision_radius_m = 2000 if not is_fallback_geo else 10000
+        else:
+            geom_wkt = cached_geocode(f"{canonical_name}, Київська область, Україна")
+            precision_tier = "settlement" if geom_wkt else "region"
+            precision_radius_m = 2000 if geom_wkt else 10000
 
     data["geom_wkt"] = geom_wkt
     data["is_fallback_geo"] = is_fallback_geo
+    data["precision_tier"] = precision_tier
+    data["precision_radius_m"] = precision_radius_m
+    if osint_location:
+        data["osint_location"] = osint_location
+
     return data
 
 @shared_task(name="worker.tasks.pipeline_cluster_and_save", bind=True)
