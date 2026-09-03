@@ -31,8 +31,8 @@ async def cmd_graph(message: types.Message):
         if graph_file:
             await message.answer_photo(
                 photo=types.BufferedInputFile(graph_file.getvalue(), filename=graph_file.name),
-                caption="📈 **Динаміка інцидентів та цілей (останні 24 год)**",
-                parse_mode="Markdown"
+                caption="📈 <b>Динаміка інцидентів та цілей (останні 24 год)</b>",
+                parse_mode=ParseMode.HTML
             )
         else:
             await message.answer("Немає достатньо даних для побудови графіка.")
@@ -49,7 +49,8 @@ async def cmd_csv_export(message: types.Message):
         csv_file = generate_csv_export(hours=24)
         await message.answer_document(
             document=types.BufferedInputFile(csv_file.getvalue(), filename=csv_file.name),
-            caption="✅ Дані OSINT платформи (24h)."
+            caption="✅ <b>Дані OSINT платформи (24h).</b>",
+            parse_mode=ParseMode.HTML
         )
     except Exception as e:
         logger.error(f"CSV error: {e}")
@@ -66,8 +67,8 @@ async def cmd_static_map(message: types.Message):
         
         await message.answer_photo(
             photo=types.BufferedInputFile(map_file.getvalue(), filename=map_file.name),
-            caption="🗺️ **Знімок тактичної мапи за останні 24 години**\nЧервоний: Вибухи/Влучання | Помаранчевий: Шахеди/Радари",
-            parse_mode="Markdown"
+            caption="🗺️ <b>Знімок тактичної мапи за останні 24 години</b>\nЧервоний: Вибухи/Влучання | Помаранчевий: Шахеди/Радари",
+            parse_mode=ParseMode.HTML
         )
     except Exception as e:
         logger.error(f"Map generation error: {e}")

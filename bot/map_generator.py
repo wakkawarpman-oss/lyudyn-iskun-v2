@@ -10,8 +10,8 @@ from database.models import SessionLocal, DetectedEvent
 from sqlalchemy import func
 from staticmap.staticmap import StaticMap, Marker
 
-# Fast and reliable tile server (OpenStreetMap standard / CartoDB fallback)
-TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+# Fast and reliable tile server (Esri Dark Gray Canvas for tactical dark UI)
+TILE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
 
 def generate_static_map(hours: int = 24) -> io.BytesIO:
     """Generates a static map image of recent events."""
