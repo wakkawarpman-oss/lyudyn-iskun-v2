@@ -33,7 +33,7 @@
 | `lyudyn-iskun-v2-bot_ui-1` | `lyudyn-iskun-core:latest` | Telegram-бот на **Aiogram 3.4** (22 команди/кнопки) |
 | `lyudyn-iskun-v2-ai_worker-1` | `lyudyn-iskun-core:latest` | **Celery Worker + Beat** (LLM-парсер, кластеризація, добова ротація) |
 | `lyudyn-iskun-v2-listener-1` | `lyudyn-iskun-core:latest` | **Telethon Client** (Слухач 20+ Telegram каналів через MTProto) |
-| `lyudyn-iskun-v2-web_api-1` | `lyudyn-iskun-core:latest` | **FastAPI** сервер (`/api/events`, `/api/stats`, `/api/shelters`, `/api/geoint/zones`) |
+| `lyudyn-iskun-v2-web_api-1` | `lyudyn-iskun-core:latest` | **FastAPI** сервер (`/api/events`, `/api/stats`, `/api/shelters`, `/api/geoint/zones`, `/api/cot`, `/api/cot/zip`) |
 | `lyudyn-iskun-v2-cloudflared-1`| `cloudflare/cloudflared:latest` | Захищений безкоштовний тунель до веб-мапи |
 | `lyudyn-iskun-v2-db-1` | `postgis/postgis:15-3.3` | Реляційна гео-просторова база даних **PostgreSQL 15 + PostGIS GIST** |
 | `lyudyn-iskun-v2-redis-1` | `redis:7-alpine` | Брокер повідомлень Celery та кеш аналітики |
