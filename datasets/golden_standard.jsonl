@@ -1,10 +1,30 @@
-{"text": "Вибух у Бучі, очевидець зняв відео", "label": 1, "type": "explosion_fire", "location": "Бучі", "kyiv_region": true}
+{"text": "Вибух у Бучі, очевидець зняв відео", "label": 1, "type": "explosion", "location": "Бучі", "kyiv_region": true}
 {"text": "Сьогодні гарний день у Києві", "label": 0, "type": null, "location": null, "kyiv_region": true}
-{"text": "Обстріл ракетами Шевченківського району", "label": 1, "type": "shelling", "location": "Шевченківського", "kyiv_region": true}
+{"text": "Обстріл ракетами Шевченківського району, влучання", "label": 1, "type": "direct_strike", "location": "Шевченківського", "kyiv_region": true}
 {"text": "Котик спить на дивані", "label": 0, "type": null, "location": null, "kyiv_region": false}
 {"text": "Приліт по Голосіївському, зруйновано склад", "label": 1, "type": "direct_strike", "location": "Голосіївському", "kyiv_region": true}
 {"text": "Даша їде на дачу", "label": 0, "type": null, "location": null, "kyiv_region": false}
-{"text": "Shahed летить у бік Києва", "label": 1, "type": "shelling", "location": null, "kyiv_region": true}
-{"text": "Пожежа після удару в Ірпені", "label": 1, "type": "explosion_fire", "location": "Ірпені", "kyiv_region": true}
+{"text": "Shahed летить у бік Києва, курс на Бровари", "label": 1, "type": "radar_track", "location": "Бровари", "kyiv_region": true}
+{"text": "Пожежа після удару в Ірпені, працює ДСНС", "label": 1, "type": "fire", "location": "Ірпені", "kyiv_region": true}
 {"text": "Рейв скасовано через тривогу", "label": 0, "type": null, "location": null, "kyiv_region": true}
-{"text": "В Севастополі підірвали авто", "label": 1, "type": "explosion_fire", "location": null, "kyiv_region": false}
+{"text": "В Севастополі підірвали авто", "label": 1, "type": "explosion", "location": null, "kyiv_region": false}
+{"text": "💥 Васильків (Київщина) - вибухи, робота ППО", "label": 1, "type": "explosion", "location": "Васильків", "kyiv_region": true}
+{"text": "🟢 м. Київ - відбій повітряної тривоги!", "label": 0, "type": "general_alert", "location": "Київ", "kyiv_region": true}
+{"text": "🔴 Повітряна тривога в місті Київ та області!", "label": 1, "type": "general_alert", "location": "Київ", "kyiv_region": true}
+{"text": "🛵 4 повз Полтавщину на Київщину вектор Бориспіль", "label": 1, "type": "radar_track", "location": "Бориспіль", "kyiv_region": true}
+{"text": "Зафіксовано рух крилатої ракети в напрямку Фастова", "label": 1, "type": "radar_track", "location": "Фастів", "kyiv_region": true}
+{"text": "У Білій Церкві чутно серію вибухів", "label": 1, "type": "explosion", "location": "Біла Церква", "kyiv_region": true}
+{"text": "Прогноз погоди на вихідні в столиці: дощ", "label": 0, "type": null, "location": null, "kyiv_region": true}
+{"text": "Падіння уламків у Деснянському районі, загоряння авто", "label": 1, "type": "fire", "location": "Деснянському", "kyiv_region": true}
+{"text": "Одеса під масованим ударом балістики", "label": 1, "type": "direct_strike", "location": "Одеса", "kyiv_region": false}
+{"text": "Вишгород - зафіксовано проліт розвідувального БпЛА", "label": 1, "type": "radar_track", "location": "Вишгород", "kyiv_region": true}
+{"text": "Армпо танцює в клубі під час комендантської", "label": 0, "type": null, "location": null, "kyiv_region": false}
+{"text": "Макарівський район: виявлено нерозірвану бойову частину", "label": 1, "type": "direct_strike", "location": "Макарів", "kyiv_region": true}
+{"text": "Харків зазнав авіаудару КАБами", "label": 1, "type": "direct_strike", "location": "Харків", "kyiv_region": false}
+{"text": "Оболонь, чутно гучний звук мотора в небі", "label": 1, "type": "radar_track", "location": "Оболонь", "kyiv_region": true}
+{"text": "Купити генератор зі знижкою 20%", "label": 0, "type": null, "location": null, "kyiv_region": false}
+{"text": "Подільський район: працюють сили ППО по ворожих дронах", "label": 1, "type": "radar_track", "location": "Подільський", "kyiv_region": true}
+{"text": "Швидкісна ціль через Чернігівщину на Бровари!", "label": 1, "type": "radar_track", "location": "Бровари", "kyiv_region": true}
+{"text": "Гостомель - повторні вибухи біля аеродрому", "label": 1, "type": "explosion", "location": "Гостомель", "kyiv_region": true}
+{"text": "Затори 8 балів на мосту Патона", "label": 0, "type": null, "location": null, "kyiv_region": true}
+{"text": "Влучання БпЛА в промисловий об'єкт у Дарницькому районі", "label": 1, "type": "direct_strike", "location": "Дарницькому", "kyiv_region": true}
