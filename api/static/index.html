@@ -127,6 +127,39 @@
             color: var(--text-primary);
         }
 
+        .oblast-selector-wrap {
+            display: flex;
+            align-items: center;
+            margin-left: 6px;
+        }
+        .oblast-select-pill {
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(15, 23, 42, 0.85);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            border-radius: 14px;
+            padding: 4px 24px 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2300e5ff' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+        .oblast-select-pill:hover, .oblast-select-pill:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.35);
+        }
+        .oblast-select-pill option {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
         .header-right {
             display: flex;
             align-items: center;
@@ -802,6 +835,14 @@
                 <span style="font-size:16px;">🛡️</span>
                 <span class="header-title">ОПЕРАТИВНА МАПА</span>
             </div>
+            <div class="oblast-selector-wrap">
+                <select id="oblast-select" class="oblast-select-pill" title="Вибір області моніторингу">
+                    <option value="kyiv">🏙️ Київська обл. / Київ</option>
+                    <option value="dnipropetrovsk">🏭 Дніпропетровська обл.</option>
+                    <option value="zaporizhzhia">⚡ Запорізька обл.</option>
+                    <option value="all">🇺🇦 Вся Україна</option>
+                </select>
+            </div>
         </div>
         <div class="header-right">
             <div class="mode-segmented-control">
@@ -1045,10 +1086,42 @@
     </div>
 
     <script>
+        // ─── 0. Oblast Administration Registry ───
+        const OBLAST_CONFIG = {
+            'kyiv': {
+                name: 'Київська обл. / Київ',
+                title: 'Київщини',
+                center: [50.4501, 30.5234],
+                zoom: 10
+            },
+            'dnipropetrovsk': {
+                name: 'Дніпропетровська обл.',
+                title: 'Дніпропетровщини',
+                center: [48.4647, 35.0462],
+                zoom: 9
+            },
+            'zaporizhzhia': {
+                name: 'Запорізька обл.',
+                title: 'Запоріжжя',
+                center: [47.8388, 35.1396],
+                zoom: 9
+            },
+            'all': {
+                name: 'Вся Україна',
+                title: 'України',
+                center: [48.3794, 31.1656],
+                zoom: 6
+            }
+        };
+
+        let currentOblast = localStorage.getItem('c4isr_active_oblast') || 'kyiv';
+        if (!OBLAST_CONFIG[currentOblast]) currentOblast = 'kyiv';
+        const initOblast = OBLAST_CONFIG[currentOblast];
+
         // ─── 1. Map Initialization ───
         const map = L.map('map', {
-            center: [50.4501, 30.5234],
-            zoom: 11,
+            center: initOblast.center,
+            zoom: initOblast.zoom,
             minZoom: 6,
             maxZoom: 19,
             zoomControl: false
@@ -1160,7 +1233,97 @@
         });
 
         toggleLayerRow('row-zones', zonesLayer);
-        toggleLayerRow('row-infra', infraLayer);
+        toggleLayerRow('row-infra', infraLayer, (on) => {
+            if (on) fetchInfrastructurePOIs();
+        });
+
+        // ─── Infrastructure POI Loader ───
+        async function fetchInfrastructurePOIs() {
+            try {
+                const res = await fetch(`/api/v1/infrastructure/critical?oblast=${currentOblast}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                infraLayer.clearLayers();
+                const features = data.features || [];
+
+                features.forEach(f => {
+                    const coords = f.geometry.coordinates;
+                    const p = f.properties;
+                    const cat = p.category;
+
+                    let iconGlyph = '🏢';
+                    let catColor = '#00e5ff';
+                    if (cat === 'substation' || cat === 'energy') { iconGlyph = '⚡'; catColor = '#ffd600'; }
+                    else if (cat === 'defense_industry') { iconGlyph = '🏭'; catColor = '#ff2a44'; }
+                    else if (cat === 'fuel_depot') { iconGlyph = '⛽'; catColor = '#ff9900'; }
+                    else if (cat === 'bridge') { iconGlyph = '🌉'; catColor = '#38bdf8'; }
+                    else if (cat === 'airport') { iconGlyph = '🛫'; catColor = '#a855f7'; }
+                    else if (cat === 'railway') { iconGlyph = '🚆'; catColor = '#34d399'; }
+
+                    const customIcon = L.divIcon({
+                        className: '',
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14],
+                        html: `
+                            <div style="
+                                width: 28px; height: 28px; border-radius: 6px;
+                                background: rgba(10, 15, 24, 0.92);
+                                border: 1.5px solid ${catColor};
+                                box-shadow: 0 0 10px ${catColor}55;
+                                display: flex; align-items: center; justify-content: center;
+                                font-size: 13px; cursor: pointer;
+                            ">${iconGlyph}</div>
+                        `
+                    });
+
+                    const marker = L.marker([coords[1], coords[0]], { icon: customIcon });
+                    marker.bindPopup(`
+                        <div style="font-family: var(--font-sans); color: #fff; padding: 4px; min-width: 180px;">
+                            <div style="font-size: 10px; font-weight: 800; color: ${catColor}; text-transform: uppercase;">${p.category_label}</div>
+                            <div style="font-size: 13px; font-weight: 800; margin: 3px 0;">${p.name}</div>
+                            <div style="font-size: 11px; color: #94a3b8; line-height: 1.3;">${p.address}</div>
+                            <div style="font-size: 10px; color: #38bdf8; margin-top: 6px; font-family: var(--font-mono); border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">
+                                📍 ${coords[1].toFixed(4)}°N, ${coords[0].toFixed(4)}°E • <span style="color:#a5f3fc; font-weight:700;">${(p.oblast || 'all').toUpperCase()}</span>
+                            </div>
+                        </div>
+                    `, { className: 'tactical-leaflet-popup' });
+                    marker.addTo(infraLayer);
+                });
+            } catch(e) {
+                console.warn('Infra POI error:', e);
+            }
+        }
+
+        // ─── Oblast Switcher Controller ───
+        const oblastSelect = document.getElementById('oblast-select');
+        if (oblastSelect) {
+            oblastSelect.value = currentOblast;
+            oblastSelect.addEventListener('change', (e) => {
+                switchOblast(e.target.value);
+            });
+        }
+
+        function switchOblast(code, skipFly = false) {
+            if (!OBLAST_CONFIG[code]) return;
+            currentOblast = code;
+            localStorage.setItem('c4isr_active_oblast', code);
+            if (oblastSelect) oblastSelect.value = code;
+
+            const cfg = OBLAST_CONFIG[code];
+            if (!skipFly) {
+                map.flyTo(cfg.center, cfg.zoom, { duration: 1.2 });
+            }
+
+            if (map.hasLayer(infraLayer)) {
+                fetchInfrastructurePOIs();
+            }
+            updateThreatBanner();
+        }
+
+        document.getElementById('btn-locate')?.addEventListener('click', () => {
+            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
+            map.flyTo(cfg.center, cfg.zoom, { duration: 1.0 });
+        });
 
         toggleLayerRow('row-shelters', sheltersLayer, async (on) => {
             if (on && sheltersLayer.getLayers().length === 0) {
@@ -1267,6 +1430,46 @@
         document.getElementById('prof-clean')?.addEventListener('click', () => setProfile('clean'));
 
         // ─── 3. Live Radar Targets (Neptun Live Feed) ───
+        function updateThreatBanner() {
+            const threatBanner = document.getElementById('threat-banner');
+            const threatText = document.getElementById('threat-banner-text');
+            const peekDrones = document.getElementById('peek-drones');
+            const statValDrones = document.getElementById('stat-val-drones');
+
+            let relevantDrones = [];
+            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
+
+            if (currentOblast === 'kyiv') {
+                relevantDrones = activeDrones.filter(d => d.is_kyiv_threat);
+            } else if (currentOblast === 'dnipropetrovsk') {
+                relevantDrones = activeDrones.filter(d => d.is_dnipro_threat);
+            } else if (currentOblast === 'zaporizhzhia') {
+                relevantDrones = activeDrones.filter(d => d.is_zaporizhzhia_threat);
+            } else {
+                relevantDrones = activeDrones;
+            }
+            const count = relevantDrones.length;
+
+            if (peekDrones) peekDrones.textContent = `${count} цілей`;
+            if (statValDrones) statValDrones.textContent = count;
+
+            if (count > 0) {
+                threatBanner.classList.remove('hidden');
+                const closest = relevantDrones[0];
+                let distStr = '';
+                if (currentOblast === 'kyiv' && closest.distance_to_kyiv_km) {
+                    distStr = `, ~${closest.distance_to_kyiv_km} км`;
+                } else if (currentOblast === 'dnipropetrovsk' && closest.distance_to_dnipro_km) {
+                    distStr = `, ~${closest.distance_to_dnipro_km} км`;
+                } else if (currentOblast === 'zaporizhzhia' && closest.distance_to_zaporizhzhia_km) {
+                    distStr = `, ~${closest.distance_to_zaporizhzhia_km} км`;
+                }
+                threatText.textContent = `${count} цілей у зоні ${cfg.title} (${closest.place || 'БпЛА'}${distStr})`;
+            } else {
+                threatBanner.classList.add('hidden');
+            }
+        }
+
         async function fetchRadarDrones() {
             try {
                 const res = await fetch('/api/v1/radar/drones');
@@ -1275,24 +1478,10 @@
                 const drones = data.drones || [];
                 activeDrones = drones;
 
-                const kyivCount = data.kyiv_threat_count || 0;
-                const threatBanner = document.getElementById('threat-banner');
-                const threatText = document.getElementById('threat-banner-text');
-                const peekDrones = document.getElementById('peek-drones');
-                const statValDrones = document.getElementById('stat-val-drones');
                 const cntTracks = document.getElementById('cnt-tracks');
-
-                if (peekDrones) peekDrones.textContent = `${kyivCount} цілей`;
-                if (statValDrones) statValDrones.textContent = kyivCount;
                 if (cntTracks) cntTracks.textContent = drones.length;
 
-                if (kyivCount > 0) {
-                    threatBanner.classList.remove('hidden');
-                    const closest = drones.find(d => d.is_kyiv_threat) || drones[0];
-                    threatText.textContent = `${kyivCount} цілей на підльоті (${closest.place || 'Київська обл.'}, ~${closest.distance_to_kyiv_km} км)`;
-                } else {
-                    threatBanner.classList.add('hidden');
-                }
+                updateThreatBanner();
 
                 radarLayer.clearLayers();
                 drones.forEach(d => {
@@ -1327,9 +1516,15 @@
             }
         }
 
-        // Tap Threat Banner -> Fly to nearest drone
+        // Tap Threat Banner -> Fly to nearest drone in active oblast
         document.getElementById('threat-banner')?.addEventListener('click', () => {
-            const threat = activeDrones.find(d => d.is_kyiv_threat) || activeDrones[0];
+            let relevant = [];
+            if (currentOblast === 'kyiv') relevant = activeDrones.filter(d => d.is_kyiv_threat);
+            else if (currentOblast === 'dnipropetrovsk') relevant = activeDrones.filter(d => d.is_dnipro_threat);
+            else if (currentOblast === 'zaporizhzhia') relevant = activeDrones.filter(d => d.is_zaporizhzhia_threat);
+            else relevant = activeDrones;
+
+            const threat = relevant[0] || activeDrones[0];
             if (threat) map.flyTo([threat.lat, threat.lng], 12, { duration: 1 });
         });
 
@@ -1545,22 +1740,25 @@
 
         // ─── 7. Locate & Zoom Controls ───
         document.getElementById('btn-locate')?.addEventListener('click', () => {
+            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     map.flyTo([pos.coords.latitude, pos.coords.longitude], 13, { duration: 1 });
                 }, () => {
-                    map.flyTo([50.4501, 30.5234], 11, { duration: 1 });
+                    map.flyTo(cfg.center, cfg.zoom, { duration: 1 });
                 });
             } else {
-                map.flyTo([50.4501, 30.5234], 11, { duration: 1 });
+                map.flyTo(cfg.center, cfg.zoom, { duration: 1 });
             }
         });
         document.getElementById('btn-zoom-in')?.addEventListener('click', () => map.zoomIn());
         document.getElementById('btn-zoom-out')?.addEventListener('click', () => map.zoomOut());
 
-        // ─── 8. Polling Intervals ───
+        // ─── 8. Startup & Polling Intervals ───
+        switchOblast(currentOblast, true);
         fetchRadarDrones();
         fetchEventsAndZones();
+        fetchInfrastructurePOIs();
         setInterval(fetchRadarDrones, 4000);
         setInterval(fetchEventsAndZones, 20000);
     </script>

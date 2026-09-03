@@ -1,3 +1,4 @@
+from typing import Optional, List, Dict
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
@@ -288,16 +289,20 @@ def get_network_channel_lineage(channel: str, db: Session = Depends(get_db)):
     return repo.get_channel_lineage(channel)
 
 @app.get("/api/v1/infrastructure/critical")
-def get_critical_infrastructure():
-    from worker.geo_extractors.poi_matcher import KYIV_POI_DATABASE, INFRASTRUCTURE_CATEGORY_LABELS
+def get_critical_infrastructure(oblast: Optional[str] = None):
+    from worker.geo_extractors.poi_matcher import POI_DATABASE, INFRASTRUCTURE_CATEGORY_LABELS
     features = []
     critical_categories = {
         "substation", "energy", "fuel_depot", "telecom", "defense_industry",
         "railway", "airport", "bridge"
     }
-    for name, data in KYIV_POI_DATABASE.items():
+    for name, data in POI_DATABASE.items():
+        if oblast and oblast != "all" and data.get("oblast") and data.get("oblast") != oblast:
+            continue
+
         cat = data.get("category", "")
         if cat in critical_categories and "lat" in data and "lon" in data:
+            display_name = data.get("name", name)
             features.append({
                 "type": "Feature",
                 "geometry": {
@@ -305,16 +310,57 @@ def get_critical_infrastructure():
                     "coordinates": [data["lon"], data["lat"]]
                 },
                 "properties": {
-                    "name": name,
+                    "name": display_name,
                     "category": cat,
                     "category_label": INFRASTRUCTURE_CATEGORY_LABELS.get(cat, "Стратегічний об'єкт"),
-                    "address": data.get("address", name)
+                    "address": data.get("address", display_name),
+                    "oblast": data.get("oblast", "kyiv")
                 }
             })
     return {
         "type": "FeatureCollection",
         "features": features,
         "count": len(features)
+    }
+
+@app.get("/api/v1/oblasts")
+def get_supported_oblasts():
+    """Returns official oblast registry with bounding centers and default zoom levels."""
+    return {
+        "oblasts": [
+            {
+                "code": "kyiv",
+                "name": "Київська область та м. Київ",
+                "short_name": "Київ / Область",
+                "icon": "fa-building-shield",
+                "center": [50.4501, 30.5234],
+                "zoom": 10
+            },
+            {
+                "code": "dnipropetrovsk",
+                "name": "Дніпропетровська область",
+                "short_name": "Дніпропетровщина",
+                "icon": "fa-industry",
+                "center": [48.4647, 35.0462],
+                "zoom": 9
+            },
+            {
+                "code": "zaporizhzhia",
+                "name": "Запорізька область",
+                "short_name": "Запоріжжя",
+                "icon": "fa-bolt-lightning",
+                "center": [47.8388, 35.1396],
+                "zoom": 9
+            },
+            {
+                "code": "all",
+                "name": "Вся Україна (Зведений огляд)",
+                "short_name": "Вся Україна",
+                "icon": "fa-globe",
+                "center": [48.3794, 31.1656],
+                "zoom": 6
+            }
+        ]
     }
 
 class DroneRaycastRequest(BaseModel):

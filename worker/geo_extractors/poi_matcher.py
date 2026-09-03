@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional, List, Dict
 
+POI_REGISTRY_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "database", "poi", "poi_registry.json")
 POI_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "database", "kyiv_poi.json")
 
 
@@ -20,6 +21,7 @@ class PoiMatch:
     category: str
     address: str
     matched_alias: str
+    oblast: str = "kyiv"
     precision: str = "building"  # ±50m
 
 
@@ -32,11 +34,12 @@ class NearbyInfrastructureMatch:
     lon: float
     distance_m: float
     address: str
+    oblast: str = "kyiv"
 
 
 INFRASTRUCTURE_CATEGORY_LABELS = {
     "substation": "⚡ Електрична підстанція",
-    "energy": "⚡ Електростанція / ТЕЦ",
+    "energy": "⚡ Електростанція / ТЕЦ / ГЕС",
     "fuel_depot": "⛽ Нафтобаза / Склад ПММ",
     "telecom": "📡 Телекомунікаційний вузол / Телевежа",
     "defense_industry": "🏭 Об'єкт оборонної промисловості / ВПК",
@@ -48,17 +51,19 @@ INFRASTRUCTURE_CATEGORY_LABELS = {
 
 
 def _load_poi_database() -> Dict[str, dict]:
-    """Loads POI database from JSON."""
-    if not os.path.exists(POI_DB_PATH):
+    """Loads POI database from POI registry or fallback to kyiv_poi."""
+    path = POI_REGISTRY_PATH if os.path.exists(POI_REGISTRY_PATH) else POI_DB_PATH
+    if not os.path.exists(path):
         return {}
     try:
-        with open(POI_DB_PATH, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
 
 
-KYIV_POI_DATABASE = _load_poi_database()
+POI_DATABASE = _load_poi_database()
+KYIV_POI_DATABASE = POI_DATABASE
 
 
 def calculate_haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -72,11 +77,11 @@ def calculate_haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: 
     return R * c
 
 
-def find_nearby_critical_infrastructure(lat: float, lon: float, max_radius_m: float = 1200.0) -> List[NearbyInfrastructureMatch]:
+def find_nearby_critical_infrastructure(lat: float, lon: float, max_radius_m: float = 1200.0, oblast: Optional[str] = None) -> List[NearbyInfrastructureMatch]:
     """
     Sightline Engine Proximity Search:
     Scans strategic critical infrastructure assets and returns those within max_radius_m,
-    sorted by proximity ascending.
+    sorted by proximity ascending. Optionally filter by oblast.
     """
     if lat is None or lon is None:
         return []
@@ -87,7 +92,10 @@ def find_nearby_critical_infrastructure(lat: float, lon: float, max_radius_m: fl
         "railway", "airport", "bridge"
     }
 
-    for name, data in KYIV_POI_DATABASE.items():
+    for name, data in POI_DATABASE.items():
+        if oblast and data.get("oblast") and data.get("oblast") != oblast:
+            continue
+
         cat = data.get("category", "")
         if cat not in critical_categories:
             continue
@@ -100,29 +108,37 @@ def find_nearby_critical_infrastructure(lat: float, lon: float, max_radius_m: fl
         dist = calculate_haversine_distance_m(lat, lon, poi_lat, poi_lon)
         if dist <= max_radius_m:
             cat_label = INFRASTRUCTURE_CATEGORY_LABELS.get(cat, "⚠️ Стратегічний об'єкт")
+            display_name = data.get("name", name)
             matches.append(NearbyInfrastructureMatch(
-                name=name,
+                name=display_name,
                 category=cat,
                 category_label=cat_label,
                 lat=poi_lat,
                 lon=poi_lon,
                 distance_m=round(dist, 1),
-                address=data.get("address", name)
+                address=data.get("address", display_name),
+                oblast=data.get("oblast", "kyiv")
             ))
 
     matches.sort(key=lambda x: x.distance_m)
     return matches
 
 
-def match_poi(text: str) -> Optional[PoiMatch]:
-    """Matches text against tactical POI database using case-insensitive word boundary matching."""
+def match_poi(text: str, oblast: Optional[str] = None) -> Optional[PoiMatch]:
+    """Matches text against tactical POI database using case-insensitive word boundary matching, optionally filtered by oblast."""
     if not text:
         return None
 
     text_lower = text.lower()
 
-    for name, data in KYIV_POI_DATABASE.items():
+    for name, data in POI_DATABASE.items():
+        if oblast and data.get("oblast") and data.get("oblast") != oblast:
+            continue
+
         aliases: List[str] = data.get("aliases", []) + [name.lower()]
+        if "name" in data and data["name"].lower() not in aliases:
+            aliases.append(data["name"].lower())
+
         for alias in aliases:
             # Escape for regex and allow flexible whitespace/quotes
             escaped = re.escape(alias.strip().lower())
@@ -132,12 +148,13 @@ def match_poi(text: str) -> Optional[PoiMatch]:
             match = re.search(pattern, text_lower)
             if match:
                 return PoiMatch(
-                    name=name,
+                    name=data.get("name", name),
                     lat=data["lat"],
                     lon=data["lon"],
                     category=data.get("category", "landmark"),
                     address=data.get("address", name),
                     matched_alias=match.group(1),
+                    oblast=data.get("oblast", "kyiv"),
                     precision="building"
                 )
 

@@ -1,0 +1,210 @@
+{
+  "national": [
+    {
+      "username": "kpszsu",
+      "title": "Повітряні Сили ЗСУ",
+      "tier": 1
+    },
+    {
+      "username": "ComAFUA",
+      "title": "Командувач Повітряних Сил",
+      "tier": 1
+    },
+    {
+      "username": "monitor_ukr",
+      "title": "Монітор (Вся Україна)",
+      "tier": 1
+    },
+    {
+      "username": "eRadarrua",
+      "title": "єРадар",
+      "tier": 1
+    },
+    {
+      "username": "povitryanatrivogaaa",
+      "title": "Повітряна Тривога UA",
+      "tier": 1
+    },
+    {
+      "username": "war_monitor",
+      "title": "War Monitor",
+      "tier": 1
+    },
+    {
+      "username": "GeneralStaffZSU",
+      "title": "Генеральний Штаб ЗСУ",
+      "tier": 1
+    },
+    {
+      "username": "MVS_UA",
+      "title": "МВС України",
+      "tier": 2
+    },
+    {
+      "username": "vanek_nikolaev",
+      "title": "Николаевский Ванёк",
+      "tier": 1
+    },
+    {
+      "username": "sirena_ukraine",
+      "title": "Сирена Україна",
+      "tier": 2
+    }
+  ],
+  "kyiv": [
+    {
+      "username": "VA_Kyiv",
+      "title": "КМВА (Київська міська військова адміністрація)",
+      "tier": 1
+    },
+    {
+      "username": "KyivCityOfficial",
+      "title": "КМДА Офіційний",
+      "tier": 1
+    },
+    {
+      "username": "dsns_kyiv_region",
+      "title": "ДСНС Київська область",
+      "tier": 1
+    },
+    {
+      "username": "dsns_telegram",
+      "title": "ДСНС України",
+      "tier": 1
+    },
+    {
+      "username": "kyivoperat",
+      "title": "Київ Оперативний",
+      "tier": 2
+    },
+    {
+      "username": "KyivOperativ",
+      "title": "Київ Оператив",
+      "tier": 2
+    },
+    {
+      "username": "kyiv24",
+      "title": "Київ 24 Новини",
+      "tier": 2
+    },
+    {
+      "username": "babel_ua",
+      "title": "Бабель",
+      "tier": 2
+    },
+    {
+      "username": "up_stryimka",
+      "title": "УП Стрічка",
+      "tier": 2
+    },
+    {
+      "username": "pravda_gerashchenko",
+      "title": "Правда Геращенко",
+      "tier": 2
+    },
+    {
+      "username": "ssternenko",
+      "title": "Сергій Стерненко",
+      "tier": 2
+    },
+    {
+      "username": "CensorNet",
+      "title": "Цензор.НЕТ",
+      "tier": 2
+    },
+    {
+      "username": "rbc_ukraina",
+      "title": "РБК-Україна",
+      "tier": 2
+    },
+    {
+      "username": "kievreal1",
+      "title": "Реальний Київ",
+      "tier": 2
+    }
+  ],
+  "dnipropetrovsk": [
+    {
+      "username": "dnipropetrovskaoda",
+      "title": "Дніпропетровська ОДА / ОВА",
+      "tier": 1
+    },
+    {
+      "username": "adm_dp",
+      "title": "Сергій Лисак (Дніпро ОВА)",
+      "tier": 1
+    },
+    {
+      "username": "sirena_dp",
+      "title": "Сирена Дніпро",
+      "tier": 1
+    },
+    {
+      "username": "dnepr_operativ",
+      "title": "Дніпро Оперативний",
+      "tier": 2
+    },
+    {
+      "username": "ny_i_dnipro",
+      "title": "Ну і Дніпро",
+      "tier": 2
+    },
+    {
+      "username": "dnipro_alerts",
+      "title": "Тривога Дніпропетровщина",
+      "tier": 1
+    },
+    {
+      "username": "suspilnednipro",
+      "title": "Суспільне Дніпро",
+      "tier": 2
+    },
+    {
+      "username": "dp_trevoga",
+      "title": "Дніпро Тривога",
+      "tier": 2
+    }
+  ],
+  "zaporizhzhia": [
+    {
+      "username": "ivan_fedorov_zp",
+      "title": "Іван Федоров / Запорізька ОВА",
+      "tier": 1
+    },
+    {
+      "username": "zoda_gov_ua",
+      "title": "Запорізька ОДА Офіційно",
+      "tier": 1
+    },
+    {
+      "username": "sirenazaporizhzhia",
+      "title": "Сирена Запоріжжя",
+      "tier": 1
+    },
+    {
+      "username": "suspilnezaporizhzhya",
+      "title": "Суспільне Запоріжжя",
+      "tier": 2
+    },
+    {
+      "username": "tryvoga_zp",
+      "title": "Тривога Запоріжжя",
+      "tier": 1
+    },
+    {
+      "username": "vozdushnaya_trevoga_zaporozhe",
+      "title": "Повітряна тривога Запоріжжя",
+      "tier": 2
+    },
+    {
+      "username": "info_zp",
+      "title": "Запоріжжя Інфо",
+      "tier": 2
+    },
+    {
+      "username": "etozp",
+      "title": "Це Запоріжжя",
+      "tier": 2
+    }
+  ]
+}
