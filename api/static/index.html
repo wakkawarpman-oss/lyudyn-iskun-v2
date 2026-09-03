@@ -1511,17 +1511,6 @@
             else map.removeLayer(ewLayer);
         });
 
-        // ─── Compact Tactical Banner & Dismissal ───
-        document.getElementById('btn-dismiss-banner')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            isBannerDismissed = true;
-            document.getElementById('tactical-alert-banner')?.classList.add('hidden');
-        });
-
-        document.getElementById('tactical-alert-banner')?.addEventListener('click', () => {
-            document.getElementById('btn-focus-threat')?.click();
-        });
-
         // ─── LIVE Mode Engine (Auto-Tracking & Continuous Target Extrapolation) ───
         const liveBtn = document.getElementById('btn-live-mode');
         liveBtn?.addEventListener('click', () => {
@@ -2305,21 +2294,6 @@
                     } else {
                         statusPill.className = 'tactical-status-pill';
                         statusThreat.innerHTML = '🛡️ ПРОСТІР ЧИСТИЙ';
-                    }
-                }
-
-                if (alertBanner && bannerText) {
-                    if (data.ballistic_threat) {
-                        alertBanner.style.background = 'rgba(220, 38, 38, 0.96)';
-                        bannerText.innerHTML = '🚨 <b>БАЛІСТИКА!</b> Загроза по Києву / області';
-                        if (!isBannerDismissed) alertBanner.classList.remove('hidden');
-                    } else if (data.kyiv_threat_count > 0) {
-                        alertBanner.style.background = 'rgba(234, 88, 12, 0.96)';
-                        bannerText.innerHTML = `⚠️ <b>ЗАГРОЗА:</b> ${data.kyiv_threat_count} цілей (&lt;180 км до Києва)`;
-                        if (!isBannerDismissed) alertBanner.classList.remove('hidden');
-                    } else {
-                        alertBanner.classList.add('hidden');
-                        isBannerDismissed = false;
                     }
                 }
 
