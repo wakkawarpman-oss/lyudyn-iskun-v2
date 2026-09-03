@@ -392,37 +392,123 @@
             box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
-        /* Tactical Live Warning Banner */
+        /* Tactical Live Warning Banner - Ultra-Compact & Non-Intrusive */
         .tactical-alert-banner {
             position: fixed;
-            top: 14px;
+            top: 48px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1002;
-            background: rgba(220, 38, 38, 0.92);
+            background: rgba(220, 38, 38, 0.94);
             backdrop-filter: blur(8px);
             border: 1px solid #ef4444;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
-            border-radius: 24px;
-            padding: 6px 16px;
+            box-shadow: 0 2px 14px rgba(239, 68, 68, 0.45);
+            border-radius: 16px;
+            padding: 3px 10px;
             color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 10px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             animation: pulse-banner 2s infinite;
-            transition: all 0.3s ease;
-            max-width: 90vw;
-            text-align: center;
+            transition: all 0.25s ease;
+            max-width: 92vw;
+            height: 24px;
+            box-sizing: border-box;
+            cursor: pointer;
         }
         .tactical-alert-banner.hidden {
             display: none !important;
         }
+        .alert-banner-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: calc(90vw - 36px);
+        }
+        .banner-dismiss-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            line-height: 1;
+            padding: 0 0 0 2px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+        .banner-dismiss-btn:hover {
+            color: #fff;
+        }
+
+        /* Live OSINT News Ticker */
+        .live-osint-ticker {
+            position: fixed;
+            top: 76px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            background: rgba(15, 20, 31, 0.95);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+            padding: 3px 10px;
+            color: #e2e8f0;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 92vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.3s ease;
+        }
+        .live-osint-ticker.hidden {
+            display: none !important;
+        }
+
+        /* LIVE Mode Action Button */
+        .hud-btn.live-btn {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #f87171;
+            background: rgba(15, 20, 31, 0.95);
+        }
+        .hud-btn.live-btn.active {
+            border-color: #22c55e;
+            color: #4ade80;
+            background: rgba(34, 197, 94, 0.18);
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+        }
+        .live-dot-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ef4444;
+            display: inline-block;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+        .hud-btn.live-btn.active .live-dot-pulse {
+            background: #22c55e;
+            animation: pulse-live 1.2s infinite;
+        }
+        @keyframes pulse-live {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.4); opacity: 0.6; box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Desktop / Mobile Text Variants */
+        .brand-badge span.brand-short { display: none; }
+        .hud-btn span.btn-label-short { display: none; }
+
         @keyframes pulse-banner {
-            0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
-            100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+            0% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.85); }
+            100% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.35); }
         }
 
         /* Quick Navigation Bar */
@@ -464,27 +550,78 @@
         .layer-badge.thermal { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); }
         .layer-badge.events { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
 
+        /* Responsive Mobile Layout */
         @media (max-width: 600px) {
+            .top-bar {
+                top: 8px; left: 8px; right: 8px;
+            }
+            .brand-badge {
+                padding: 6px 9px;
+                font-size: 11px;
+                border-radius: 14px;
+            }
+            .brand-badge span.brand-full { display: none; }
+            .brand-badge span.brand-short { display: inline; }
+
+            .action-btns {
+                gap: 4px;
+            }
+            .hud-btn {
+                padding: 6px 8px;
+                font-size: 11px;
+                border-radius: 14px;
+            }
+            .hud-btn span.btn-label-long { display: none; }
+            .hud-btn span.btn-label-short { display: inline; }
+
+            /* Compact Alert Banner on Mobile */
+            .tactical-alert-banner {
+                top: 46px;
+                padding: 2px 8px;
+                font-size: 9.5px;
+                height: 22px;
+                max-width: 94vw;
+            }
+
+            .live-osint-ticker {
+                top: 72px;
+                padding: 2px 8px;
+                font-size: 9px;
+                max-width: 94vw;
+            }
+
+            /* Bottom Drawer on Mobile */
+            .panel {
+                top: auto !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                max-height: 68vh !important;
+                border-radius: 18px 18px 0 0 !important;
+                border-bottom: none !important;
+                border-left: none !important;
+                border-right: none !important;
+                box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.85) !important;
+                transform: translateY(0);
+            }
+            .panel.collapsed {
+                transform: translateY(105%) !important;
+                opacity: 0;
+                pointer-events: none;
+            }
+
             .timeline-hud {
                 bottom: 8px;
-                padding: 8px 12px;
+                max-width: calc(100vw - 16px);
+                padding: 6px 8px;
                 border-radius: 12px;
             }
             .preset-btn {
-                padding: 3px 4px;
+                padding: 3px 5px;
                 font-size: 9px;
-        /* Telerecon Network Modal */
-        .network-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(11, 14, 20, 0.96);
-            backdrop-filter: blur(24px);
-            z-index: 3000;
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-            box-sizing: border-box;
-            transition: opacity 0.25s ease;
+            }
         }
         .network-modal.hidden { display: none !important; }
         .network-header {
@@ -546,26 +683,41 @@
     </style>
 </head>
 <body>
-    <!-- Tactical Live Warning Banner -->
+    <!-- Compact Tactical Threat Banner -->
     <div id="tactical-alert-banner" class="tactical-alert-banner hidden">
-        <span class="live-dot" style="background:#fff;"></span>
-        <span id="alert-banner-text">⚠️ ТАКТИЧНЕ СПОВІЩЕННЯ</span>
+        <span class="live-dot" style="background:#fff; width:6px; height:6px; flex-shrink:0;"></span>
+        <span id="alert-banner-text" class="alert-banner-text">⚠️ ТАКТИЧНЕ СПОВІЩЕННЯ</span>
+        <button id="btn-dismiss-banner" class="banner-dismiss-btn" title="Приховати">✕</button>
+    </div>
+
+    <!-- Live OSINT News Ticker -->
+    <div id="live-osint-ticker" class="live-osint-ticker hidden">
+        <span style="color:#00e5ff; font-weight:700;">📡 ОСТАННЯ ПОДІЯ:</span>
+        <span id="ticker-text" style="color:#f1f5f9;">Очікування оновлень...</span>
     </div>
 
     <!-- Top Mobile Control Bar -->
     <div class="top-bar">
         <div class="brand-badge">
-            <span>🛰️ ОКІНТ-ПРО</span>
+            <span>🛰️ <span class="brand-full">ОКІНТ-ПРО</span><span class="brand-short">ОКІНТ</span></span>
         </div>
         <div class="action-btns">
+            <button class="hud-btn live-btn" id="btn-live-mode" title="Увімкнути Live Режим стеження та розрахунку векторів">
+                <span class="live-dot-pulse"></span>
+                <span class="btn-label-long">LIVE: ВИМК</span>
+                <span class="btn-label-short">LIVE</span>
+            </button>
             <button class="hud-btn" id="btn-network" title="Граф зв'язків ІПСО (Telerecon)">
-                <span>🕸️ Мережа ІПСО</span>
+                <span class="btn-label-long">🕸️ Мережа</span>
+                <span class="btn-label-short">🕸️</span>
             </button>
             <button class="hud-btn" id="btn-gps" title="Знайти мою геопозицію">
-                <span>🎯 Де я?</span>
+                <span class="btn-label-long">🎯 Де я?</span>
+                <span class="btn-label-short">🎯</span>
             </button>
-            <button class="hud-btn" id="btn-layers">
-                <span>⚙️ Шари</span>
+            <button class="hud-btn" id="btn-layers" title="Налаштування шарів карти">
+                <span class="btn-label-long">⚙️ Шари</span>
+                <span class="btn-label-short">⚙️</span>
             </button>
         </div>
     </div>
@@ -822,6 +974,36 @@
         let isPlaying = false;
         let playInterval = null;
 
+        // Live Mode & Real-Time Motion State
+        let isLiveMode = false;
+        let isBannerDismissed = false;
+        let liveRadarInterval = null;
+        let liveEventsInterval = null;
+        let deadReckoningInterval = null;
+        let defaultDataInterval = null;
+        let defaultRadarInterval = null;
+        let activeDroneObjects = [];
+        let lastKnownEventIds = new Set();
+
+        // Tactical Web Audio Synthesizer
+        function playTacticalBeep(freq = 880, duration = 0.12) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+        }
+
         // Robust UTC ISO-8601 Parser (prevents local browser timezone skew)
         function parseUtcIso(isoStr) {
             if (!isoStr) return null;
@@ -913,6 +1095,116 @@
             if (e.target.checked) map.addLayer(ewLayer);
             else map.removeLayer(ewLayer);
         });
+
+        // ─── Compact Tactical Banner & Dismissal ───
+        document.getElementById('btn-dismiss-banner')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isBannerDismissed = true;
+            document.getElementById('tactical-alert-banner')?.classList.add('hidden');
+        });
+
+        document.getElementById('tactical-alert-banner')?.addEventListener('click', () => {
+            document.getElementById('btn-focus-threat')?.click();
+        });
+
+        // ─── LIVE Mode Engine (Auto-Tracking & Continuous Target Extrapolation) ───
+        const liveBtn = document.getElementById('btn-live-mode');
+        liveBtn?.addEventListener('click', () => {
+            toggleLiveMode();
+        });
+
+        function toggleLiveMode(forceState = null) {
+            isLiveMode = forceState !== null ? forceState : !isLiveMode;
+
+            if (isLiveMode) {
+                liveBtn.classList.add('active');
+                const labelLong = liveBtn.querySelector('.btn-label-long');
+                const labelShort = liveBtn.querySelector('.btn-label-short');
+                if (labelLong) labelLong.textContent = 'LIVE: УВІМК';
+                if (labelShort) labelShort.textContent = 'LIVE 🟢';
+
+                // High-frequency polling
+                clearInterval(defaultRadarInterval);
+                clearInterval(liveRadarInterval);
+                liveRadarInterval = setInterval(loadRadarDrones, 4000);
+
+                clearInterval(defaultDataInterval);
+                clearInterval(liveEventsInterval);
+                liveEventsInterval = setInterval(loadLiveOsintStream, 5000);
+
+                // 1-second dead-reckoning extrapolation loop
+                clearInterval(deadReckoningInterval);
+                deadReckoningInterval = setInterval(stepTargetDeadReckoning, 1000);
+
+                showLiveOsintTicker('🟢 LIVE режим активовано: розрахунок переміщення цілей та живий моніторинг');
+                playTacticalBeep(784, 0.12);
+            } else {
+                liveBtn.classList.remove('active');
+                const labelLong = liveBtn.querySelector('.btn-label-long');
+                const labelShort = liveBtn.querySelector('.btn-label-short');
+                if (labelLong) labelLong.textContent = 'LIVE: ВИМК';
+                if (labelShort) labelShort.textContent = 'LIVE';
+
+                clearInterval(liveRadarInterval);
+                clearInterval(liveEventsInterval);
+                clearInterval(deadReckoningInterval);
+
+                // Restore default intervals
+                defaultDataInterval = setInterval(loadData, 30000);
+                defaultRadarInterval = setInterval(loadRadarDrones, 15000);
+
+                document.getElementById('live-osint-ticker')?.classList.add('hidden');
+            }
+        }
+
+        function stepTargetDeadReckoning() {
+            if (!isLiveMode || !activeDroneObjects.length) return;
+            activeDroneObjects.forEach(d => {
+                if (!d.speed_kmh || d.heading === undefined) return;
+                // Dead reckoning displacement in 1 second
+                const speedMps = (d.speed_kmh * 1000.0) / 3600.0;
+                const rad = (d.heading * Math.PI) / 180.0;
+                const dLat = (speedMps * Math.cos(rad)) / 111139.0;
+                const dLng = (speedMps * Math.sin(rad)) / (111139.0 * Math.cos((d.lat * Math.PI) / 180.0));
+                d.lat += dLat;
+                d.lng += dLng;
+
+                const m = droneMarkers.find(marker => marker._droneId === d.id);
+                if (m) {
+                    m.setLatLng([d.lat, d.lng]);
+                }
+            });
+        }
+
+        async function loadLiveOsintStream() {
+            try {
+                const res = await fetch('/api/events?hours=1');
+                if (!res.ok) return;
+                const events = await res.json();
+                if (!events || !events.length) return;
+
+                const latest = events[0];
+                if (latest && !lastKnownEventIds.has(latest.id)) {
+                    lastKnownEventIds.add(latest.id);
+                    const loc = latest.location_text || 'Київ / Область';
+                    const text = latest.message_text ? latest.message_text.slice(0, 60) + '...' : latest.event_type;
+                    showLiveOsintTicker(`⚡ [${loc}]: ${text}`);
+                    playTacticalBeep(988, 0.15);
+                }
+            } catch (err) {}
+        }
+
+        function showLiveOsintTicker(msg) {
+            const ticker = document.getElementById('live-osint-ticker');
+            const tickerText = document.getElementById('ticker-text');
+            if (ticker && tickerText) {
+                tickerText.textContent = msg;
+                ticker.classList.remove('hidden');
+                setTimeout(() => {
+                    ticker.classList.add('hidden');
+                }, 7500);
+            }
+        }
 
         // GPS Geolocation
         document.getElementById('btn-gps').addEventListener('click', () => {
@@ -1267,22 +1559,35 @@
                 if (statDrones) statDrones.textContent = drones.length;
                 if (badgeRadar) badgeRadar.textContent = drones.length;
 
-                // Tactical Alert Banner
+                // Tactical Alert Banner - Compact & Dismissible
                 const alertBanner = document.getElementById('tactical-alert-banner');
                 const bannerText = document.getElementById('alert-banner-text');
                 if (alertBanner && bannerText) {
                     if (data.ballistic_threat) {
-                        alertBanner.classList.remove('hidden');
-                        alertBanner.style.background = 'rgba(220, 38, 38, 0.95)';
-                        bannerText.innerHTML = '🚨 <b>ТАКТИЧНА ТРИВОГА:</b> ЗАФІКСОВАНО БАЛІСТИЧНУ ЗАГРОЗУ!';
+                        alertBanner.style.background = 'rgba(220, 38, 38, 0.96)';
+                        bannerText.innerHTML = '🚨 <b>БАЛІСТИКА!</b> Загроза по Києву / області';
+                        if (!isBannerDismissed) alertBanner.classList.remove('hidden');
                     } else if (data.kyiv_threat_count > 0) {
-                        alertBanner.classList.remove('hidden');
-                        alertBanner.style.background = 'rgba(234, 88, 12, 0.95)';
-                        bannerText.innerHTML = `⚠️ <b>ОПЕРАТИВНА ЗАГРОЗА:</b> ${data.kyiv_threat_count} ЦІЛЕЙ У РАДІУСІ &lt;180КМ ВІД КИЄВА!`;
+                        alertBanner.style.background = 'rgba(234, 88, 12, 0.96)';
+                        bannerText.innerHTML = `⚠️ <b>ЗАГРОЗА:</b> ${data.kyiv_threat_count} цілей (&lt;180 км до Києва)`;
+                        if (!isBannerDismissed) alertBanner.classList.remove('hidden');
                     } else {
                         alertBanner.classList.add('hidden');
+                        isBannerDismissed = false;
                     }
                 }
+
+                activeDroneObjects = drones.map(d => ({
+                    id: d.id,
+                    lat: d.lat,
+                    lng: d.lng,
+                    speed_kmh: d.speed_kmh || 185,
+                    heading: d.heading || 0,
+                    label: d.label,
+                    color: d.color || '#ff3366',
+                    place: d.place,
+                    distance_to_kyiv_km: d.distance_to_kyiv_km
+                }));
 
                 drones.forEach(d => {
                     if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
@@ -1294,6 +1599,20 @@
                             weight: 2,
                             opacity: 0.6,
                             dashArray: '4, 6'
+                        }).addTo(radarLayer);
+                    }
+
+                    // Forward projected trajectory cone in Live Mode (10-minute projection)
+                    if (d.speed_kmh && typeof d.heading === 'number') {
+                        const projM = (d.speed_kmh * 1000 / 3600.0) * 600.0; // 10 min
+                        const rad = (d.heading * Math.PI) / 180.0;
+                        const projLat = d.lat + (projM * Math.cos(rad)) / 111139.0;
+                        const projLng = d.lng + (projM * Math.sin(rad)) / (111139.0 * Math.cos((d.lat * Math.PI) / 180.0));
+                        L.polyline([[d.lat, d.lng], [projLat, projLng]], {
+                            color: d.color || '#ff3366',
+                            weight: 1.5,
+                            opacity: isLiveMode ? 0.85 : 0.4,
+                            dashArray: '3, 6'
                         }).addTo(radarLayer);
                     }
 
@@ -1309,7 +1628,7 @@
                     marker._droneId = d.id;
 
                     const speedStr = d.speed_kmh ? `<div>⚡ <b>Швидкість:</b> ~${Math.round(d.speed_kmh)} км/год</div>` : '';
-                    const headStr = d.heading ? `<div>🧭 <b>Курс:</b> ${Math.round(d.heading)}°</div>` : '';
+                    const headStr = d.heading !== undefined ? `<div>🧭 <b>Курс:</b> ${Math.round(d.heading)}°</div>` : '';
                     const confStr = d.confidence ? `<div>🛡 <b>Впевненість:</b> ${d.confidence}%</div>` : '';
 
                     marker.bindPopup(`
@@ -1322,7 +1641,7 @@
                             ${speedStr}
                             ${headStr}
                             ${confStr}
-                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live</div>
+                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live ${isLiveMode ? '(LIVE активний)' : ''}</div>
                         </div>
                     `);
 
@@ -1626,8 +1945,8 @@
         loadData();
         loadRadarDrones();
         loadThermalAnomalies();
-        setInterval(loadData, 30000);
-        setInterval(loadRadarDrones, 15000);
+        defaultDataInterval = setInterval(loadData, 30000);
+        defaultRadarInterval = setInterval(loadRadarDrones, 15000);
         setInterval(loadThermalAnomalies, 60000);
         setInterval(loadEwInterference, 60000);
 
