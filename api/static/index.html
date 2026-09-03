@@ -391,6 +391,78 @@
             box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
         }
 
+        /* Tactical Live Warning Banner */
+        .tactical-alert-banner {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1002;
+            background: rgba(220, 38, 38, 0.92);
+            backdrop-filter: blur(8px);
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+            border-radius: 24px;
+            padding: 6px 16px;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulse-banner 2s infinite;
+            transition: all 0.3s ease;
+            max-width: 90vw;
+            text-align: center;
+        }
+        .tactical-alert-banner.hidden {
+            display: none !important;
+        }
+        @keyframes pulse-banner {
+            0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); }
+            100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        }
+
+        /* Quick Navigation Bar */
+        .quick-nav-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .quick-nav-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 5px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .quick-nav-btn:hover {
+            background: rgba(0, 229, 255, 0.15);
+            border-color: #00e5ff;
+            color: #00e5ff;
+        }
+
+        /* Layer Count Badges */
+        .layer-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            margin-left: 6px;
+        }
+        .layer-badge.radar { background: rgba(255, 0, 85, 0.2); color: #ff0055; border: 1px solid rgba(255, 0, 85, 0.4); }
+        .layer-badge.thermal { background: rgba(249, 115, 22, 0.2); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .layer-badge.events { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+
         @media (max-width: 600px) {
             .timeline-hud {
                 bottom: 8px;
@@ -405,6 +477,12 @@
     </style>
 </head>
 <body>
+    <!-- Tactical Live Warning Banner -->
+    <div id="tactical-alert-banner" class="tactical-alert-banner hidden">
+        <span class="live-dot" style="background:#fff;"></span>
+        <span id="alert-banner-text">⚠️ ТАКТИЧНЕ СПОВІЩЕННЯ</span>
+    </div>
+
     <!-- Top Mobile Control Bar -->
     <div class="top-bar">
         <div class="brand-badge">
@@ -423,7 +501,7 @@
     <!-- Collapsible Tactical Control Panel -->
     <div class="panel" id="hud-panel">
         <div class="panel-header">
-            <div class="panel-title">🛡️ Керування Шарами</div>
+            <div class="panel-title">🛡️ Тактичне Керування</div>
             <button class="close-btn" id="btn-close">✕</button>
         </div>
 
@@ -433,15 +511,30 @@
                 <div class="stat-lbl">Подій на мапі</div>
             </div>
             <div class="stat-card">
+                <div class="stat-val" id="stat-drones" style="color:#ff0055;">--</div>
+                <div class="stat-lbl">Цілей (Neptun)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="stat-thermal" style="color:#f97316;">--</div>
+                <div class="stat-lbl">Термо (NASA)</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-val" id="stat-shelters">1,197</div>
                 <div class="stat-lbl">Укриття Києва</div>
             </div>
         </div>
 
+        <div class="section-label">Швидкий фокус</div>
+        <div class="quick-nav-bar">
+            <button class="quick-nav-btn" id="btn-focus-kyiv">🏙️ Київ</button>
+            <button class="quick-nav-btn" id="btn-focus-ua">🇺🇦 Україна</button>
+            <button class="quick-nav-btn" id="btn-focus-threat">⚡ Найближча ціль</button>
+        </div>
+
         <div class="section-label">Активні Шари Карти</div>
         <div class="layer-box">
             <label class="layer-item">
-                <span>🔴 Підтверджені Події</span>
+                <span>🔴 Підтверджені Події <span class="layer-badge events" id="badge-events">0</span></span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-events" checked>
                     <span class="slider"></span>
@@ -455,7 +548,7 @@
                 </label>
             </label>
             <label class="layer-item">
-                <span>🛡️ Укриття та Станції Метро</span>
+                <span>🛡️ Укриття та Метро <span class="layer-badge" id="badge-shelters">1197</span></span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-shelters" checked>
                     <span class="slider"></span>
@@ -469,14 +562,14 @@
                 </label>
             </label>
             <label class="layer-item">
-                <span>🛸 Живий радар цілей (Neptun Live)</span>
+                <span>🛸 Живий радар цілей (Neptun) <span class="layer-badge radar" id="badge-radar">0</span></span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-radar" checked>
                     <span class="slider"></span>
                 </label>
             </label>
             <label class="layer-item">
-                <span>🔥 Термо-аномалії NASA FIRMS</span>
+                <span>🔥 Термо-аномалії (NASA VIIRS) <span class="layer-badge thermal" id="badge-thermal">0</span></span>
                 <label class="switch">
                     <input type="checkbox" id="toggle-thermal" checked>
                     <span class="slider"></span>
@@ -487,20 +580,28 @@
         <div class="section-label">📋 Тактична Легенда</div>
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-left"><span>🛸</span> <b>БпЛА / Повітряна ціль</b></div>
-                <span style="color:#f59e0b; font-weight:700;">🛸 Дрон</span>
+                <div class="legend-left"><span>🛸</span> <b>БпЛА Shahed / Дрон</b></div>
+                <span style="color:#ff0055; font-weight:700;">🛸 Neptun</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>🚀</span> <b>Крилата / Балістична ракета</b></div>
+                <span style="color:#9d4edd; font-weight:700;">🚀 Ракета</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>🔥</span> <b>Термо-аномалія (NASA VIIRS)</b></div>
+                <span style="color:#f97316; font-weight:700;">🔥 Супутник</span>
             </div>
             <div class="legend-item">
                 <div class="legend-left"><span>💥</span> <b>Влучання / Вибух</b></div>
                 <span style="color:#ef4444; font-weight:700;">💥 Удар</span>
             </div>
             <div class="legend-item">
-                <div class="legend-left"><span>🔥</span> <b>Пожежа / Руйнування</b></div>
-                <span style="color:#f97316; font-weight:700;">🔥 Пожежа</span>
-            </div>
-            <div class="legend-item">
                 <div class="legend-left"><span>🛡️</span> <b>Робота сил ППО</b></div>
                 <span style="color:#22c55e; font-weight:700;">🛡️ ППО</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-left"><span>🚇</span> <b>Укриття / Метро Києва</b></div>
+                <span style="color:#00e5ff; font-weight:700;">🛡️ 1,197 точок</span>
             </div>
 
             <div style="border-top:1px solid #334155; margin:6px 0; padding-top:6px; font-size:11px; color:#94a3b8; font-weight:600;">
@@ -811,6 +912,10 @@
             if (totalStat) {
                 totalStat.textContent = visibleCount;
             }
+            const badgeEvents = document.getElementById('badge-events');
+            if (badgeEvents) {
+                badgeEvents.textContent = visibleCount;
+            }
         }
 
         // Debounced Slider Update
@@ -988,6 +1093,30 @@
             }
         });
 
+        // Quick Navigation & Threat Focus Handlers
+        let latestDrones = [];
+        let droneMarkers = [];
+
+        document.getElementById('btn-focus-kyiv').addEventListener('click', () => {
+            map.flyTo([50.4501, 30.5234], 11, { duration: 1.2 });
+        });
+
+        document.getElementById('btn-focus-ua').addEventListener('click', () => {
+            map.flyTo([48.5, 31.5], 6, { duration: 1.2 });
+        });
+
+        document.getElementById('btn-focus-threat').addEventListener('click', () => {
+            if (!latestDrones.length) {
+                alert('Наразі немає активних повітряних цілей у небі над Україною.');
+                return;
+            }
+            const sorted = [...latestDrones].sort((a, b) => (a.distance_to_kyiv_km || 9999) - (b.distance_to_kyiv_km || 9999));
+            const closest = sorted[0];
+            map.flyTo([closest.lat, closest.lng], 12, { duration: 1.2 });
+            const m = droneMarkers.find(dm => dm._droneId === closest.id);
+            if (m) m.openPopup();
+        });
+
         // Live Radar Drones (Neptun Live Feed)
         async function loadRadarDrones() {
             try {
@@ -995,8 +1124,33 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 const drones = data.drones || [];
+                latestDrones = drones;
+                droneMarkers = [];
                 
                 radarLayer.clearLayers();
+
+                // Update HUD metrics & live badges
+                const statDrones = document.getElementById('stat-drones');
+                const badgeRadar = document.getElementById('badge-radar');
+                if (statDrones) statDrones.textContent = drones.length;
+                if (badgeRadar) badgeRadar.textContent = drones.length;
+
+                // Tactical Alert Banner
+                const alertBanner = document.getElementById('tactical-alert-banner');
+                const bannerText = document.getElementById('alert-banner-text');
+                if (alertBanner && bannerText) {
+                    if (data.ballistic_threat) {
+                        alertBanner.classList.remove('hidden');
+                        alertBanner.style.background = 'rgba(220, 38, 38, 0.95)';
+                        bannerText.innerHTML = '🚨 <b>ТАКТИЧНА ТРИВОГА:</b> ЗАФІКСОВАНО БАЛІСТИЧНУ ЗАГРОЗУ!';
+                    } else if (data.kyiv_threat_count > 0) {
+                        alertBanner.classList.remove('hidden');
+                        alertBanner.style.background = 'rgba(234, 88, 12, 0.95)';
+                        bannerText.innerHTML = `⚠️ <b>ОПЕРАТИВНА ЗАГРОЗА:</b> ${data.kyiv_threat_count} ЦІЛЕЙ У РАДІУСІ &lt;180КМ ВІД КИЄВА!`;
+                    } else {
+                        alertBanner.classList.add('hidden');
+                    }
+                }
 
                 drones.forEach(d => {
                     if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
@@ -1020,6 +1174,7 @@
                         opacity: 1,
                         fillOpacity: 0.9
                     });
+                    marker._droneId = d.id;
 
                     const speedStr = d.speed_kmh ? `<div>⚡ <b>Швидкість:</b> ~${Math.round(d.speed_kmh)} км/год</div>` : '';
                     const headStr = d.heading ? `<div>🧭 <b>Курс:</b> ${Math.round(d.heading)}°</div>` : '';
@@ -1040,6 +1195,7 @@
                     `);
 
                     marker.addTo(radarLayer);
+                    droneMarkers.push(marker);
                 });
             } catch (err) {
                 console.warn('Radar drones load error:', err);
@@ -1056,14 +1212,24 @@
                 
                 thermalLayer.clearLayers();
 
+                // Update HUD metrics & live badges
+                const statThermal = document.getElementById('stat-thermal');
+                const badgeThermal = document.getElementById('badge-thermal');
+                if (statThermal) statThermal.textContent = anomalies.length.toLocaleString();
+                if (badgeThermal) badgeThermal.textContent = anomalies.length.toLocaleString();
+
                 anomalies.forEach(a => {
                     if (typeof a.lat !== 'number' || typeof a.lon !== 'number') return;
                     
-                    const rad = Math.min(14, Math.max(5, Math.round(Math.sqrt(a.frp_mw || 1) * 2.5)));
+                    const frp = a.frp_mw || 1;
+                    const rad = Math.min(14, Math.max(5, Math.round(Math.sqrt(frp) * 2.5)));
+                    const fillColor = frp >= 20 ? '#ff0055' : (frp >= 5 ? '#f97316' : '#eab308');
+                    const strokeColor = frp >= 20 ? '#ffd700' : '#ffffff';
+
                     const marker = L.circleMarker([a.lat, a.lon], {
                         radius: rad,
-                        fillColor: '#ff4500',
-                        color: '#ffd700',
+                        fillColor: fillColor,
+                        color: strokeColor,
                         weight: 1.5,
                         opacity: 0.9,
                         fillOpacity: 0.75
@@ -1071,7 +1237,7 @@
 
                     marker.bindPopup(`
                         <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:180px; font-size:12px;">
-                            <div style="font-weight:700; color:#ff4500; font-size:13px; margin-bottom:4px; border-bottom:1px solid #fed7aa; padding-bottom:3px;">
+                            <div style="font-weight:700; color:${fillColor}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #fed7aa; padding-bottom:3px;">
                                 🔥 Термальна аномалія (NASA VIIRS)
                             </div>
                             <div>⚡ <b>Потужність (FRP):</b> ${a.frp_mw} МВт</div>

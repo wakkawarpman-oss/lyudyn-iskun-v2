@@ -24,13 +24,14 @@ def flush_api_caches():
     """Deletes cached API and analytics responses so the web map and bot pick up
     new incidents on their NEXT poll/query instead of waiting out cache TTLs."""
     try:
-        keys_to_delete = ["api:events", "api:stats", "api:shelters", "api:geoint:zones", "osint:deep_analysis"]
+        base_keys = ["api:events", "api:stats", "api:shelters", "api:geoint:zones", "osint:deep_analysis"]
+        for k in base_keys:
+            redis_client.delete(k)
         for pattern in ["api:events:*", "api:zones:*"]:
             matched = redis_client.keys(pattern)
             if matched:
-                keys_to_delete.extend([k.decode("utf-8") if isinstance(k, bytes) else str(k) for k in matched])
-        if keys_to_delete:
-            redis_client.delete(*set(keys_to_delete))
+                for mk in matched:
+                    redis_client.delete(mk)
     except Exception as re:
         logger.warning(f"Redis cache flush warning: {re}")
 logger = logging.getLogger(__name__)
