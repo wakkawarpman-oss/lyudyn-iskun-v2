@@ -60,23 +60,35 @@ async def main():
         # Configure tactical bot metadata
         try:
             await bot.set_my_name(name="ОКІНТ-ПРО")
+        except Exception as e_name:
+            logger.warning(f"Could not update bot name: {e_name}")
+
+        try:
+            await bot.set_my_short_description(
+                short_description="🛡️ Тактичний OSINT Києва: живий радар БпЛА, супутник NASA, граф ІПСО та ШІ 24/7."
+            )
+        except Exception as e_sdesc:
+            logger.warning(f"Could not update short description: {e_sdesc}")
+
+        try:
             await bot.set_my_description(
                 description=(
-                    "🛡️ ОКІНТ-ПРО — Тактична OSINT-система оперативного моніторингу та геоаналітики Києва та області.\n\n"
-                    "• Цілодобовий збір розвідданих 24/7\n"
-                    "• Багаторівнева верифікація за консенсусом джерел\n"
-                    "• Високоточна геоприв'язка до будинку/вулиці\n"
-                    "• Радарне відстеження БпЛА/ракетних загроз\n"
-                    "• Синхронний моніторинг сигналу «ВІДБІЙ ТРИВОГИ»\n\n"
-                    "«ЗБИРАЄМО • АНАЛІЗУЄМО • ПЕРЕМАГАЄМО»"
+                    "🛡️ ОКІНТ-ПРО — Тактична OSINT-платформа оперативного моніторингу та геоаналітики Києва та області 24/7.\n\n"
+                    "«ЗБИРАЄМО • АНАЛІЗУЄМО • ПЕРЕМАГАЄМО»\n\n"
+                    "⚡ КЛЮЧОВИЙ БОЙОВИЙ ФУНКЦІОНАЛ:\n"
+                    "• 🛸 Живий радар повітряних цілей (Neptun Live) — пеленг і вектори підльоту БпЛА\n"
+                    "• 🔥 Супутниковий моніторинг пожеж (NASA FIRMS VIIRS) — детекція вибухів і спалахів\n"
+                    "• 🕸️ Аналізатор зв'язків та ІПСО (Telerecon Core) — граф цитувань і нульовий пацієнт\n"
+                    "• 🎯 Високоточна геоприв'язка інцидентів до будинку та вулиці (OSM + GeoSpy)\n"
+                    "• 🛰️ Інтерактивна тактична веб-карта з зонами ураження\n"
+                    "• 🔔 Синхронний моніторинг сигналу «ВІДБІЙ ТРИВОГИ»\n"
+                    "• 👁️ Комп'ютерний зір Vision AI для аналізу фото та кадрів відео\n\n"
+                    "Команди: /threats, /network, /radar, /analytics, /report, /help"
                 )
             )
-            await bot.set_my_short_description(
-                short_description="🛡️ ОКІНТ-ПРО — Тактичний OSINT-моніторинг та геоаналітика 24/7."
-            )
-            logger.info("Bot name & description set to 'ОКІНТ-ПРО'")
+            logger.info("Bot metadata updated successfully.")
         except Exception as e_desc:
-            logger.warning(f"Could not update bot metadata via API: {e_desc}")
+            logger.warning(f"Could not update bot description: {e_desc}")
             
         await dp.start_polling(bot)
     except Exception as e:
