@@ -68,6 +68,11 @@
             display: none !important;
         }
 
+        /* Pure OpenStreetMap Tactical Dark Filter (Zero-Key, Zero-Watermark) */
+        .osm-tactical-dark {
+            filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(120%);
+        }
+
         /* ─── 1. Header (56px) ─── */
         .app-header {
             position: fixed;
@@ -1049,8 +1054,11 @@
             zoomControl: false
         });
 
-        // 3 Basemaps
-        const bmDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+        // 3 Basemaps (100% Free, Keyless, Zero-Watermark OpenStreetMap & Esri)
+        const bmDark = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            className: 'osm-tactical-dark'
+        }).addTo(map);
         const bmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
         const bmSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
 
