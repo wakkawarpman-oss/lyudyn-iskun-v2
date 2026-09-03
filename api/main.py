@@ -234,5 +234,10 @@ def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
             
     return zones
 
+@app.get("/api/v1/radar/drones")
+def get_radar_drones():
+    from worker.osint.neptun_radar import get_live_radar_threats
+    return get_live_radar_threats()
+
 # Serve the static HTML frontend
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")

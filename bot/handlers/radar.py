@@ -61,10 +61,43 @@ async def cmd_radar_kontur(message: types.Message):
         
     radar_feed = "\n".join(recent_radar_events) if recent_radar_events else "<i>Наразі повітряний простір над столицею спокійний (активних повітряних цілей не зафіксовано).</i>"
     
+    # Live Neptun radar targets telemetry
+    live_section = ""
+    try:
+        from worker.osint.neptun_radar import get_live_radar_threats
+        loop = asyncio.get_event_loop()
+        radar_data = await loop.run_in_executor(None, get_live_radar_threats)
+        if radar_data and radar_data.get("count", 0) > 0:
+            drones = radar_data.get("drones", [])
+            kyiv_targets = [d for d in drones if d.get("is_kyiv_threat")]
+            ballistic = radar_data.get("ballistic_threat")
+            
+            lines = [f"🛰️ <b>ЖИВИЙ РАДАР (ЦІЛЕЙ В НЕБІ УКРАЇНИ: {len(drones)})</b>"]
+            if ballistic:
+                lines.append("⚠️ <b>УВАГА: ЗАФІКСОВАНО БАЛІСТИЧНУ ЗАГРОЗУ!</b>")
+            
+            if kyiv_targets:
+                lines.append("🎯 <b>Цілі у зоні Київського регіону (&lt;180 км):</b>")
+                for d in kyiv_targets[:4]:
+                    dist = d.get("distance_to_kyiv_km")
+                    label = d.get("label")
+                    place = d.get("place") or d.get("region") or "Невідомо"
+                    speed = int(d.get("speed_kmh") or 0)
+                    speed_str = f" | {speed} км/год" if speed > 0 else ""
+                    lines.append(f"  • <b>{label}</b>: ~{dist} км ({place}{speed_str})")
+            else:
+                closest = drones[0]
+                lines.append(f"🟢 <i>Прямої загрози Києву немає. Найближча ціль: {closest.get('label')} (~{closest.get('distance_to_kyiv_km')} км, {closest.get('place') or closest.get('region')})</i>")
+            
+            live_section = "\n".join(lines) + "\n\n"
+    except Exception as re:
+        logger.warning(f"Neptun radar in bot warning: {re}")
+
     text = (
         "🛸 <b>РАДАРНЕ СПОСТЕРЕЖЕННЯ ТА ТРЕКІНГ ЦІЛЕЙ («КОНТУР»)</b>\n"
         "<i>Моніторинг польоту БПЛА Shahed-136, ракет та авіації у реальному часі.</i>\n\n"
-        f"📡 <b>Свіжа радіолокаційна обстановка:</b>\n"
+        f"{live_section}"
+        f"📡 <b>Останні зафіксовані повідомлення моніторингу:</b>\n"
         f"{radar_feed}\n\n"
         "🗺️ <b>Оберіть тактичну мапу для перегляду:</b>"
     )

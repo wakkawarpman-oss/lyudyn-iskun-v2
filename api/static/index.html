@@ -468,6 +468,13 @@
                     <span class="slider"></span>
                 </label>
             </label>
+            <label class="layer-item">
+                <span>🛸 Живий радар цілей (Neptun Live)</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-radar" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
         </div>
 
         <div class="section-label">📋 Тактична Легенда</div>
@@ -572,6 +579,7 @@
         const eventsLayer = L.layerGroup().addTo(map);
         const zonesLayer = L.layerGroup().addTo(map);
         const sheltersLayer = L.layerGroup().addTo(map);
+        const radarLayer = L.layerGroup().addTo(map);
         let userMarker = null;
 
         // In-Memory Data Pools for Super-Fast Zero-Lag Timeline Filtering
@@ -653,6 +661,11 @@
                 map.removeLayer(satBasemap);
                 map.addLayer(darkBasemap);
             }
+        });
+
+        document.getElementById('toggle-radar').addEventListener('change', (e) => {
+            if (e.target.checked) map.addLayer(radarLayer);
+            else map.removeLayer(radarLayer);
         });
 
         // GPS Geolocation
@@ -962,10 +975,70 @@
             }
         });
 
+        // Live Radar Drones (Neptun Live Feed)
+        async function loadRadarDrones() {
+            try {
+                const res = await fetch('/api/v1/radar/drones');
+                if (!res.ok) return;
+                const data = await res.json();
+                const drones = data.drones || [];
+                
+                radarLayer.clearLayers();
+
+                drones.forEach(d => {
+                    if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
+                    
+                    // Flight trail if available
+                    if (Array.isArray(d.trail) && d.trail.length > 1) {
+                        L.polyline(d.trail, {
+                            color: d.color || '#ff3366',
+                            weight: 2,
+                            opacity: 0.6,
+                            dashArray: '4, 6'
+                        }).addTo(radarLayer);
+                    }
+
+                    // Drone pulse marker
+                    const marker = L.circleMarker([d.lat, d.lng], {
+                        radius: 8,
+                        fillColor: d.color || '#ff3366',
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    });
+
+                    const speedStr = d.speed_kmh ? `<div>⚡ <b>Швидкість:</b> ~${Math.round(d.speed_kmh)} км/год</div>` : '';
+                    const headStr = d.heading ? `<div>🧭 <b>Курс:</b> ${Math.round(d.heading)}°</div>` : '';
+                    const confStr = d.confidence ? `<div>🛡 <b>Впевненість:</b> ${d.confidence}%</div>` : '';
+
+                    marker.bindPopup(`
+                        <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:190px; font-size:12px;">
+                            <div style="font-weight:700; color:${d.color || '#ff3366'}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px;">
+                                🛸 ${d.label}
+                            </div>
+                            <div>📍 <b>Локація:</b> ${d.place || d.region || 'Невідомо'}</div>
+                            <div>🎯 <b>До Києва:</b> ~${d.distance_to_kyiv_km} км</div>
+                            ${speedStr}
+                            ${headStr}
+                            ${confStr}
+                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live</div>
+                        </div>
+                    `);
+
+                    marker.addTo(radarLayer);
+                });
+            } catch (err) {
+                console.warn('Radar drones load error:', err);
+            }
+        }
+
         // Initialize Map & Data
         loadShelters();
         loadData();
+        loadRadarDrones();
         setInterval(loadData, 30000);
+        setInterval(loadRadarDrones, 15000);
 
         // Auto collapse layers panel on mobile
         if (window.innerWidth <= 600) {
