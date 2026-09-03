@@ -10,13 +10,14 @@ from bot.handlers.common import router as common_router
 
 router = Router()
 
-# Register modular sub-routers in clean deterministic priority order
+# Register modular sub-routers in clean deterministic priority order:
+# Specific command/button routers first, catch-all text search (shelters) last.
 router.include_router(alerts_router)
 router.include_router(radar_router)
 router.include_router(analytics_router)
-router.include_router(shelters_router)
 router.include_router(osint_router)
 router.include_router(admin_router)
 router.include_router(common_router)
+router.include_router(shelters_router)
 
 __all__ = ["router"]

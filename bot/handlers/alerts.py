@@ -38,8 +38,26 @@ async def cmd_start(message: types.Message):
 @router.message(F.text == "🔄 АКТУАЛІЗАЦІЯ ПОДІЙ")
 @router.message(F.text.ilike("%актуалізація%"))
 @router.message(F.text.ilike("%актуализация%"))
-@admin_only
 async def cmd_sync_events(message: types.Message):
+    import redis.asyncio as aioredis
+    r = aioredis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+    
+    # 20s cooldown per chat to prevent spamming
+    rate_key = f"rate:sync:{message.chat.id}"
+    try:
+        is_locked = await r.get(rate_key)
+        if is_locked:
+            await safe_send(
+                message,
+                "⏳ <b>Опитування джерел уже виконується у фоні.</b>\n\n"
+                "Зачекайте 15-30 секунд для завершення ШІ-аналізу або натисніть "
+                "<b>💥 Резонанс</b> / <b>🎖 Ключові інциденти</b> для перегляду останніх даних."
+            )
+            return
+        await r.setex(rate_key, 20, "1")
+    except Exception as exc:
+        logger.warning(f"Sync rate limit error: {exc}")
+
     await safe_send(
         message,
         "⏳ <b>Запущено актуалізацію подій...</b>\n"

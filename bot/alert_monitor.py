@@ -130,7 +130,11 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
     try:
         # Check last 6 hours of official alerts
         since = datetime.utcnow() - timedelta(hours=6)
-        official_events = db.query(DetectedEvent).filter(
+        official_events = db.query(
+            DetectedEvent.message_text,
+            DetectedEvent.detected_at,
+            DetectedEvent.source_channel
+        ).filter(
             DetectedEvent.detected_at >= since,
             DetectedEvent.source_channel.in_(["kyiv_alarm", "va_kyiv", "kyivcityofficial", "kpszsu", "air_alert_ua", "1181169156"])
         ).order_by(DetectedEvent.detected_at.desc()).limit(10).all()

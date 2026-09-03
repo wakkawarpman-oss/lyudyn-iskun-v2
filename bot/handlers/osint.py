@@ -23,15 +23,19 @@ router = Router()
 async def cmd_deep_osint(message: types.Message):
     db = SessionLocal()
     try:
-        user_key = db.query(UserApiKey).filter(UserApiKey.user_id == message.from_user.id).first()
-        if not user_key or not user_key.openai_api_key:
-            await message.answer(
-                "🔒 Для глибокого OSINT-аналізу потрібен OpenAI API Key (Vision).\nВстановіть його командою:\n`/key sk-...`",
-                parse_mode=ParseMode.MARKDOWN
+        user_api_key, effective_key = await _get_effective_openai_key(message)
+        if not effective_key:
+            await safe_send(
+                message,
+                "🔒 <b>Для глибокого OSINT-аналізу потрібен OpenAI API Key.</b>\n\n"
+                "Підключіть персональний ключ командою:\n"
+                "<code>/key sk-ваш-токен</code>\n\n"
+                "<i>(Отримати ключ: platform.openai.com/api-keys)</i>",
+                disable_web_page_preview=True
             )
             return
             
-        api_key = decrypt_key(user_key.openai_api_key)
+        api_key = effective_key
         threshold = datetime.utcnow() - timedelta(hours=12)
 
         cache_key = "osint:deep_analysis"
