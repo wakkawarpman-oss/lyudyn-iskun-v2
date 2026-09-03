@@ -11,6 +11,7 @@ from bot.handlers.utils import (
     CONFIRMED_INCIDENT_TYPES, KYIV_REGION_FILTER, logger
 )
 from database.models import SessionLocal, DetectedEvent
+from worker.geo_extractors.vector_extractor import extract_threat_vector
 
 router = Router()
 
@@ -38,7 +39,21 @@ async def cmd_radar_kontur(message: types.Message):
         for e in events:
             t_str = format_kyiv_time(e.detected_at)
             snippet = clean_event_snippet(e.message_text, 90)
-            recent_radar_events.append(f"• <b>[{t_str}]</b> {format_source_display(e.source_channel)}: {snippet}")
+            line = f"• <b>[{t_str}]</b> {format_source_display(e.source_channel)}: {snippet}"
+
+            # Deterministic vector estimate (bearing/ETA), NOT a Kalman
+            # filter — only fires when the text names both an origin and a
+            # destination. See worker/geo_extractors/vector_extractor.py.
+            vector = extract_threat_vector(e.message_text)
+            if vector:
+                line += (
+                    f"\n  ↳ 🧭 {vector.bearing_deg}° | {vector.weapon_label} ~{int(vector.speed_kmh)} км/год "
+                    f"| ETA до {vector.destination_name}: ~{int(vector.eta_minutes)} хв"
+                )
+                if vector.next_landmark:
+                    line += f" | далі ймовірно {vector.next_landmark} (~{int(vector.next_landmark_eta_minutes)} хв)"
+
+            recent_radar_events.append(line)
     except Exception as ex:
         logger.error(f"Radar query error: {ex}")
     finally:
