@@ -48,6 +48,14 @@ def run_health_check():
     finally:
         db.close()
         
+    # 3. Auto-sync active Cloudflare tunnel URL to Redis
+    try:
+        tunnel_url = os.getenv("DASHBOARD_URL", "https://halifax-aim-restoration-dylan.trycloudflare.com")
+        r = redis.Redis.from_url(REDIS_URL)
+        r.set("active_tunnel_url", tunnel_url)
+    except Exception as te:
+        logger.warning(f"Watchdog tunnel sync error: {te}")
+
     if alerts:
         send_alert("\n\n".join(alerts))
         logger.warning("Watchdog found issues and sent an alert.")

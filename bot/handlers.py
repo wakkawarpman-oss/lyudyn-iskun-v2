@@ -126,7 +126,18 @@ async def global_error_handler(event: types.ErrorEvent):
 from zoneinfo import ZoneInfo
 
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
-DASHBOARD_URL = os.getenv("DASHBOARD_URL", "https://displays-knows-hygiene-tested.trycloudflare.com")
+
+def get_dashboard_url() -> str:
+    """Dynamically retrieves the current active Cloudflare tunnel URL from Redis or ENV."""
+    import redis
+    try:
+        r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+        val = r.get("active_tunnel_url")
+        if val:
+            return val.decode("utf-8").strip()
+    except Exception:
+        pass
+    return os.getenv("DASHBOARD_URL", "https://halifax-aim-restoration-dylan.trycloudflare.com")
 
 # Strict Kyiv & Kyiv Region Geographical Filter
 KYIV_REGION_FILTER = or_(
@@ -552,7 +563,7 @@ async def handle_text_shelter_search(message: types.Message):
 
     # 4. If geocoding finds nothing, present interactive map link
     inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="🌐 Відкрити Мапу з Укриттями у 1 Клік", url=DASHBOARD_URL)
+    inline_kb.button(text="🌐 Відкрити Мапу з Укриттями у 1 Клік", url=get_dashboard_url())
     inline_kb.adjust(1)
 
     await safe_send(
@@ -669,7 +680,7 @@ async def cmd_radar_kontur(message: types.Message):
     
     inline_kb = InlineKeyboardBuilder()
     inline_kb.button(text="\U0001f6f8 Відкрити Радар «Контур»", url="https://t.me/kontur_map_bot/app")
-    inline_kb.button(text="\U0001f5fa\ufe0f Наша Тактична GEOINT Мапа", web_app=WebAppInfo(url=DASHBOARD_URL))
+    inline_kb.button(text="🗺️ Наша Тактична GEOINT Мапа", url=get_dashboard_url())
     inline_kb.adjust(1, 1)
     
     await safe_send(message, text, reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)
@@ -1061,7 +1072,7 @@ async def cmd_web_map(message: types.Message):
         "<i>Натисніть кнопку нижче для відкриття інтерактивної мапи у вашому браузері:</i>"
     )
     inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="\U0001f310 Відкрити Мапу у Браузері", url=DASHBOARD_URL)
+    inline_kb.button(text="🌐 Відкрити Мапу у Браузері", url=get_dashboard_url())
     inline_kb.adjust(1)
     
     await safe_send(message, text, reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)
