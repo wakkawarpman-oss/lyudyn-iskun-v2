@@ -3,16 +3,17 @@
 УЗАГАЛЬНЕНИЙ ТЕСТ ЛЮДИН ІСКУН
 Запускає всі тести і генерує звіт
 """
+import os
 import subprocess
 import sys
 from datetime import datetime
 
 TEST_GROUPS = [
-    ("A", "Кнопки та інтерфейс", "tests/test_commands_smoke.py tests/test_memes.py"),
-    ("B", "Команди (handlers)", "tests/test_commands_functional.py tests/test_commands_edge.py"),
-    ("C", "Фонові процеси", "tests/test_background_smoke.py tests/test_background_functional.py"),
-    ("D", "Безпека", "tests/test_security_smoke.py tests/test_security_functional.py"),
-    ("E", "Інтеграція", "tests/test_integration_smoke.py tests/test_integration_functional.py"),
+    ("A", "Класифікація та валідація LLM", "tests/test_classifier.py tests/test_llm_hallucinations.py tests/test_llm.py"),
+    ("B", "Кластеризація та геокодування", "tests/test_clustering.py tests/test_geo_consensus.py tests/test_geo_precision_pipeline.py tests/test_poi_matcher.py"),
+    ("C", "Сенсори та радар (Neptun / FIRMS / COT)", "tests/test_neptun_radar.py tests/test_firms_verifier.py tests/test_cot.py"),
+    ("D", "Безпека та шифрування", "tests/test_security.py tests/test_reencrypt_all_keys.py"),
+    ("E", "Інтеграція та UI", "tests/test_ui_formatter.py tests/test_alert_monitor.py tests/test_e2e.py"),
 ]
 
 def run():
@@ -29,7 +30,8 @@ def run():
         print(f"🔘 БЛОК {block}: {name}")
         print(f"{'─' * 60}")
         
-        cmd = f"pytest {files} -v --tb=short"
+        pytest_bin = ".venv/bin/pytest" if os.path.exists(".venv/bin/pytest") else "pytest"
+        cmd = f"{pytest_bin} {files} -v --tb=short"
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
         output = result.stdout + result.stderr

@@ -13,6 +13,5 @@ echo "3. Тести на галюцинації LLM..."
 pytest tests/test_llm_hallucinations.py -v
 
 echo "✅ Всі критичні тести пройдено!"
-pytest tests/test_memes.py -v
 pytest tests/test_e2e.py -v
 pytest tests/test_security.py -v
