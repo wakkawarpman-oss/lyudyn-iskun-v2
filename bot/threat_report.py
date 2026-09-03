@@ -265,15 +265,17 @@ def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") ->
             type_label = format_event_type(e.event_type, lang=lang)
             source_link = format_verified_source_link(e.source_channel, e.message_id, lang=lang)
 
-            # C2 Verification Tag
+            # Clean 3-Tier Human Verification Badge
             source_weight = getattr(e, "source_weight", 0.5)
             source_tier = getattr(e, "source_tier", "B")
             if getattr(e, "is_official", False) or e.source_channel.lower().lstrip('@') in OFFICIAL_CHANNELS or source_tier == 'S':
-                verif_badge = "🏛️ [OFFICIAL]" if lang == "en" else "🏛️ [ОФІЦІЙНО]"
-            elif getattr(e, "verification_status", "") == "VERIFIED" or source_weight >= 1.2:
-                verif_badge = f"🟢 [VERIFIED {e.sources_count} src.]" if lang == "en" else f"🟢 [ВЕРИФІКОВАНО {e.sources_count} дж.]"
+                verif_badge = "🟢 [CONFIRMED]" if lang == "en" else "🟢 [ПІДТВЕРДЖЕНО]"
+            elif getattr(e, "verification_status", "") == "VERIFIED" or getattr(e, "sources_count", 1) >= 2 or source_weight >= 1.2:
+                verif_badge = f"🟢 [CONFIRMED {e.sources_count} src.]" if lang == "en" else f"🟢 [ПІДТВЕРДЖЕНО {e.sources_count} дж.]"
+            elif getattr(e, "verification_status", "") in ["INVESTIGATING", "PROVISIONAL", "POSSIBLE_IPSO"]:
+                verif_badge = "⚪ [INVESTIGATING]" if lang == "en" else "⚪ [УТОЧНЮЄТЬСЯ]"
             else:
-                verif_badge = "🟡 [UNVERIFIED]" if lang == "en" else "🟡 [НЕПІДТВЕРДЖЕНО]"
+                verif_badge = "🟡 [REPORTED]" if lang == "en" else "🟡 [ПОВІДОМЛЯЄТЬСЯ]"
 
             source_label = "Source" if lang == "en" else "Джерело"
             loc_label = e.location_text or ("Kyiv Region" if lang == "en" else "Київщина")

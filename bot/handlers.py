@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from aiogram import Router, types, F
 router = Router()
@@ -43,21 +43,12 @@ def admin_only(handler):
 def is_admin(user_id) -> bool:
     return str(user_id) == ADMIN_ID
 
-def format_source_display(src):
-    if not src: return "невідомо"
-    src = str(src).strip()
-    if src.replace('-', '').isdigit():
-        return f"ID:{src}"
-    return f"@{src.lstrip('@')}"
-
-def format_source_link(src, msg_id):
-    if not src: return ""
-    src = str(src).strip()
-    if src.replace('-', '').isdigit():
-        # Private channel format: t.me/c/1234567/msg_id
-        clean_id = src.replace('-100', '')
-        return f"https://t.me/c/{clean_id}/{msg_id}"
-    return f"https://t.me/{src.lstrip('@')}/{msg_id}"
+from bot.ui_formatter import (
+    format_human_event_card,
+    format_kyiv_time,
+    format_source_display,
+    clean_event_snippet,
+)
 
 import logging
 from aiogram import Bot
@@ -177,14 +168,6 @@ KYIV_REGION_FILTER = or_(
     DetectedEvent.location_text.ilike('%Переяслав%'),
     DetectedEvent.location_text.ilike('%Яготин%')
 )
-
-def format_kyiv_time(dt: datetime) -> str:
-    """Converts UTC datetime from database to local Kyiv Time (EEST/EET) HH:MM."""
-    if not dt:
-        return ""
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(KYIV_TZ).strftime("%H:%M")
 
 
 # ──────────────────────────── Keyboard ────────────────────────────
@@ -792,77 +775,8 @@ async def cmd_radar_kontur(message: types.Message):
 # Legacy duplicate cmd_analytics removed (unified into primary handler below)
 
 
-import re
-
-def clean_event_snippet(text: str, max_len: int = 120) -> str:
-    """Strips raw markdown formatting, URLs, and artifacts for clean mobile output."""
-    if not text:
-        return ""
-    cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    cleaned = re.sub(r'[*_`~]', '', cleaned)
-    cleaned = re.sub(r'https?://\S+', '', cleaned)
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    if len(cleaned) > max_len:
-        cleaned = cleaned[:max_len].rsplit(' ', 1)[0] + "..."
-    return html.escape(cleaned)
-
-def get_event_type_label(event_type: str) -> str:
-    labels = {
-        "direct_strike": "\U0001f534 ПРЯМИЙ УДАР",
-        "explosion": "\U0001f4a5 ВИБУХ",
-        "fire": "\U0001f525 ПОЖЕЖА",
-        "destruction": "\U0001f3da РУЙНУВАННЯ",
-        "casualties": "\U0001f3e5 ПОСТРАЖДАЛІ",
-        "armed_conflict": "\u2694\ufe0f СПЕЦОПЕРАЦІЯ / БІЙ",
-        "shelling": "\U0001f4a3 ОБСТРІЛ"
-    }
-    return labels.get(event_type.lower(), f"\u26a1 {event_type.upper()}")
-
-def format_factcheck_badge(e: DetectedEvent) -> str:
-    status = getattr(e, "verification_status", "UNVERIFIED_SINGLE_SOURCE") or "UNVERIFIED_SINGLE_SOURCE"
-    count = getattr(e, "sources_count", 1) or 1
-    sources = getattr(e, "sources_list", "") or e.source_channel
-    
-    source_weight = getattr(e, "source_weight", 0.5)
-    source_tier = getattr(e, "source_tier", "B")
-    
-    # 1. Verification Label
-    if status == "OFFICIAL" or getattr(e, "is_official", False) or source_tier == 'S':
-        badge = f"🏛️ <b>ОФІЦІЙНЕ ДЖЕРЕЛО (@{e.source_channel})</b>"
-    elif status == "VERIFIED" or source_weight >= 1.2:
-        clean_sources = ", ".join([f"@{s.strip().lstrip('@')}" for s in sources.split(",") if s.strip()][:2])
-        badge = f"🟢 <b>ВЕРИФІКОВАНО (Консенсус вага {source_weight:.1f}, {count} дж.: {clean_sources})</b>"
-    elif status == "POSSIBLE_IPSO":
-        badge = "🚨 <b>УВАГА: СУМНІВНЕ / МОЖЛИВИЙ ВКАТ</b>"
-    else:
-        badge = f"🟡 <b>НЕПІДТВЕРДЖЕНО (Вага {source_weight:.1f}, @{e.source_channel})</b>"
-
-    # 2. C2 Geoint Synthesis Logic
-    if getattr(e, "has_media", False):
-        geo_method = "📸 Фото EXIF GPS / Vision AI"
-    elif getattr(e, "is_official", False):
-        geo_method = "🏛️ Офіційна прив'язка влади"
-    elif count >= 2:
-        geo_method = f"🟢 Перехресний консенсус ({count} дж.)"
-    else:
-        geo_method = "🗺️ Топонімічна прив'язка (OSINT)"
-
-    c2_trace = (
-        f"{badge}\n"
-        f"   └ 🛰️ <b>C2 Схема:</b> <code>[Джерела: {count}] ➔ [Синтез: {geo_method}] ➔ [PostGIS GIST]</code>"
-    )
-    return c2_trace
-
-
 def unique_by_incident(events: list) -> list:
-    """Single source of truth: dedup by the worker-assigned incident_id
-    (set in worker/tasks.py's clustering) instead of re-clustering in the
-    bot with separate, looser heuristics. Previously this file ran its own
-    bilingual fuzzy-matching pass (deduplicate_events/BILINGUAL_MAP), which
-    disagreed with what the map API shows (same raw rows, no re-clustering)
-    — e.g. bot said "25 incidents", map showed 334 rows. Both now read the
-    same worker-computed grouping; keeps input order (callers already sort).
-    """
+    """Single source of truth: dedup by the worker-assigned incident_id."""
     seen = set()
     unique = []
     for e in events:
@@ -876,7 +790,7 @@ def unique_by_incident(events: list) -> list:
 
 CONFIRMED_INCIDENT_TYPES = ['direct_strike', 'explosion', 'fire', 'destruction', 'casualties', 'armed_conflict', 'shelling']
 
-# ──────────────────────── /report ─────────────────────────────────
+# ──────────────────────── /report (12 Hours) ─────────────────────────
 
 @router.message(Command("report"))
 @router.message(F.text.contains("Звіт"))
@@ -900,29 +814,22 @@ async def cmd_report_12h(message: types.Message):
         events = unique_by_incident(raw_events)
 
         if not events:
-            await message.answer("За останні 12 годин підтверджених фізичних інцидентів у Києві та області не зафіксовано.")
+            await safe_send(
+                message,
+                "📋 <b>ОПЕРАТИВНИЙ ЗВІТ — КИЇВЩИНА (12 ГОДИН)</b>\n\n"
+                "<i>✅ За останні 12 годин підтверджених фізичних інцидентів у Києві та області не зафіксовано (обстановка спокійна).</i>"
+            )
             return
 
-        lines = [f"\U0001f4ca <b>ОПЕРАТИВНИЙ ЗВІТ (КИЇВ ТА ОБЛАСТЬ, 12 ГОДИН)</b> • <i>Унікальних інцидентів: {len(events)}</i>\n"]
+        lines = [
+            "📋 <b>ОПЕРАТИВНИЙ ЗВІТ — КИЇВЩИНА (12 ГОДИН)</b>\n"
+            f"<i>Зафіксовано {len(raw_events)} повідомлень ({len(events)} унікальних інцидентів)</i>\n"
+        ]
         for idx, e in enumerate(events[:10], 1):
-            time_str = format_kyiv_time(e.detected_at)
-            loc = e.location_text or 'Невідомо'
-            badge = format_factcheck_badge(e)
-            src = e.source_channel or 'unknown'
-            mid = e.message_id or 0
-            label = get_event_type_label(e.event_type)
-            snippet = clean_event_snippet(e.message_text, 100)
-            
-            lines.append(
-                f"<b>{idx}. {label}</b> | <code>{time_str}</code>\n"
-                f"📍 <b>Локація:</b> {html.escape(loc)}\n"
-                f"🛡️ {badge}\n"
-                f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='{format_source_link(src, mid)}'>Першоджерело {format_source_display(src)}</a>\n"
-            )
+            lines.append(format_human_event_card(idx, e, show_snippet=True))
 
         if len(events) > 10:
-            lines.append(f"<i>...та ще {len(events) - 10} інцидентів у базі.</i>")
+            lines.append(f"<i>...та ще {len(events) - 10} інцидентів у базі даних.</i>")
 
         await safe_send(message, "\n".join(lines), disable_web_page_preview=True)
     finally:
@@ -952,26 +859,19 @@ async def cmd_top_events(message: types.Message):
         events = unique_by_incident(raw_events)
 
         if not events:
-            await message.answer("Поки що немає даних для ТОПу підтверджених інцидентів по Києву.")
+            await safe_send(
+                message,
+                "🔥 <b>НАЙВАЖЛИВІШІ ПОДІЇ (КИЇВ ТА ОБЛАСТЬ, 24 ГОДИНИ)</b>\n\n"
+                "<i>Поки що немає даних для ТОПу зафіксованих інцидентів по Києву.</i>"
+            )
             return
 
-        lines = ["🔥 <b>ТОП УНІКАЛЬНИХ ІНЦИДЕНТІВ (КИЇВ ТА ОБЛАСТЬ, 24 ГОД)</b>\n"]
+        lines = [
+            "🔥 <b>НАЙВАЖЛИВІШІ ПОДІЇ ЗА 24 ГОДИНИ (КИЇВ ТА ОБЛАСТЬ)</b>\n"
+            f"<i>Всього {len(raw_events)} повідомлень ➔ {len(events)} унікальних інцидентів після дедублікації</i>\n"
+        ]
         for idx, e in enumerate(events[:10], 1):
-            loc = e.location_text or 'Невідомо'
-            badge = format_factcheck_badge(e)
-            src = e.source_channel or 'unknown'
-            mid = e.message_id or 0
-            label = get_event_type_label(e.event_type)
-            snippet = clean_event_snippet(e.message_text, 100)
-            time_str = format_kyiv_time(e.detected_at)
-            
-            lines.append(
-                f"<b>{idx}. {label}</b> [Резонанс: <b>{e.resonance_score}/100</b>] | 🕒 <code>{time_str}</code>\n"
-                f"📍 <b>Локація:</b> {html.escape(loc)}\n"
-                f"🛡️ {badge}\n"
-                f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='{format_source_link(src, mid)}'>Джерело {format_source_display(src)}</a>\n"
-            )
+            lines.append(format_human_event_card(idx, e, show_snippet=True))
 
         await safe_send(message, "\n".join(lines), disable_web_page_preview=True)
     finally:
@@ -981,7 +881,7 @@ async def cmd_top_events(message: types.Message):
 # ──────────────────────── /resonance (1 hour window) ──────────────
 
 @router.message(Command("resonance"))
-@router.message(F.text == "\U0001f4a5 Резонанс")
+@router.message(F.text == "💥 Резонанс")
 async def cmd_resonance(message: types.Message):
     db = SessionLocal()
     try:
@@ -1004,31 +904,17 @@ async def cmd_resonance(message: types.Message):
         if not events:
             await safe_send(
                 message,
-                "\U0001f4a5 <b>РЕЗОНАНСНІ ІНЦИДЕНТИ (КИЇВ ТА ОБЛАСТЬ, ОСТАННЯ 1 ГОДИНА)</b>\n\n"
-                "<i>\u2705 За останні 60 хвилин нових підтверджених прильотів чи вибухів по Києву та області не зафіксовано (обстановка спокійна).</i>\n\n"
-                "\U0001f449 Натисніть <b>\U0001f525 ТОП подій</b> або <b>\U0001f4cb Звіт (12 год)</b> для перегляду зведень за весь день."
+                "💥 <b>АКТИВНІСТЬ ЗА ОСТАННЮ 1 ГОДИНУ (КИЇВ ТА ОБЛАСТЬ)</b>\n\n"
+                "<i>✅ За останні 60 хвилин нових підтверджених прильотів чи вибухів по Києву та області не зафіксовано (обстановка спокійна).</i>\n\n"
+                "👉 Натисніть <b>🔥 ТОП подій</b> або <b>📋 Звіт (12 год)</b> для перегляду зведень за весь день."
             )
             return
 
-        lines = ["\U0001f4a5 <b>РЕЗОНАНСНІ ІНЦИДЕНТИ (КИЇВ ТА ОБЛАСТЬ, ОСТАННЯ 1 ГОДИНА)</b>\n"]
+        lines = ["💥 <b>АКТИВНІСТЬ ЗА ОСТАННЮ 1 ГОДИНУ (КИЇВ ТА ОБЛАСТЬ)</b>\n"]
         for idx, e in enumerate(events[:10], 1):
-            loc = e.location_text or 'Невідомо'
-            src = e.source_channel or 'unknown'
-            mid = e.message_id or 0
-            time_str = format_kyiv_time(e.detected_at)
-            badge = format_factcheck_badge(e)
-            label = get_event_type_label(e.event_type)
-            snippet = clean_event_snippet(e.message_text, 110)
+            lines.append(format_human_event_card(idx, e, show_snippet=True))
 
-            lines.append(
-                f"<b>{idx}. {label}</b> [{e.resonance_score}/100] | 🕒 <code>{time_str}</code>\n"
-                f"📍 <b>Локація:</b> {html.escape(loc)}\n"
-                f"🛡️ {badge}\n"
-                f"📝 <i>{snippet}</i>\n"
-                f"🔗 <a href='{format_source_link(src, mid)}'>Джерело {format_source_display(src)}</a>\n"
-            )
-
-        lines.append("<i>⏱️ Стрічка дедублікована та відображає унікальні події за останні 60 хвилин.</i>")
+        lines.append("<i>⏱️ Стрічка відображає унікальні події за останні 60 хвилин.</i>")
         await safe_send(message, "\n".join(lines), disable_web_page_preview=True)
     finally:
         db.close()
@@ -1085,34 +971,34 @@ async def cmd_analytics(message: types.Message):
         sorted_sources = sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         sources_str = "\n".join([f"• {format_source_display(ch)}: <b>{cnt} повідомлень</b>" for ch, cnt in sorted_sources]) or "• Немає даних"
 
-        # Time Window Analytics & Dynamic Spike Detection (A.2 Contract)
+        # Time Window Analytics & Dynamic Spike Detection
         try:
             from worker.tasks import get_time_window_stats
             time_stats = get_time_window_stats(db)
             spike_badge = "🔴 <b>СПАЙК АКТИВНОСТІ (Хвиля / Залп)</b>" if time_stats.get("spike") else "🟢 <b>Спокійно (Фонова активність)</b>"
             window_str = (
-                f"⏱️ <b>Динаміка активності за часовими вікнами:</b>\n"
-                f"• 5 хв: <code>{time_stats.get('events_5m', 0)}</code> | 15 хв: <code>{time_stats.get('events_15m', 0)}</code> | 60 хв: <code>{time_stats.get('events_60m', 0)}</code>\n"
-                f"• ⚡ <b>Спайк-детектор:</b> {spike_badge}\n\n"
+                f"⏱️ <b>Що відбувається зараз:</b>\n"
+                f"• За останні 5 хв: <code>{time_stats.get('events_5m', 0)}</code> | за 15 хв: <code>{time_stats.get('events_15m', 0)}</code> | за 60 хв: <code>{time_stats.get('events_60m', 0)}</code>\n"
+                f"• Стан активності: {spike_badge}\n\n"
             )
         except Exception as twe:
             logger.warning(f"Time window calculation warning: {twe}")
             window_str = ""
 
         text = (
-            "📊 <b>ОПЕРАТИВНА OSINT-АНАЛІТИКА КИЄВА ТА ОБЛАСТІ (24г)</b>\n\n"
-            f"• 📈 <b>Усього унікальних подій:</b> <code>{total_24h}</code>\n"
-            f"• ⚡ <b>Середній рівень резонансу:</b> <code>{avg_resonance}/100</code>\n"
-            f"• 🟢 <b>Крос-мовна дедублікація:</b> <code>100% Верифіковано</code>\n\n"
+            "📊 <b>ОПЕРАТИВНА ОБСТАНОВКА — КИЇВЩИНА (24 ГОДИНИ)</b>\n\n"
+            f"За останні 24 години система зафіксувала <b>{len(raw_events)} первинних повідомлень</b> "
+            f"(після дедублікації та фільтрації — <b>{total_24h} унікальних подій</b>).\n\n"
             f"{window_str}"
-            "🎯 <b>Структура загроз за 24 години:</b>\n"
-            f"• 🛸 <b>БпЛА / Радарні треки:</b> <code>{cats['bpla']}</code>\n"
-            f"• 💥 <b>Підтверджені прильоти / Вибухи:</b> <code>{cats['strike']}</code>\n"
-            f"• 🔥 <b>Пожежі та руйнування:</b> <code>{cats['fire']}</code>\n"
-            f"• 🛡️ <b>Робота сил ППО:</b> <code>{cats['defense']}</code>\n\n"
-            "📡 <b>ТОП-5 найактивніших OSINT джерел моніторингу:</b>\n"
+            "🎯 <b>Розподіл унікальних подій за 24 години:</b>\n"
+            f"• 🛸 <b>БпЛА / Радарні цілі:</b> <code>{cats['bpla']}</code>\n"
+            f"• 💥 <b>Влучання та вибухи:</b> <code>{cats['strike']}</code>\n"
+            f"• 🔥 <b>Пожежі та наслідки:</b> <code>{cats['fire']}</code>\n"
+            f"• 🛡️ <b>Зафіксована робота ППО:</b> <code>{cats['defense']}</code>\n"
+            f"• ⚠️ <b>Інші повідомлення:</b> <code>{cats['other']}</code>\n\n"
+            "📡 <b>ТОП-5 джерел моніторингу за обсягом:</b>\n"
             f"{sources_str}\n\n"
-            "🗺️ <i>Для перегляду кожної точки на живій карті натисніть <b>/map</b>!</i>"
+            "🗺️ <i>Для перегляду інтерактивної мапи натисніть <b>/map</b>!</i>"
         )
         
         await safe_send(message, text, disable_web_page_preview=True)
