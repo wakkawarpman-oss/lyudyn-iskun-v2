@@ -36,6 +36,10 @@ def format_source_display(src: Optional[str]) -> str:
     if not src:
         return "невідомо"
     src_clean = str(src).strip()
+    if src_clean in ["1181169156", "-1001181169156"]:
+        return "Реальний Київ (@kievreal1)"
+    if src_clean in ["2053889953", "-1002053889953"]:
+        return "Оперативний Монітор"
     if src_clean.replace('-', '').isdigit():
         return f"ID:{src_clean}"
     return f"@{src_clean.lstrip('@')}"
@@ -47,6 +51,8 @@ def format_source_link(src: Optional[str], msg_id: Optional[int]) -> str:
         return ""
     src_clean = str(src).strip()
     mid = msg_id or 0
+    if src_clean in ["1181169156", "-1001181169156"]:
+        return f"https://t.me/kievreal1/{mid}"
     if src_clean.replace('-', '').isdigit():
         clean_id = src_clean.replace('-100', '')
         return f"https://t.me/c/{clean_id}/{mid}"
@@ -54,15 +60,31 @@ def format_source_link(src: Optional[str], msg_id: Optional[int]) -> str:
 
 
 def clean_event_snippet(text: Optional[str], max_chars: int = 120) -> str:
-    """Removes HTML artifacts, excess whitespace and truncates nicely."""
+    """Removes HTML artifacts, raw markdown links, promo boilerplate and truncates nicely."""
     if not text:
         return ""
     # Strip HTML tags
     clean = re.sub(r'<[^>]+>', '', text)
-    # Strip URL links and excessive symbols
+    # Strip markdown links [text](url) -> text
+    clean = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', clean)
+    # Strip remaining bare URLs
     clean = re.sub(r'https?://\S+', '', clean)
+    # Strip common channel promo watermarks and footers
+    promo_patterns = [
+        r'(?i)надіслати новину\s*@?\w*',
+        r'(?i)прислать новость\s*@?\w*',
+        r'(?i)👉\s*підписатис[яь]',
+        r'(?i)підписатися на канал',
+        r'(?i)подписаться',
+        r'\[ㅤ\s*\]'
+    ]
+    for p in promo_patterns:
+        clean = re.sub(p, '', clean)
+    # Normalize whitespace
     clean = ' '.join(clean.split()).strip()
-    
+    # Strip dangling brackets or punctuation at the end
+    clean = re.sub(r'[\[\]\(\)\-_=~*`]+\s*$', '', clean).strip()
+
     if len(clean) > max_chars:
         clean = clean[:max_chars].rstrip() + "..."
     return html.escape(clean)
@@ -74,7 +96,7 @@ def format_event_type_human(event_type: Optional[str]) -> str:
     Replaces technical/alarmist labels (e.g. 'ПРЯМИЙ УДАР') with precise categories.
     """
     et = (event_type or "other").lower()
-    
+
     labels = {
         "radar_track": "🛸 <b>БпЛА / Повітряна ціль</b>",
         "explosion": "💥 <b>Вибух</b>",
@@ -102,13 +124,22 @@ def format_confirmation_tier(e: DetectedEvent) -> Tuple[str, str]:
     count = getattr(e, "sources_count", None) or 1
     src_ch = (getattr(e, "source_channel", "") or "").lower().lstrip('@')
     source_weight = getattr(e, "source_weight", None) or 0.5
-    source_tier = getattr(e, "source_tier", None) or "B"
-    is_official = getattr(e, "is_official", False) or (src_ch in OFFICIAL_CHANNELS) or (source_tier == 'S') or (status == "OFFICIAL")
+
+    # Check if there is an official source either as primary or in the cluster sources_list
+    official_source_name = None
+    if src_ch in OFFICIAL_CHANNELS:
+        official_source_name = format_source_display(e.source_channel)
+    elif getattr(e, "sources_list", None):
+        for s in e.sources_list.split(','):
+            s_clean = s.strip().lower().lstrip('@')
+            if s_clean in OFFICIAL_CHANNELS:
+                official_source_name = f"@{s_clean}"
+                break
 
     # Tier 1: 🟢 Підтверджено
-    if is_official:
+    if official_source_name:
         badge = "🟢 <b>Підтверджено</b>"
-        explanation = f"інформація надійшла з офіційного джерела ({format_source_display(e.source_channel)})"
+        explanation = f"інформація надійшла з офіційного джерела ({official_source_name})"
         return badge, explanation
     elif status == "VERIFIED" or count >= 2 or source_weight >= 1.2:
         badge = "🟢 <b>Підтверджено</b>"

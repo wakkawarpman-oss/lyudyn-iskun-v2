@@ -11,6 +11,7 @@ class EventTypeEnum(str, Enum):
     ARMED_CONFLICT = "armed_conflict"
     RADAR_TRACK = "radar_track"
     GENERAL_ALERT = "general_alert"
+    AIR_DEFENSE = "air_defense"
 
 class DamageLevelEnum(str, Enum):
     NONE = "none"

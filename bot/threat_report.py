@@ -102,6 +102,39 @@ def _find_evidence_event(events: list, keywords: list):
     return None, None
 
 
+def _find_strategic_aviation_event(events: list):
+    """
+    Finds the most recent genuine strategic aviation event.
+    Rejects criminal/assassination news about Russian personnel in airfield cities.
+    """
+    direct_aircraft = [
+        'ту-95', 'ту-160', 'ту-22', 'міг-31', 'миг-31', 'кинджал', 'кинжал',
+        'стратегічна авіація', 'стратегическая авиация', 'tu-95', 'tu-160', 'mig-31', 'kinzhal'
+    ]
+    airfield_names = ['енгельс', 'саваслейка', 'оленья', 'шайковка', 'engels', 'savasleyka', 'olenya']
+    flight_activities = ['зліт', 'виліт', 'борт', 'аеродром', 'активність', 'пуск', 'тривога', 'патрул', 'повітряний простір']
+    negatives = ['поранили', 'замах', 'вбито', 'розстріляли', 'критичному стані', 'поранен']
+
+    for e in events:
+        txt = (e.message_text or "").lower()
+
+        # Direct aircraft model mentioned
+        for da in direct_aircraft:
+            if da in txt:
+                return e, da
+
+        # Airfield mention with actual flight activity
+        for af in airfield_names:
+            if af in txt:
+                # Ignore news about shot/injured officers without takeoffs
+                if any(neg in txt for neg in negatives) and not any(pos in txt for pos in ['зліт', 'виліт', 'борт']):
+                    continue
+                if any(act in txt for act in flight_activities):
+                    return e, f"{af} (зліт/активність)"
+
+    return None, None
+
+
 def calculate_threat_levels(events: list, lang: str = "ua") -> dict:
     """
     Deterministic threat assessment based ONLY on evidence in the database.
@@ -173,7 +206,7 @@ def calculate_threat_levels(events: list, lang: str = "ua") -> dict:
             drone_reason = "Фіксацій руху БпЛА за 24 год не виявлено"
 
     # ──── Strategic Aviation ────
-    aviation_evidence, aviation_kw = _find_evidence_event(events, STRATEGIC_AVIATION_KEYWORDS)
+    aviation_evidence, aviation_kw = _find_strategic_aviation_event(events)
     if aviation_evidence:
         dt_val = aviation_evidence.detected_at.replace(tzinfo=datetime.timezone.utc) if aviation_evidence.detected_at.tzinfo is None else aviation_evidence.detected_at
         t_str = dt_val.astimezone(KYIV_TZ).strftime("%H:%M")

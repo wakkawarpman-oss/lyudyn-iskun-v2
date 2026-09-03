@@ -37,7 +37,7 @@ def build_system_prompt() -> str:
   "is_kyiv_region": true/false,
   "is_confirmed_incident": true/false,
   "is_radar_track": true/false,
-  "event_type": "direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
+  "event_type": "air_defense|direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
   "location": "точна назва району/вулиці/міста на Київщині",
   "osm_query": "вибери ЛИШЕ ОДНУ найбільш конкретну локацію для OpenStreetMap (заборонено використовувати 'та' чи коми для перелічення кількох місць)",
   "casualties": true/false,
@@ -110,7 +110,8 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     regional_city_names = {
         'бровар': 'Бровари', 'вишгород': 'Вишгород', 'бориспіл': 'Бориспіль',
         'ірпін': 'Ірпінь', 'ірпен': 'Ірпінь', 'буч': 'Буча', 'фастів': 'Фастів',
-        'фастов': 'Фастів', 'біл': 'Біла Церква', 'церкв': 'Біла Церква',
+        'фастов': 'Фастів', 'біла церкв': 'Біла Церква', 'білій церкв': 'Біла Церква',
+        'білої церкв': 'Біла Церква', 'білоцерків': 'Біла Церква',
         'обухів': 'Обухів', 'обухов': 'Обухів', 'гостомель': 'Гостомель',
         'ворзель': 'Ворзель', 'боярк': 'Боярка', 'глевах': 'Глеваха',
         'васильк': 'Васильків', 'макарів': 'Макарів', 'трипілл': 'Трипілля',
@@ -145,11 +146,18 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     is_kyiv = has_kyiv and not (has_non_kyiv and not any(k in t_lower for k in regional_cities + kyiv_districts + ['київ', 'києв', 'столиц']))
     
     event_type = "general_alert"
-    if 'вибух' in t_lower: event_type = "explosion"
-    elif 'приліт' in t_lower or 'влучання' in t_lower: event_type = "direct_strike"
-    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'рух', 'бпла', 'дрон', 'мопед', '🛵', 'курс', 'вектор']): event_type = "radar_track"
-    elif 'пожеж' in t_lower or 'загорян' in t_lower: event_type = "fire"
-    elif any(w in t_lower for w in ['тривог', 'відбій', 'увага']): event_type = "general_alert"
+    if any(w in t_lower for w in ['збито', 'подавлено', 'робота ппо', 'збиття', 'відбито атаку', 'збили']):
+        event_type = "air_defense"
+    elif 'вибух' in t_lower:
+        event_type = "explosion"
+    elif 'приліт' in t_lower or 'влучання' in t_lower:
+        event_type = "direct_strike"
+    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'рух', 'бпла', 'дрон', 'мопед', '🛵', 'курс', 'вектор']):
+        event_type = "radar_track"
+    elif 'пожеж' in t_lower or 'загорян' in t_lower:
+        event_type = "fire"
+    elif any(w in t_lower for w in ['тривог', 'відбій', 'увага']):
+        event_type = "general_alert"
     
     loc_name = "Київ та область"
     osm_query = "Київ"

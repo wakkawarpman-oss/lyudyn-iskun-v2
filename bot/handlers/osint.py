@@ -124,7 +124,38 @@ async def cmd_deep_osint(message: types.Message):
             except Exception:
                 pass
             await safe_send(message, f"🔍 <b>ГЛИБОКИЙ OSINT ЗВІТ</b> 🔍\n\n{analysis}")
-        elif resp.status_code == 401:
+            return
+
+        # Attempt graceful failover to Groq LLaMA 3.3
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if groq_api_key:
+            try:
+                logger.info("OpenAI failed or rate-limited; failing over to Groq LLaMA for Deep OSINT...")
+                groq_headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {groq_api_key}"
+                }
+                groq_data = {
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.1
+                }
+                resp_groq = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=groq_headers, json=groq_data, timeout=35)
+                if resp_groq.status_code == 200:
+                    analysis = resp_groq.json()["choices"][0]["message"]["content"]
+                    try:
+                        redis_client.setex(cache_key, 300, analysis)
+                    except Exception:
+                        pass
+                    await safe_send(message, f"🔍 <b>ГЛИБОКИЙ OSINT ЗВІТ</b> <i>(Резервний ШІ-рушій LLaMA 3.3)</i> 🔍\n\n{analysis}")
+                    return
+            except Exception as ge:
+                logger.warning(f"Groq OSINT failover error: {ge}")
+
+        if resp.status_code == 401:
             await safe_send(
                 message,
                 "❌ <b>Помилка OpenAI API (401 Unauthorized):</b>\n"

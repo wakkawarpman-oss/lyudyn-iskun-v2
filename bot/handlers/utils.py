@@ -85,13 +85,31 @@ async def safe_send(message: types.Message, text: str, **kwargs):
 
 
 def unique_by_incident(events: list) -> list:
-    """Single source of truth: dedup by the worker-assigned incident_id."""
-    seen = set()
+    """
+    Enhanced deduplication:
+    1. Dedup by worker-assigned incident_id.
+    2. Dedup by normalized snippet content and location so reposts hours apart
+       of the exact same official summary do not flood the top lists.
+    """
+    seen_ids = set()
+    seen_signatures = set()
     unique = []
+
     for e in events:
         key = e.incident_id or f"_row_{e.id}"
-        if key in seen:
+        if key in seen_ids:
             continue
-        seen.add(key)
+
+        raw_txt = (e.message_text or "").lower()
+        clean_stem = re.sub(r'[^a-zA-Zа-яА-ЯіїєґІЇЄҐ0-9]', '', raw_txt[:80])
+        sig = f"{e.location_text or ''}:{clean_stem[:35]}" if len(clean_stem) >= 15 else None
+
+        if sig and sig in seen_signatures:
+            continue
+
+        seen_ids.add(key)
+        if sig:
+            seen_signatures.add(sig)
         unique.append(e)
+
     return unique
