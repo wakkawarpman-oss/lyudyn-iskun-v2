@@ -107,7 +107,6 @@ async def cmd_static_map(message: types.Message):
 
 from bot.threat_report import generate_live_threat_assessment, generate_reference_card
 
-router = Router()
 logger = logging.getLogger(__name__)
 
 @router.error()
@@ -1575,76 +1574,7 @@ async def cmd_meow(message: types.Message):
     await safe_send(message, f"{category['title']}\n\n{quote}")
 
 
-from aiogram import Router, types, F
-router = Router()
-from aiogram.filters import Command
 import io
-
-
-
-from bot.graph_generator import generate_analytics_graph
-
-@router.message(Command("graph"))
-@router.message(F.text == "📈 Графік активності")
-async def cmd_graph(message: types.Message):
-    await message.answer("⏳ Малюю графік активності за 24 години...")
-    try:
-        loop = asyncio.get_event_loop()
-        import functools
-        graph_file = await loop.run_in_executor(None, functools.partial(generate_analytics_graph, hours=24))
-        
-        if graph_file:
-            await message.answer_photo(
-                photo=types.BufferedInputFile(graph_file.getvalue(), filename=graph_file.name),
-                caption="📈 **Динаміка інцидентів та цілей (останні 24 год)**",
-                parse_mode="Markdown"
-            )
-        else:
-            await message.answer("Немає достатньо даних для побудови графіка.")
-    except Exception as e:
-        logger.error(f"Graph error: {e}")
-        await message.answer("❌ Помилка генерації графіка.")
-
-from bot.export import generate_csv_export
-from bot.map_generator import generate_static_map
-
-@router.message(Command("csv"))
-@router.message(F.text == "📊 Експорт CSV")
-async def cmd_csv_export(message: types.Message):
-    await message.answer("⏳ Формую базу даних інцидентів (CSV) за 24 години...")
-    try:
-        csv_file = generate_csv_export(hours=24)
-        await message.answer_document(
-            document=types.BufferedInputFile(csv_file.getvalue(), filename=csv_file.name),
-            caption="✅ Дані OSINT платформи (24h)."
-        )
-    except Exception as e:
-        logger.error(f"CSV error: {e}")
-        await message.answer("❌ Помилка експорту.")
-
-@router.message(Command("map"))
-@router.message(F.text == "🗺️ Згенерувати Мапу (.png)")
-async def cmd_static_map(message: types.Message):
-    await message.answer("⏳ Рендеринг тактичної мапи...")
-    try:
-        # Run in executor so it doesn't block asyncio
-        loop = asyncio.get_event_loop()
-        import functools
-        map_file = await loop.run_in_executor(None, functools.partial(generate_static_map, hours=24))
-        
-        await message.answer_photo(
-            photo=types.BufferedInputFile(map_file.getvalue(), filename=map_file.name),
-            caption="🗺️ **Знімок тактичної мапи за останні 24 години**\nЧервоний: Вибухи/Влучання | Помаранчевий: Шахеди/Радари",
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        logger.error(f"Map generation error: {e}")
-        await message.answer("❌ Помилка рендерингу мапи.")
-
-from bot.threat_report import generate_live_threat_assessment
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 # 1. Markdown Export
