@@ -112,8 +112,9 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     event_type = "general_alert"
     if 'вибух' in t_lower: event_type = "explosion"
     elif 'приліт' in t_lower or 'влучання' in t_lower: event_type = "direct_strike"
-    elif 'шахед' in t_lower or 'ракет' in t_lower or 'ціль' in t_lower or 'рух' in t_lower: event_type = "radar_track"
+    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'рух', 'бпла', 'дрон', 'мопед', '🛵', 'курс', 'вектор']): event_type = "radar_track"
     elif 'пожеж' in t_lower or 'загорян' in t_lower: event_type = "fire"
+    elif any(w in t_lower for w in ['тривог', 'відбій', 'увага']): event_type = "general_alert"
     
     loc_name = "Київ та область"
     osm_query = "Київ"

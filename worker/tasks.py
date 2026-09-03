@@ -129,7 +129,11 @@ def pipeline_extract(self, payload_str):
 
     is_kyiv_region = llm_data.get("is_kyiv_region", False)
     channel_clean = payload.get("channel", "").lstrip("@").lower()
-    kyiv_channels = ["1181169156", "kyivlive", "kyiv_novosti", "t_kyiv", "kyiv_alarm", "vakyiv", "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map"]
+    kyiv_channels = [
+        "1181169156", "kyivlive", "kyiv_novosti", "t_kyiv", "kyiv_alarm", "va_kyiv", "vakyiv",
+        "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map",
+        "eradarrua", "povitryanatrivogaaa", "dsns_kyiv_region", "kyiv24", "war_monitor", "kpszsu"
+    ]
     if channel_clean in kyiv_channels:
         is_kyiv_region = True
     if not is_kyiv_region:
@@ -137,7 +141,8 @@ def pipeline_extract(self, payload_str):
 
     is_confirmed = llm_data.get("is_confirmed_incident", False)
     is_radar = llm_data.get("is_radar_track", False)
-    if not is_confirmed and not is_radar:
+    is_alert = llm_data.get("event_type") in ["general_alert", "alert", "explosion", "direct_strike", "fire", "radar_track"]
+    if not is_confirmed and not is_radar and not is_alert:
         return {"skip": True, "reason": "not_confirmed"}
 
     return {
