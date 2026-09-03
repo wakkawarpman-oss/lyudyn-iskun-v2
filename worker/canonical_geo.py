@@ -135,12 +135,13 @@ def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], 
     cleaned = raw_location.strip().lower()
     cleaned = re.sub(r'["\']', '', cleaned)
 
-    # 1. Exact lookup — a genuine named place in the text, not a fallback.
+    # 1. Exact lookup
     if cleaned in CANONICAL_TOPONYMS and CANONICAL_TOPONYMS[cleaned]:
         entry = CANONICAL_TOPONYMS[cleaned]
-        return entry["canonical"], entry["lat"], entry["lon"], False
+        is_fallback = (entry.get("type") == "region")
+        return entry["canonical"], entry["lat"], entry["lon"], is_fallback
 
-    # 2. Fuzzy/Substring scan (matching longest canonical key first) — also genuine.
+    # 2. Fuzzy/Substring scan (matching longest canonical key first)
     sorted_keys = sorted(CANONICAL_TOPONYMS.keys(), key=lambda k: len(k), reverse=True)
     for key in sorted_keys:
         val = CANONICAL_TOPONYMS[key]
@@ -149,7 +150,8 @@ def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], 
         # If key is inside cleaned raw location
         pattern = r'\b' + re.escape(key) + r'\b'
         if re.search(pattern, cleaned) or key in cleaned:
-            return val["canonical"], val["lat"], val["lon"], False
+            is_fallback = (val.get("type") == "region")
+            return val["canonical"], val["lat"], val["lon"], is_fallback
 
     # 3. Fallback: If it contains 'київ' or 'область', but nothing more specific matched.
     if "київ" in cleaned:

@@ -52,6 +52,26 @@ class MockEvent:
         self.lon = lon
 
 
+def test_canonical_geo_region_fallback():
+    """Verify that region-level toponyms return is_fallback_geo=True while specific settlements return False."""
+    from worker.canonical_geo import resolve_canonical_toponym
+
+    # Region-wide centroids must be marked as fallback to prevent ATAK/map noise
+    name, lat, lon, is_fallback = resolve_canonical_toponym("Київ та область")
+    assert is_fallback is True
+
+    name, lat, lon, is_fallback = resolve_canonical_toponym("Київська область")
+    assert is_fallback is True
+
+    # Specific settlements and districts must NOT be marked as fallback
+    name, lat, lon, is_fallback = resolve_canonical_toponym("Бровари")
+    assert is_fallback is False
+    assert name == "Бровари"
+
+    name, lat, lon, is_fallback = resolve_canonical_toponym("Оболонь")
+    assert is_fallback is False
+
+
 def test_cot_xml_validity_and_character_escaping():
     """Ensure ElementTree generates well-formed XML even with special characters."""
     ev = MockEvent(
