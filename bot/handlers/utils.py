@@ -64,14 +64,19 @@ def is_admin(user_id) -> bool:
 
 
 def get_dashboard_url() -> str:
-    """Dynamically retrieves the current active Cloudflare tunnel URL from Redis or ENV."""
+    """Dynamically retrieves the current active dashboard URL from ENV or Redis, defaulting to stable direct IP."""
+    env_url = os.getenv("DASHBOARD_URL")
+    if env_url and env_url.strip() and "halifax" not in env_url:
+        return env_url.strip()
     try:
         val = redis_client.get("active_tunnel_url")
         if val:
-            return val.strip() if isinstance(val, str) else val.decode("utf-8").strip()
+            url_str = val.strip() if isinstance(val, str) else val.decode("utf-8").strip()
+            if "halifax" not in url_str and url_str.startswith("http"):
+                return url_str
     except Exception:
         pass
-    return os.getenv("DASHBOARD_URL", "https://halifax-aim-restoration-dylan.trycloudflare.com")
+    return "http://136.113.156.17"
 
 
 async def safe_send(message: types.Message, text: str, **kwargs):

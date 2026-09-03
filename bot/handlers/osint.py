@@ -204,15 +204,18 @@ async def cmd_status(message: types.Message):
 @router.message(F.text == "🌐 Веб-мапа")
 @router.message(Command("map"))
 async def cmd_web_map(message: types.Message):
+    dash_url = get_dashboard_url()
     text = (
         "🗺️ <b>ЖИВА ТАКТИЧНА OSINT-МАПА (GEOINT V2)</b>\n\n"
         "• 🔴 <b>Зони ураження (Blast Radii):</b> 50м / 180м / 450м\n"
-        "• 🛡️ <b>Укриття та Станції Метро Києва:</b> 1,197 точок\n"
-        "• 🛰️ <b>Супутниковий шар та геопросторовий моніторинг</b>\n\n"
-        "<i>Натисніть кнопку нижче для відкриття інтерактивної мапи у вашому браузері:</i>"
+        "• 🛡️ <b>Укриття та Станції Метро Києва:</b> 1,300+ точок\n"
+        "• 🛸 <b>Живий радар БпЛА:</b> засічки, швидкість та підліт\n"
+        "• 📱 <b>Мобільний HUD:</b> швидка тактична навігація для смартфонів\n\n"
+        f"🔗 <b>Пряме посилання:</b> <code>{dash_url}</code>\n\n"
+        "<i>Натисніть кнопку нижче або перейдіть за посиланням у будь-якому браузері:</i>"
     )
     inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="🌐 Відкрити Мапу у Браузері", url=get_dashboard_url())
+    inline_kb.button(text="🌐 Відкрити Мапу у Браузері", url=dash_url)
     inline_kb.adjust(1)
     
     await safe_send(message, text, reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)

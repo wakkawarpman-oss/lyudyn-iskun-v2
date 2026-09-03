@@ -48,9 +48,9 @@ def run_health_check():
     finally:
         db.close()
         
-    # 3. Auto-sync active Cloudflare tunnel URL to Redis
+    # 3. Auto-sync active dashboard URL to Redis
     try:
-        tunnel_url = os.getenv("DASHBOARD_URL", "https://halifax-aim-restoration-dylan.trycloudflare.com")
+        tunnel_url = os.getenv("DASHBOARD_URL", "http://136.113.156.17")
         r = redis.Redis.from_url(REDIS_URL)
         r.set("active_tunnel_url", tunnel_url)
     except Exception as te:
