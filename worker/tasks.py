@@ -4,6 +4,7 @@ import os
 import json
 import logging
 import base64
+import redis
 from celery import shared_task
 from geoalchemy2.elements import WKTElement
 from database.models import SessionLocal, DetectedEvent
