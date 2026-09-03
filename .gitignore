@@ -9,3 +9,5 @@ __pycache__/
 temp_*
 node_modules/
 .DS_Store
+.omc/
+.venv/
