@@ -1,0 +1,10 @@
+{"text": "Вибух у Бучі, очевидець зняв відео", "label": 1, "type": "explosion_fire", "location": "Бучі", "kyiv_region": true}
+{"text": "Сьогодні гарний день у Києві", "label": 0, "type": null, "location": null, "kyiv_region": true}
+{"text": "Обстріл ракетами Шевченківського району", "label": 1, "type": "shelling", "location": "Шевченківського", "kyiv_region": true}
+{"text": "Котик спить на дивані", "label": 0, "type": null, "location": null, "kyiv_region": false}
+{"text": "Приліт по Голосіївському, зруйновано склад", "label": 1, "type": "direct_strike", "location": "Голосіївському", "kyiv_region": true}
+{"text": "Даша їде на дачу", "label": 0, "type": null, "location": null, "kyiv_region": false}
+{"text": "Shahed летить у бік Києва", "label": 1, "type": "shelling", "location": null, "kyiv_region": true}
+{"text": "Пожежа після удару в Ірпені", "label": 1, "type": "explosion_fire", "location": "Ірпені", "kyiv_region": true}
+{"text": "Рейв скасовано через тривогу", "label": 0, "type": null, "location": null, "kyiv_region": true}
+{"text": "В Севастополі підірвали авто", "label": 1, "type": "explosion_fire", "location": null, "kyiv_region": false}

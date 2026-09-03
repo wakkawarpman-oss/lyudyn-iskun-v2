@@ -1,0 +1,501 @@
+{
+  "communities": {
+    "0": [
+      "bot_handlers",
+      "bot_handlers_clean_event_snippet",
+      "bot_handlers_cmd_analytics",
+      "bot_handlers_cmd_back_to_menu",
+      "bot_handlers_cmd_catch_raw_key",
+      "bot_handlers_cmd_csv_export",
+      "bot_handlers_cmd_dasha_humor_combined",
+      "bot_handlers_cmd_deep_osint",
+      "bot_handlers_cmd_del_key",
+      "bot_handlers_cmd_export_report",
+      "bot_handlers_cmd_graph",
+      "bot_handlers_cmd_help",
+      "bot_handlers_cmd_meow",
+      "bot_handlers_cmd_my_key",
+      "bot_handlers_cmd_premium",
+      "bot_handlers_cmd_radar_kontur",
+      "bot_handlers_cmd_reference",
+      "bot_handlers_cmd_report_12h",
+      "bot_handlers_cmd_resonance",
+      "bot_handlers_cmd_set_key",
+      "bot_handlers_cmd_shelters_prompt",
+      "bot_handlers_cmd_start",
+      "bot_handlers_cmd_static_map",
+      "bot_handlers_cmd_status",
+      "bot_handlers_cmd_sync_events",
+      "bot_handlers_cmd_threat_report",
+      "bot_handlers_cmd_top_events",
+      "bot_handlers_cmd_web_map",
+      "bot_handlers_deduplicate_events",
+      "bot_handlers_format_factcheck_badge",
+      "bot_handlers_format_kyiv_time",
+      "bot_handlers_format_source_display",
+      "bot_handlers_format_source_link",
+      "bot_handlers_geocode_kyiv_street",
+      "bot_handlers_get_bilingual_cluster_key",
+      "bot_handlers_get_event_type_label",
+      "bot_handlers_global_error_handler",
+      "bot_handlers_handle_photo",
+      "bot_handlers_handle_text_shelter_search",
+      "bot_handlers_handle_user_location",
+      "bot_handlers_is_shelter_text_query",
+      "bot_handlers_py_bot",
+      "bot_handlers_py_datetime",
+      "bot_handlers_rationale_152",
+      "bot_handlers_rationale_169",
+      "bot_handlers_rationale_480",
+      "bot_handlers_rationale_748",
+      "bot_handlers_rationale_833",
+      "bot_handlers_rationale_844",
+      "bot_handlers_safe_send",
+      "bot_handlers_save_user_key",
+      "bot_handlers_search_and_send_shelters",
+      "bot_keyboards_get_main_keyboard",
+      "bot_memes_db",
+      "error",
+      "errorevent",
+      "message"
+    ],
+    "1": [
+      "asyncio",
+      "base",
+      "bot_auto_backup",
+      "bot_auto_backup_databasebackup",
+      "bot_auto_backup_databasebackup_backup_to_telegram",
+      "bot_auto_backup_databasebackup_init",
+      "bot_auto_backup_databasebackup_run",
+      "bot_auto_backup_py_bot",
+      "bot_critical_alerts",
+      "bot_critical_alerts_criticalalertsystem",
+      "bot_critical_alerts_criticalalertsystem_check_and_alert",
+      "bot_critical_alerts_criticalalertsystem_init",
+      "bot_critical_alerts_criticalalertsystem_run",
+      "bot_critical_alerts_py_bot",
+      "bot_export",
+      "bot_export_generate_csv_export",
+      "bot_export_py_bytesio",
+      "bot_export_rationale_8",
+      "bot_graph_generator",
+      "bot_graph_generator_generate_analytics_graph",
+      "bot_graph_generator_py_bytesio",
+      "bot_graph_generator_rationale_10",
+      "bot_health_check",
+      "bot_health_check_healthmonitor",
+      "bot_health_check_healthmonitor_alert_admin",
+      "bot_health_check_healthmonitor_init",
+      "bot_health_check_healthmonitor_run",
+      "bot_health_check_py_bot",
+      "bot_main",
+      "bot_main_main",
+      "bot_map_generator",
+      "bot_map_generator_generate_static_map",
+      "bot_map_generator_py_bytesio",
+      "bot_map_generator_rationale_8",
+      "database_import_shelters",
+      "database_import_shelters_import_kyiv_shelters",
+      "database_models",
+      "database_models_bombshelter",
+      "database_models_detectedevent",
+      "database_models_init_db",
+      "database_models_userapikey"
+    ],
+    "2": [
+      "basemodel",
+      "calibration_fine_tune_regex",
+      "calibration_fine_tune_regex_evaluate_on_golden",
+      "calibration_tune_resonance",
+      "calibration_tune_resonance_calibrate_resonance_threshold",
+      "calibration_tune_resonance_get_resonance",
+      "enum",
+      "patch",
+      "str",
+      "tests_test_classifier",
+      "tests_test_classifier_mock_llm",
+      "tests_test_classifier_py_parametrize",
+      "tests_test_classifier_test_classify",
+      "tests_test_classifier_test_kyiv_filter",
+      "tests_test_llm",
+      "tests_test_llm_hallucinations",
+      "tests_test_llm_hallucinations_py_parametrize",
+      "tests_test_llm_hallucinations_test_llm_consistency",
+      "tests_test_llm_hallucinations_test_no_hallucinated_terms",
+      "tests_test_llm_test_clean_json_response",
+      "tests_test_llm_test_rule_based_fallback",
+      "tests_test_security",
+      "tests_test_security_rationale_6",
+      "tests_test_security_test_prompt_injection_resistance",
+      "worker_llm_engine",
+      "worker_llm_engine_build_system_prompt",
+      "worker_llm_engine_clean_and_validate_json_response",
+      "worker_llm_engine_get_current_time_str",
+      "worker_llm_engine_process_with_llm",
+      "worker_llm_engine_rationale_50",
+      "worker_llm_engine_rule_based_fallback_parser",
+      "worker_schemas",
+      "worker_schemas_damagelevelenum",
+      "worker_schemas_eventtypeenum",
+      "worker_schemas_parsedeventschema",
+      "worker_schemas_threatassessmentslotschema"
+    ],
+    "3": [
+      "shared_task",
+      "tests_test_verifier",
+      "tests_test_verifier_test_consensus_math",
+      "tests_test_verifier_test_verifier_tier_mapping",
+      "worker_osint_ai_geolocation",
+      "worker_osint_ai_geolocation_aigeolocation",
+      "worker_osint_ai_geolocation_aigeolocation_analyze_image",
+      "worker_osint_exif_extractor",
+      "worker_osint_exif_extractor_exifextractor",
+      "worker_osint_exif_extractor_exifextractor_convert_to_degrees",
+      "worker_osint_exif_extractor_exifextractor_extract",
+      "worker_osint_exif_extractor_rationale_13",
+      "worker_tasks",
+      "worker_tasks_cached_geocode",
+      "worker_tasks_cleanup_old_events",
+      "worker_tasks_fetch_rss_news_task",
+      "worker_tasks_get_tier_info",
+      "worker_tasks_internal_geocode",
+      "worker_tasks_pipeline_cluster_and_save",
+      "worker_tasks_pipeline_extract",
+      "worker_tasks_pipeline_geocode",
+      "worker_tasks_process_message",
+      "worker_tasks_run_watchdog",
+      "worker_watchdog",
+      "worker_watchdog_run_health_check",
+      "worker_watchdog_send_alert"
+    ],
+    "4": [
+      "bot_threat_report",
+      "bot_threat_report_calculate_threat_levels",
+      "bot_threat_report_find_evidence_event",
+      "bot_threat_report_format_event_type",
+      "bot_threat_report_format_verified_source_link",
+      "bot_threat_report_generate_live_threat_assessment",
+      "bot_threat_report_generate_reference_card",
+      "bot_threat_report_rationale_108",
+      "bot_threat_report_rationale_241",
+      "bot_threat_report_rationale_353",
+      "bot_threat_report_rationale_69",
+      "bot_threat_report_rationale_92",
+      "bot_threat_report_rationale_98",
+      "bot_threat_report_text_matches",
+      "bot_threat_report_threat_color"
+    ],
+    "5": [
+      "api_main",
+      "api_main_get_cached",
+      "api_main_get_danger_zones",
+      "api_main_get_db",
+      "api_main_get_events",
+      "api_main_get_map_shelters",
+      "api_main_get_stats",
+      "api_main_set_cached",
+      "get",
+      "session"
+    ],
+    "6": [
+      "listener_telethon_client",
+      "listener_telethon_client_chunk_list",
+      "listener_telethon_client_listen_for_sync_commands",
+      "listener_telethon_client_main",
+      "listener_telethon_client_perform_sync",
+      "listener_telethon_client_rationale_22",
+      "listener_telethon_client_rationale_54",
+      "listener_telethon_client_rationale_79"
+    ],
+    "7": [
+      "worker_osint_geoint_engine",
+      "worker_osint_geoint_engine_geointengine",
+      "worker_osint_geoint_engine_geointengine_calculate_sun_position",
+      "worker_osint_geoint_engine_geointengine_get_tactical_danger_zones",
+      "worker_osint_geoint_engine_py_datetime",
+      "worker_osint_geoint_engine_rationale_16",
+      "worker_osint_geoint_engine_rationale_8",
+      "worker_osint_geoint_engine_rationale_83"
+    ],
+    "8": [
+      "worker_osint_rss_intel",
+      "worker_osint_rss_intel_enhancedrssintel",
+      "worker_osint_rss_intel_enhancedrssintel_fetch_all",
+      "worker_osint_rss_intel_enhancedrssintel_matches_keywords",
+      "worker_osint_rss_intel_enhancedrssintel_parse_date",
+      "worker_osint_rss_intel_py_datetime",
+      "worker_osint_rss_intel_rationale_8"
+    ],
+    "9": [
+      "bot_handlers_callback_meme",
+      "bot_handlers_cb_meme_filter",
+      "bot_keyboards",
+      "bot_keyboards_get_meme_keyboard",
+      "callback_query",
+      "callbackquery"
+    ],
+    "10": [
+      "alembic_env",
+      "alembic_env_rationale_30",
+      "alembic_env_rationale_43",
+      "alembic_env_run_migrations_offline",
+      "alembic_env_run_migrations_online"
+    ],
+    "11": [
+      "tests_test_e2e",
+      "tests_test_e2e_rationale_4",
+      "tests_test_e2e_rationale_8",
+      "tests_test_e2e_test_cold_start",
+      "tests_test_e2e_test_full_pipeline"
+    ],
+    "12": [
+      "tests_test_memes",
+      "tests_test_memes_mock_meme_gen",
+      "tests_test_memes_test_meme_has_disclaimer",
+      "tests_test_memes_test_meme_no_repeat",
+      "tests_test_memes_test_meme_not_operational"
+    ],
+    "13": [
+      "alembic_alembic_env",
+      "alembic_alembic_env_rationale_30",
+      "alembic_alembic_env_run_migrations_offline",
+      "alembic_alembic_env_run_migrations_online"
+    ],
+    "14": [
+      "alembic_alembic_versions_adb3744b0ec5_initial_migration",
+      "alembic_alembic_versions_adb3744b0ec5_initial_migration_downgrade",
+      "alembic_alembic_versions_adb3744b0ec5_initial_migration_upgrade"
+    ],
+    "15": [
+      "run_tests",
+      "run_tests_database_url",
+      "run_tests_sh__entry"
+    ],
+    "16": [
+      "tests_test_clustering",
+      "tests_test_clustering_test_consensus_score_upgrade",
+      "tests_test_clustering_test_dummy_clustering_math"
+    ],
+    "17": [
+      "local_fix"
+    ],
+    "18": [
+      "local_fix_final"
+    ],
+    "19": [
+      "local_patch"
+    ],
+    "20": [
+      "patch_cloudflare"
+    ],
+    "21": [
+      "patch_docker"
+    ],
+    "22": [
+      "patch_handlers"
+    ],
+    "23": [
+      "patch_handlers2"
+    ],
+    "24": [
+      "patch_handlers_graph"
+    ],
+    "25": [
+      "patch_keyboard"
+    ],
+    "26": [
+      "patch_osint"
+    ],
+    "27": [
+      "patch_tasks"
+    ],
+    "28": [
+      "tests_init"
+    ],
+    "29": [
+      "worker_celery_app"
+    ],
+    "30": [
+      "worker_osint_init"
+    ]
+  },
+  "cohesion": {
+    "0": 0.09837092731829573,
+    "1": 0.08536585365853659,
+    "2": 0.09682539682539683,
+    "3": 0.12615384615384614,
+    "4": 0.19047619047619047,
+    "5": 0.4444444444444444,
+    "6": 0.39285714285714285,
+    "7": 0.2857142857142857,
+    "8": 0.42857142857142855,
+    "9": 0.4666666666666667,
+    "10": 0.4,
+    "11": 0.4,
+    "12": 0.7,
+    "13": 0.6666666666666666,
+    "14": 0.6666666666666666,
+    "15": 0.6666666666666666,
+    "16": 0.6666666666666666,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0
+  },
+  "gods": [
+    {
+      "id": "bot_handlers_safe_send",
+      "label": "safe_send()",
+      "degree": 27
+    },
+    {
+      "id": "database_models_detectedevent",
+      "label": "DetectedEvent",
+      "degree": 18
+    },
+    {
+      "id": "worker_llm_engine_process_with_llm",
+      "label": "process_with_llm()",
+      "degree": 14
+    },
+    {
+      "id": "bot_handlers_cmd_report_12h",
+      "label": "cmd_report_12h()",
+      "degree": 10
+    },
+    {
+      "id": "bot_handlers_cmd_resonance",
+      "label": "cmd_resonance()",
+      "degree": 10
+    },
+    {
+      "id": "bot_handlers_cmd_top_events",
+      "label": "cmd_top_events()",
+      "degree": 9
+    },
+    {
+      "id": "bot_threat_report_generate_live_threat_assessment",
+      "label": "generate_live_threat_assessment()",
+      "degree": 9
+    },
+    {
+      "id": "bot_auto_backup_databasebackup",
+      "label": "DatabaseBackup",
+      "degree": 7
+    },
+    {
+      "id": "bot_critical_alerts_criticalalertsystem",
+      "label": "CriticalAlertSystem",
+      "degree": 7
+    },
+    {
+      "id": "bot_handlers_search_and_send_shelters",
+      "label": "search_and_send_shelters()",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "DatabaseBackup",
+      "target": "DetectedEvent",
+      "source_files": [
+        "bot/auto_backup.py",
+        "database/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "CriticalAlertSystem",
+      "target": "DetectedEvent",
+      "source_files": [
+        "bot/critical_alerts.py",
+        "database/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "format_factcheck_badge()",
+      "target": "DetectedEvent",
+      "source_files": [
+        "bot/handlers.py",
+        "database/models.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "_save_user_key()",
+      "target": "UserApiKey",
+      "source_files": [
+        "bot/handlers.py",
+        "database/models.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "handle_photo()",
+      "target": "EXIFExtractor",
+      "source_files": [
+        "bot/handlers.py",
+        "worker/osint/exif_extractor.py"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `DetectedEvent` connect `Backup and Alert System` to `Bot Command Handlers`, `Image Geolocation Analysis`, `Threat Assessment Generation`, `API Data Endpoints`?",
+      "why": "High betweenness centrality (0.156) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `process_with_llm()` connect `LLM Resonance Tuning` to `Image Geolocation Analysis`?",
+      "why": "High betweenness centrality (0.077) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `EXIFExtractor` connect `Image Geolocation Analysis` to `Bot Command Handlers`?",
+      "why": "High betweenness centrality (0.060) - this node is a cross-community bridge."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 3 inferred relationships involving `DetectedEvent` (e.g. with `DatabaseBackup` and `CriticalAlertSystem`) actually correct?",
+      "why": "`DetectedEvent` has 3 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `run_tests.sh script`, `DATABASE_URL` to the rest of the system?",
+      "why": "2 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Bot Command Handlers` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09837092731829573 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `Backup and Alert System` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08536585365853659 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
