@@ -17,14 +17,31 @@ OBLAST_BOUNDS = {
     "kyiv_city": {"min_lat": 50.25, "max_lat": 50.60, "min_lon": 30.20, "max_lon": 30.85},
     "kyiv_oblast": {"min_lat": 49.18, "max_lat": 51.55, "min_lon": 29.25, "max_lon": 32.18, "exclude_city": True},
     "kyiv": {"min_lat": 49.18, "max_lat": 51.55, "min_lon": 29.25, "max_lon": 32.18},
+    "vinnytsia": {"min_lat": 48.05, "max_lat": 49.85, "min_lon": 27.35, "max_lon": 30.05},
+    "volyn": {"min_lat": 50.30, "max_lat": 51.95, "min_lon": 23.60, "max_lon": 26.15},
     "dnipropetrovsk": {"min_lat": 47.45, "max_lat": 49.25, "min_lon": 33.00, "max_lon": 36.90},
+    "donetsk": {"min_lat": 46.85, "max_lat": 49.25, "min_lon": 36.65, "max_lon": 39.25},
+    "zhytomyr": {"min_lat": 49.65, "max_lat": 51.75, "min_lon": 27.20, "max_lon": 29.75},
+    "zakarpattia": {"min_lat": 47.90, "max_lat": 49.10, "min_lon": 22.15, "max_lon": 24.65},
     "zaporizhzhia": {"min_lat": 46.35, "max_lat": 48.15, "min_lon": 34.50, "max_lon": 37.30},
-    "kharkiv": {"min_lat": 48.50, "max_lat": 50.50, "min_lon": 35.10, "max_lon": 38.30},
-    "odesa": {"min_lat": 45.10, "max_lat": 48.25, "min_lon": 29.20, "max_lon": 31.40},
+    "ivano_frankivsk": {"min_lat": 47.70, "max_lat": 49.35, "min_lon": 23.60, "max_lon": 25.60},
+    "kirovohrad": {"min_lat": 47.75, "max_lat": 49.25, "min_lon": 29.75, "max_lon": 33.60},
+    "luhansk": {"min_lat": 47.80, "max_lat": 50.10, "min_lon": 37.85, "max_lon": 40.25},
+    "lviv": {"min_lat": 48.70, "max_lat": 50.65, "min_lon": 22.70, "max_lon": 25.40},
     "mykolaiv": {"min_lat": 46.35, "max_lat": 48.20, "min_lon": 30.90, "max_lon": 33.20},
+    "odesa": {"min_lat": 45.10, "max_lat": 48.25, "min_lon": 29.20, "max_lon": 31.40},
     "poltava": {"min_lat": 48.75, "max_lat": 50.60, "min_lon": 32.05, "max_lon": 35.50},
+    "rivne": {"min_lat": 50.05, "max_lat": 51.95, "min_lon": 25.10, "max_lon": 27.45},
     "sumy": {"min_lat": 50.00, "max_lat": 52.40, "min_lon": 33.00, "max_lon": 35.70},
+    "ternopil": {"min_lat": 48.50, "max_lat": 50.30, "min_lon": 24.70, "max_lon": 26.45},
+    "kharkiv": {"min_lat": 48.50, "max_lat": 50.50, "min_lon": 35.10, "max_lon": 38.30},
+    "kherson": {"min_lat": 45.85, "max_lat": 47.60, "min_lon": 31.50, "max_lon": 35.10},
+    "khmelnytskyi": {"min_lat": 48.40, "max_lat": 50.60, "min_lon": 26.10, "max_lon": 27.90},
+    "cherkasy": {"min_lat": 48.40, "max_lat": 50.25, "min_lon": 29.80, "max_lon": 32.90},
+    "chernivtsi": {"min_lat": 47.70, "max_lat": 48.70, "min_lon": 24.90, "max_lon": 27.50},
     "chernihiv": {"min_lat": 50.40, "max_lat": 52.40, "min_lon": 30.50, "max_lon": 33.50},
+    "crimea": {"min_lat": 44.30, "max_lat": 46.25, "min_lon": 32.45, "max_lon": 36.70, "exclude_sevastopol": True},
+    "sevastopol": {"min_lat": 44.40, "max_lat": 44.85, "min_lon": 33.35, "max_lon": 33.90},
 }
 
 def get_cached(key):
@@ -103,6 +120,16 @@ def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depe
                     func.ST_Y(DetectedEvent.geom) <= cb["max_lat"],
                     func.ST_X(DetectedEvent.geom) >= cb["min_lon"],
                     func.ST_X(DetectedEvent.geom) <= cb["max_lon"]
+                ))
+            )
+        if b.get("exclude_sevastopol"):
+            sb = OBLAST_BOUNDS["sevastopol"]
+            query = query.filter(
+                not_(and_(
+                    func.ST_Y(DetectedEvent.geom) >= sb["min_lat"],
+                    func.ST_Y(DetectedEvent.geom) <= sb["max_lat"],
+                    func.ST_X(DetectedEvent.geom) >= sb["min_lon"],
+                    func.ST_X(DetectedEvent.geom) <= sb["max_lon"]
                 ))
             )
 
@@ -286,6 +313,16 @@ def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session 
                     func.ST_X(DetectedEvent.geom) <= cb["max_lon"]
                 ))
             )
+        if b.get("exclude_sevastopol"):
+            sb = OBLAST_BOUNDS["sevastopol"]
+            query = query.filter(
+                not_(and_(
+                    func.ST_Y(DetectedEvent.geom) >= sb["min_lat"],
+                    func.ST_Y(DetectedEvent.geom) <= sb["max_lat"],
+                    func.ST_X(DetectedEvent.geom) >= sb["min_lon"],
+                    func.ST_X(DetectedEvent.geom) <= sb["max_lon"]
+                ))
+            )
 
     strikes = query.all()
     
@@ -389,94 +426,34 @@ def get_supported_oblasts():
     """Returns official oblast registry with bounding centers and default zoom levels."""
     return {
         "oblasts": [
-            {
-                "code": "kyiv_city",
-                "name": "м. Київ (Столиця)",
-                "short_name": "м. Київ",
-                "icon": "fa-city",
-                "center": [50.4501, 30.5234],
-                "zoom": 11
-            },
-            {
-                "code": "kyiv_oblast",
-                "name": "Київська область",
-                "short_name": "Київщина",
-                "icon": "fa-tree",
-                "center": [50.3500, 30.2000],
-                "zoom": 9
-            },
-            {
-                "code": "dnipropetrovsk",
-                "name": "Дніпропетровська область",
-                "short_name": "Дніпропетровщина",
-                "icon": "fa-industry",
-                "center": [48.4647, 35.0462],
-                "zoom": 9
-            },
-            {
-                "code": "zaporizhzhia",
-                "name": "Запорізька область",
-                "short_name": "Запоріжжя",
-                "icon": "fa-bolt-lightning",
-                "center": [47.8388, 35.1396],
-                "zoom": 9
-            },
-            {
-                "code": "kharkiv",
-                "name": "Харківська область",
-                "short_name": "Харківщина",
-                "icon": "fa-shield-halved",
-                "center": [49.9935, 36.2304],
-                "zoom": 9
-            },
-            {
-                "code": "odesa",
-                "name": "Одеська область",
-                "short_name": "Одещина",
-                "icon": "fa-anchor",
-                "center": [46.4825, 30.7233],
-                "zoom": 9
-            },
-            {
-                "code": "mykolaiv",
-                "name": "Миколаївська область",
-                "short_name": "Миколаївщина",
-                "icon": "fa-water",
-                "center": [46.9750, 31.9946],
-                "zoom": 9
-            },
-            {
-                "code": "poltava",
-                "name": "Полтавська область",
-                "short_name": "Полтавщина",
-                "icon": "fa-wheat-awn",
-                "center": [49.5883, 34.5514],
-                "zoom": 9
-            },
-            {
-                "code": "sumy",
-                "name": "Сумська область",
-                "short_name": "Сумщина",
-                "icon": "fa-tower-observation",
-                "center": [50.9077, 34.7981],
-                "zoom": 9
-            },
-            {
-                "code": "chernihiv",
-                "name": "Чернігівська область",
-                "short_name": "Чернігівщина",
-                "icon": "fa-chess-rook",
-                "center": [51.4982, 31.2893],
-                "zoom": 9
-            },
-            {
-                "code": "all",
-                "name": "Вся Україна (Зведений огляд)",
-                "short_name": "Вся Україна",
-                "icon": "fa-globe",
-                "center": [48.3794, 31.1656],
-                "zoom": 6
-            }
+            {"code": "kyiv_city", "name": "м. Київ (Столиця)", "short_name": "м. Київ", "icon": "fa-city", "center": [50.4501, 30.5234], "zoom": 11},
+            {"code": "kyiv_oblast", "name": "Київська область", "short_name": "Київщина", "icon": "fa-tree", "center": [50.3500, 30.2000], "zoom": 9},
+            {"code": "vinnytsia", "name": "Вінницька область", "short_name": "Вінниччина", "icon": "fa-sun", "center": [49.2331, 28.4682], "zoom": 9},
+            {"code": "volyn", "name": "Волинська область", "short_name": "Волинь", "icon": "fa-shield-halved", "center": [50.7472, 25.3254], "zoom": 9},
+            {"code": "dnipropetrovsk", "name": "Дніпропетровська область", "short_name": "Дніпропетровщина", "icon": "fa-industry", "center": [48.4647, 35.0462], "zoom": 9},
+            {"code": "donetsk", "name": "Донецька область", "short_name": "Донеччина", "icon": "fa-mountain", "center": [48.0159, 37.8029], "zoom": 9},
+            {"code": "zhytomyr", "name": "Житомирська область", "short_name": "Житомирщина", "icon": "fa-leaf", "center": [50.2547, 28.6587], "zoom": 9},
+            {"code": "zakarpattia", "name": "Закарпатська область", "short_name": "Закарпаття", "icon": "fa-mountain-sun", "center": [48.6208, 22.2879], "zoom": 9},
+            {"code": "zaporizhzhia", "name": "Запорізька область", "short_name": "Запоріжжя", "icon": "fa-bolt-lightning", "center": [47.8388, 35.1396], "zoom": 9},
+            {"code": "ivano_frankivsk", "name": "Івано-Франківська область", "short_name": "Прикарпаття", "icon": "fa-campground", "center": [48.9226, 24.7111], "zoom": 9},
+            {"code": "kirovohrad", "name": "Кіровоградська область", "short_name": "Кіровоградщина", "icon": "fa-wheat-awn", "center": [48.5079, 32.2623], "zoom": 9},
+            {"code": "luhansk", "name": "Луганська область", "short_name": "Луганщина", "icon": "fa-fire", "center": [48.5740, 39.3078], "zoom": 9},
+            {"code": "lviv", "name": "Львівська область", "short_name": "Львівщина", "icon": "fa-landmark", "center": [49.8397, 24.0297], "zoom": 9},
+            {"code": "mykolaiv", "name": "Миколаївська область", "short_name": "Миколаївщина", "icon": "fa-water", "center": [46.9750, 31.9946], "zoom": 9},
+            {"code": "odesa", "name": "Одеська область", "short_name": "Одещина", "icon": "fa-anchor", "center": [46.4825, 30.7233], "zoom": 9},
+            {"code": "poltava", "name": "Полтавська область", "short_name": "Полтавщина", "icon": "fa-seedling", "center": [49.5883, 34.5514], "zoom": 9},
+            {"code": "rivne", "name": "Рівненська область", "short_name": "Рівненщина", "icon": "fa-feather", "center": [50.6199, 26.2516], "zoom": 9},
+            {"code": "sumy", "name": "Сумська область", "short_name": "Сумщина", "icon": "fa-tower-observation", "center": [50.9077, 34.7981], "zoom": 9},
+            {"code": "ternopil", "name": "Тернопільська область", "short_name": "Тернопільщина", "icon": "fa-castle", "center": [49.5535, 25.5948], "zoom": 9},
+            {"code": "kharkiv", "name": "Харківська область", "short_name": "Харківщина", "icon": "fa-shield", "center": [49.9935, 36.2304], "zoom": 9},
+            {"code": "kherson", "name": "Херсонська область", "short_name": "Херсонщина", "icon": "fa-ship", "center": [46.6354, 32.6169], "zoom": 9},
+            {"code": "khmelnytskyi", "name": "Хмельницька область", "short_name": "Хмельниччина", "icon": "fa-shield-heart", "center": [49.4230, 26.9871], "zoom": 9},
+            {"code": "cherkasy", "name": "Черкаська область", "short_name": "Черкащина", "icon": "fa-monument", "center": [49.4444, 32.0598], "zoom": 9},
+            {"code": "chernivtsi", "name": "Чернівецька область", "short_name": "Буковина", "icon": "fa-archway", "center": [48.2921, 25.9358], "zoom": 9},
+            {"code": "chernihiv", "name": "Чернігівська область", "short_name": "Чернігівщина", "icon": "fa-chess-rook", "center": [51.4982, 31.2893], "zoom": 9},
+            {"code": "crimea", "name": "Автономна Республіка Крим", "short_name": "АР Крим", "icon": "fa-compass", "center": [44.9521, 34.1024], "zoom": 8},
+            {"code": "sevastopol", "name": "м. Севастополь", "short_name": "Севастополь", "icon": "fa-life-ring", "center": [44.6167, 33.5254], "zoom": 11},
+            {"code": "all", "name": "Вся Україна (Зведений огляд)", "short_name": "Вся Україна", "icon": "fa-globe", "center": [48.3794, 31.1656], "zoom": 6}
         ]
     }
 

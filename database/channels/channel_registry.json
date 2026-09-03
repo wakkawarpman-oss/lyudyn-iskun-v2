@@ -300,5 +300,204 @@
       "title": "Суспільне Чернігів",
       "tier": 2
     }
+  ],
+  "vinnytsia": [
+    {
+      "username": "vinnytsiaoda",
+      "title": "Вінницька ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnevinnytsia",
+      "title": "Суспільне Вінниця",
+      "tier": 2
+    }
+  ],
+  "volyn": [
+    {
+      "username": "volyn_adm",
+      "title": "Волинська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnevolyn",
+      "title": "Суспільне Волинь",
+      "tier": 2
+    }
+  ],
+  "donetsk": [
+    {
+      "username": "pavlokyrylenko_donoda",
+      "title": "Донецька ОДА",
+      "tier": 1
+    },
+    {
+      "username": "kramatorsk_rada",
+      "title": "Краматорська міськрада",
+      "tier": 2
+    }
+  ],
+  "zhytomyr": [
+    {
+      "username": "zhytomyroblast",
+      "title": "Житомирська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnezhytomyr",
+      "title": "Суспільне Житомир",
+      "tier": 2
+    }
+  ],
+  "zakarpattia": [
+    {
+      "username": "zakarpatskaODA",
+      "title": "Закарпатська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnezakarpattia",
+      "title": "Суспільне Закарпаття",
+      "tier": 2
+    }
+  ],
+  "ivano_frankivsk": [
+    {
+      "username": "onyshchuksvitlana",
+      "title": "Івано-Франківська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilneivanofrankivsk",
+      "title": "Суспільне Івано-Франківськ",
+      "tier": 2
+    }
+  ],
+  "kirovohrad": [
+    {
+      "username": "kirovohradskaODA",
+      "title": "Кіровоградська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnekropyvnytskyi",
+      "title": "Суспільне Кропивницький",
+      "tier": 2
+    }
+  ],
+  "luhansk": [
+    {
+      "username": "luhanskaVTSA",
+      "title": "Луганська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilneluhansk",
+      "title": "Суспільне Донбас",
+      "tier": 2
+    }
+  ],
+  "lviv": [
+    {
+      "username": "kozytskyy_maksym_official",
+      "title": "Максим Козицький / Львівська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnelviv",
+      "title": "Суспільне Львів",
+      "tier": 2
+    }
+  ],
+  "rivne": [
+    {
+      "username": "vitaliykoval8",
+      "title": "Рівненська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnerivne",
+      "title": "Суспільне Рівне",
+      "tier": 2
+    }
+  ],
+  "ternopil": [
+    {
+      "username": "ternopilskaODA",
+      "title": "Тернопільська ОДА",
+      "tier": 1
+    },
+    {
+      "username": "suspilneternopil",
+      "title": "Суспільне Тернопіль",
+      "tier": 2
+    }
+  ],
+  "kherson": [
+    {
+      "username": "khersonskaODA",
+      "title": "Херсонська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnekherson",
+      "title": "Суспільне Херсон",
+      "tier": 2
+    }
+  ],
+  "khmelnytskyi": [
+    {
+      "username": "adm_km",
+      "title": "Хмельницька ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnekhmelnytskyi",
+      "title": "Суспільне Хмельницький",
+      "tier": 2
+    }
+  ],
+  "cherkasy": [
+    {
+      "username": "cherkaskaODA",
+      "title": "Черкаська ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnecherkasy",
+      "title": "Суспільне Черкаси",
+      "tier": 2
+    }
+  ],
+  "chernivtsi": [
+    {
+      "username": "chernivtskaODA",
+      "title": "Чернівецька ОВА",
+      "tier": 1
+    },
+    {
+      "username": "suspilnechernivtsi",
+      "title": "Суспільне Чернівці",
+      "tier": 2
+    }
+  ],
+  "crimea": [
+    {
+      "username": "krymrealii",
+      "title": "Крим.Реалії",
+      "tier": 1
+    },
+    {
+      "username": "crimeanwind",
+      "title": "Кримський вітер",
+      "tier": 1
+    }
+  ],
+  "sevastopol": [
+    {
+      "username": "sevastopol_chp",
+      "title": "ЧП Севастополь",
+      "tier": 2
+    }
   ]
 }

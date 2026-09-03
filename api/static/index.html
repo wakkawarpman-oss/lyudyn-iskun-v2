@@ -964,14 +964,31 @@
                 <select id="oblast-select" class="oblast-select-pill" title="Вибір області моніторингу">
                     <option value="kyiv_city">🏙️ м. Київ</option>
                     <option value="kyiv_oblast">🌲 Київська обл.</option>
+                    <option value="vinnytsia">🌻 Вінницька обл.</option>
+                    <option value="volyn">🛡️ Волинська обл.</option>
                     <option value="dnipropetrovsk">🏭 Дніпропетровська обл.</option>
+                    <option value="donetsk">⛏️ Донецька обл.</option>
+                    <option value="zhytomyr">🌿 Житомирська обл.</option>
+                    <option value="zakarpattia">⛰️ Закарпатська обл.</option>
                     <option value="zaporizhzhia">⚡ Запорізька обл.</option>
-                    <option value="kharkiv">🛡️ Харківська обл.</option>
-                    <option value="odesa">⚓ Одеська обл.</option>
+                    <option value="ivano_frankivsk">🏕️ Івано-Франківська обл.</option>
+                    <option value="kirovohrad">🌾 Кіровоградська обл.</option>
+                    <option value="luhansk">🔥 Луганська обл.</option>
+                    <option value="lviv">🏰 Львівська обл.</option>
                     <option value="mykolaiv">🌊 Миколаївська обл.</option>
-                    <option value="poltava">🌾 Полтавська обл.</option>
+                    <option value="odesa">⚓ Одеська обл.</option>
+                    <option value="poltava">🌱 Полтавська обл.</option>
+                    <option value="rivne">🪶 Рівненська обл.</option>
                     <option value="sumy">🚜 Сумська обл.</option>
-                    <option value="chernihiv">🏰 Чернігівська обл.</option>
+                    <option value="ternopil">🛡️ Тернопільська обл.</option>
+                    <option value="kharkiv">🔰 Харківська обл.</option>
+                    <option value="kherson">🍉 Херсонська обл.</option>
+                    <option value="khmelnytskyi">🏰 Хмельницька обл.</option>
+                    <option value="cherkasy">🏛️ Черкаська обл.</option>
+                    <option value="chernivtsi">🌲 Чернівецька обл.</option>
+                    <option value="chernihiv">🏯 Чернігівська обл.</option>
+                    <option value="crimea">🧭 АР Крим</option>
+                    <option value="sevastopol">⚓ м. Севастополь</option>
                     <option value="all">🇺🇦 Вся Україна</option>
                 </select>
             </div>
@@ -1299,72 +1316,34 @@
     <script>
         // ─── 0. Oblast Administration Registry ───
         const OBLAST_CONFIG = {
-            'kyiv_city': {
-                name: 'м. Київ',
-                title: 'Києва',
-                center: [50.4501, 30.5234],
-                zoom: 11
-            },
-            'kyiv_oblast': {
-                name: 'Київська обл.',
-                title: 'Київщини',
-                center: [50.3500, 30.2000],
-                zoom: 9
-            },
-            'dnipropetrovsk': {
-                name: 'Дніпропетровська обл.',
-                title: 'Дніпропетровщини',
-                center: [48.4647, 35.0462],
-                zoom: 9
-            },
-            'zaporizhzhia': {
-                name: 'Запорізька обл.',
-                title: 'Запоріжжя',
-                center: [47.8388, 35.1396],
-                zoom: 9
-            },
-            'kharkiv': {
-                name: 'Харківська обл.',
-                title: 'Харківщини',
-                center: [49.9935, 36.2304],
-                zoom: 9
-            },
-            'odesa': {
-                name: 'Одеська обл.',
-                title: 'Одещини',
-                center: [46.4825, 30.7233],
-                zoom: 9
-            },
-            'mykolaiv': {
-                name: 'Миколаївська обл.',
-                title: 'Миколаївщини',
-                center: [46.9750, 31.9946],
-                zoom: 9
-            },
-            'poltava': {
-                name: 'Полтавська обл.',
-                title: 'Полтавщини',
-                center: [49.5883, 34.5514],
-                zoom: 9
-            },
-            'sumy': {
-                name: 'Сумська обл.',
-                title: 'Сумщини',
-                center: [50.9077, 34.7981],
-                zoom: 9
-            },
-            'chernihiv': {
-                name: 'Чернігівська обл.',
-                title: 'Чернігівщини',
-                center: [51.4982, 31.2893],
-                zoom: 9
-            },
-            'all': {
-                name: 'Вся Україна',
-                title: 'України',
-                center: [48.3794, 31.1656],
-                zoom: 6
-            }
+            'kyiv_city': { name: 'м. Київ', title: 'Києва', center: [50.4501, 30.5234], zoom: 11 },
+            'kyiv_oblast': { name: 'Київська обл.', title: 'Київщини', center: [50.3500, 30.2000], zoom: 9 },
+            'vinnytsia': { name: 'Вінницька обл.', title: 'Вінниччини', center: [49.2331, 28.4682], zoom: 9 },
+            'volyn': { name: 'Волинська обл.', title: 'Волині', center: [50.7472, 25.3254], zoom: 9 },
+            'dnipropetrovsk': { name: 'Дніпропетровська обл.', title: 'Дніпропетровщини', center: [48.4647, 35.0462], zoom: 9 },
+            'donetsk': { name: 'Донецька обл.', title: 'Донеччини', center: [48.0159, 37.8029], zoom: 9 },
+            'zhytomyr': { name: 'Житомирська обл.', title: 'Житомирщини', center: [50.2547, 28.6587], zoom: 9 },
+            'zakarpattia': { name: 'Закарпатська обл.', title: 'Закарпаття', center: [48.6208, 22.2879], zoom: 9 },
+            'zaporizhzhia': { name: 'Запорізька обл.', title: 'Запоріжжя', center: [47.8388, 35.1396], zoom: 9 },
+            'ivano_frankivsk': { name: 'Івано-Франківська обл.', title: 'Прикарпаття', center: [48.9226, 24.7111], zoom: 9 },
+            'kirovohrad': { name: 'Кіровоградська обл.', title: 'Кіровоградщини', center: [48.5079, 32.2623], zoom: 9 },
+            'luhansk': { name: 'Луганська обл.', title: 'Луганщини', center: [48.5740, 39.3078], zoom: 9 },
+            'lviv': { name: 'Львівська обл.', title: 'Львівщини', center: [49.8397, 24.0297], zoom: 9 },
+            'mykolaiv': { name: 'Миколаївська обл.', title: 'Миколаївщини', center: [46.9750, 31.9946], zoom: 9 },
+            'odesa': { name: 'Одеська обл.', title: 'Одещини', center: [46.4825, 30.7233], zoom: 9 },
+            'poltava': { name: 'Полтавська обл.', title: 'Полтавщини', center: [49.5883, 34.5514], zoom: 9 },
+            'rivne': { name: 'Рівненська обл.', title: 'Рівненщини', center: [50.6199, 26.2516], zoom: 9 },
+            'sumy': { name: 'Сумська обл.', title: 'Сумщини', center: [50.9077, 34.7981], zoom: 9 },
+            'ternopil': { name: 'Тернопільська обл.', title: 'Тернопільщини', center: [49.5535, 25.5948], zoom: 9 },
+            'kharkiv': { name: 'Харківська обл.', title: 'Харківщини', center: [49.9935, 36.2304], zoom: 9 },
+            'kherson': { name: 'Херсонська обл.', title: 'Херсонщини', center: [46.6354, 32.6169], zoom: 9 },
+            'khmelnytskyi': { name: 'Хмельницька обл.', title: 'Хмельниччини', center: [49.4230, 26.9871], zoom: 9 },
+            'cherkasy': { name: 'Черкаська обл.', title: 'Черкащини', center: [49.4444, 32.0598], zoom: 9 },
+            'chernivtsi': { name: 'Чернівецька обл.', title: 'Буковини', center: [48.2921, 25.9358], zoom: 9 },
+            'chernihiv': { name: 'Чернігівська обл.', title: 'Чернігівщини', center: [51.4982, 31.2893], zoom: 9 },
+            'crimea': { name: 'АР Крим', title: 'Криму', center: [44.9521, 34.1024], zoom: 8 },
+            'sevastopol': { name: 'м. Севастополь', title: 'Севастополя', center: [44.6167, 33.5254], zoom: 11 },
+            'all': { name: 'Вся Україна', title: 'України', center: [48.3794, 31.1656], zoom: 6 }
         };
 
         let currentOblast = localStorage.getItem('c4isr_active_oblast') || 'kyiv_city';
