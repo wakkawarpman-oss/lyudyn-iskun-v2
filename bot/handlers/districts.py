@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Set, Dict
+from typing import Set, Dict, List
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
@@ -12,19 +12,129 @@ from bot.handlers.utils import safe_send
 logger = logging.getLogger(__name__)
 router = Router()
 
-KYIV_DISTRICTS: Dict[str, str] = {
-    "obolon": "Оболонський",
-    "podil": "Подільський",
-    "shevchenko": "Шевченківський",
-    "pechersk": "Печерський",
-    "holosiiv": "Голосіївський",
-    "solomiansk": "Солом'янський",
-    "sviatoshyn": "Святошинський",
-    "darnytsia": "Дарницький",
-    "dniprovsk": "Дніпровський",
-    "desniansk": "Деснянський",
-    "suburbs": "Передмістя (Бровари/Ірпінь/Буча)",
+KYIV_DISTRICTS: Dict[str, Dict[str, str]] = {
+    "shevchenko": {
+        "name": "Шевченківський",
+        "micro": "Татарка, Лук'янівка, Сирець, Шулявка, Нивки, КПІ"
+    },
+    "podil": {
+        "name": "Подільський",
+        "micro": "Поділ, Виноградар, Куренівка, Вітряні Гори, Воздвиженка, Татарка"
+    },
+    "obolon": {
+        "name": "Оболонський",
+        "micro": "Оболонь, Мінський масив, Пріорка, Пуща-Водиця"
+    },
+    "pechersk": {
+        "name": "Печерський",
+        "micro": "Печерськ, Липки, Звіринець, Видубичі, Чорна Гора"
+    },
+    "solomiansk": {
+        "name": "Солом'янський",
+        "micro": "Солом'янка, Чоколівка, Відрадний, Жуляни, Кардачі"
+    },
+    "holosiiv": {
+        "name": "Голосіївський",
+        "micro": "Голосієво, Теремки, Деміївка, Корчувате, Феофанія"
+    },
+    "sviatoshyn": {
+        "name": "Святошинський",
+        "micro": "Борщагівка, Академмістечко, Біличі, Новобіличі"
+    },
+    "darnytsia": {
+        "name": "Дарницький",
+        "micro": "Позняки, Осокорки, Харківський, Бортничі"
+    },
+    "dniprovsk": {
+        "name": "Дніпровський",
+        "micro": "Русанівка, Березняки, Воскресенка, Лівобережний, ДВРЗ"
+    },
+    "desniansk": {
+        "name": "Деснянський",
+        "micro": "Троєщина, Лісовий масив, Биківня"
+    },
+    "suburbs": {
+        "name": "Передмістя",
+        "micro": "Бровари, Буча, Ірпінь, Бориспіль, Вишгород"
+    }
 }
+
+# Microdistrict to district morphological stem lookup
+MICRODISTRICT_LOOKUP: Dict[str, List[str]] = {
+    "татарк": ["shevchenko", "podil"],
+    "лук'янів": ["shevchenko"],
+    "лук’янів": ["shevchenko"],
+    "сирець": ["shevchenko"],
+    "сирц": ["shevchenko"],
+    "шуляв": ["shevchenko"],
+    "нивк": ["shevchenko"],
+    "кпі": ["shevchenko", "solomiansk"],
+    "політех": ["shevchenko", "solomiansk"],
+    "кудряв": ["shevchenko"],
+    "поділ": ["podil"],
+    "виноградар": ["podil"],
+    "куренів": ["podil"],
+    "вітрян": ["podil"],
+    "воздвижен": ["podil"],
+    "пріорк": ["podil", "obolon"],
+    "оболон": ["obolon"],
+    "мінськ": ["obolon"],
+    "пущ": ["obolon"],
+    "печерськ": ["pechersk"],
+    "липк": ["pechersk"],
+    "звіринець": ["pechersk"],
+    "звіринц": ["pechersk"],
+    "видубич": ["pechersk"],
+    "чорна гора": ["pechersk"],
+    "солом'ян": ["solomiansk"],
+    "солом’ян": ["solomiansk"],
+    "чоколів": ["solomiansk"],
+    "відрадн": ["solomiansk"],
+    "жулян": ["solomiansk"],
+    "кардач": ["solomiansk"],
+    "караваєв": ["solomiansk"],
+    "голосієв": ["holosiiv"],
+    "голосіїв": ["holosiiv"],
+    "теремк": ["holosiiv"],
+    "деміїв": ["holosiiv"],
+    "корчуват": ["holosiiv"],
+    "феофані": ["holosiiv"],
+    "пирогов": ["holosiiv"],
+    "китаєв": ["holosiiv"],
+    "борщагів": ["sviatoshyn"],
+    "академмістеч": ["sviatoshyn"],
+    "білич": ["sviatoshyn"],
+    "новобілич": ["sviatoshyn"],
+    "святошин": ["sviatoshyn"],
+    "позняк": ["darnytsia"],
+    "осокорк": ["darnytsia"],
+    "харківськ": ["darnytsia"],
+    "бортнич": ["darnytsia"],
+    "червоний хутір": ["darnytsia"],
+    "русанів": ["dniprovsk"],
+    "березняк": ["dniprovsk"],
+    "воскресен": ["dniprovsk"],
+    "лівобереж": ["dniprovsk"],
+    "дврз": ["dniprovsk"],
+    "райдужн": ["dniprovsk"],
+    "троєщин": ["desniansk"],
+    "лісов": ["desniansk"],
+    "биківн": ["desniansk"],
+    "бровар": ["suburbs"],
+    "буч": ["suburbs"],
+    "ірпін": ["suburbs"],
+    "бориспіл": ["suburbs"],
+    "вишгород": ["suburbs"],
+}
+
+def resolve_target_districts(text: str) -> List[str]:
+    """Resolves any mention of microdistricts (e.g. Татарка, Позняки) to parent district IDs."""
+    text_lower = text.lower()
+    districts = set()
+    for micro_stem, d_ids in MICRODISTRICT_LOOKUP.items():
+        if micro_stem in text_lower:
+            districts.update(d_ids)
+    return sorted(list(districts))
 
 def get_redis():
     import os
@@ -88,13 +198,14 @@ async def toggle_all_districts(chat_id: int) -> Set[str]:
 
 def build_districts_keyboard(selected_districts: Set[str]):
     builder = InlineKeyboardBuilder()
-    for dist_id, name in KYIV_DISTRICTS.items():
+    for dist_id, info in KYIV_DISTRICTS.items():
         is_sel = dist_id in selected_districts
         icon = "✅" if is_sel else "▫️"
+        name = info["name"]
         builder.button(text=f"{icon} {name}", callback_data=f"dist:toggle:{dist_id}")
     
     all_selected = len(selected_districts) >= len(KYIV_DISTRICTS)
-    all_icon = "🔔 Всі вибрані" if all_selected else "🔔 Обрати всі"
+    all_icon = "🔔 Всі обрані" if all_selected else "🔔 Обрати всі"
     builder.button(text=all_icon, callback_data="dist:toggle:all")
     builder.adjust(2, 2, 2, 2, 2, 1, 1)
     return builder.as_markup()
@@ -107,10 +218,22 @@ def build_districts_keyboard(selected_districts: Set[str]):
 async def cmd_districts(message: types.Message):
     selected = await get_user_districts(message.chat.id)
     text = (
-        "📍 <b>ПЕРСОНАЛЬНІ СПОВІЩЕННЯ ЗА РАЙОНАМИ КИЄВА</b>\n\n"
-        "Оберіть сектори вашого проживання чи роботи. Бот надішле <b>миттєвий пріоритетний пуш</b>, "
-        "якщо ворожий БпЛА, ракета або уламки прямуватимуть саме у ваш район.\n\n"
-        "<i>Натискайте на кнопки для вибору (✅ — увімкнено):</i>"
+        "📍 <b>ПЕРСОНАЛЬНІ СПОВІЩЕННЯ ЗА РАЙОНАМИ ТА МІКРОРАЙОНАМИ КИЄВА</b>\n\n"
+        "Оберіть ваші сектори. Бот надішле <b>миттєвий пріоритетний пуш</b>, якщо ворожий БпЛА, "
+        "ракета або уламки прямуватимуть саме до вашого масиву.\n\n"
+        "🗺 <b>Сектори та їхні масиви:</b>\n"
+        "• 🏛 <b>Шевченківський:</b> <i>Татарка, Лук'янівка, Сирець, Шулявка, Нивки, КПІ</i>\n"
+        "• ⛵ <b>Подільський:</b> <i>Поділ, Виноградар, Куренівка, Вітряні Гори, Воздвиженка, Татарка</i>\n"
+        "• 🏢 <b>Оболонський:</b> <i>Оболонь, Мінський масив, Пріорка, Пуща-Водиця</i>\n"
+        "• 👑 <b>Печерський:</b> <i>Печерськ, Липки, Звіринець, Видубичі, Чорна Гора</i>\n"
+        "• ✈️ <b>Солом'янський:</b> <i>Солом'янка, Чоколівка, Відрадний, Жуляни, Кардачі</i>\n"
+        "• 🌳 <b>Голосіївський:</b> <i>Голосієво, Теремки, Деміївка, Корчувате, Феофанія</i>\n"
+        "• 🌲 <b>Святошинський:</b> <i>Борщагівка, Академмістечко, Біличі, Новобіличі</i>\n"
+        "• 🏙 <b>Дарницький:</b> <i>Позняки, Осокорки, Харківський, Бортничі</i>\n"
+        "• 🌊 <b>Дніпровський:</b> <i>Русанівка, Березняки, Воскресенка, Лівобережний, ДВРЗ</i>\n"
+        "• 🗼 <b>Деснянський:</b> <i>Троєщина, Лісовий масив, Биківня</i>\n"
+        "• 🛡 <b>Передмістя:</b> <i>Бровари, Буча, Ірпінь, Бориспіль, Вишгород</i>\n\n"
+        "<i>Натискайте на кнопки нижче для перемикання (✅ — увімкнено):</i>"
     )
     await safe_send(message, text, reply_markup=build_districts_keyboard(selected))
 
@@ -125,7 +248,8 @@ async def cb_toggle_district(callback: types.CallbackQuery):
         await callback.answer(msg, show_alert=False)
     else:
         selected = await toggle_user_district(chat_id, district_id)
-        dist_name = KYIV_DISTRICTS.get(district_id, district_id)
+        dist_info = KYIV_DISTRICTS.get(district_id, {"name": district_id})
+        dist_name = dist_info["name"] if isinstance(dist_info, dict) else dist_info
         status_word = "увімкнено" if district_id in selected else "вимкнено"
         await callback.answer(f"{dist_name}: сповіщення {status_word}", show_alert=False)
     
@@ -142,9 +266,10 @@ async def notify_district_subscribers(bot, district_id: str, threat_title: str, 
         if not users:
             return
         
-        dist_name = KYIV_DISTRICTS.get(district_id, district_id)
+        dist_info = KYIV_DISTRICTS.get(district_id, {"name": district_id})
+        dist_name = dist_info["name"] if isinstance(dist_info, dict) else dist_info
         text = (
-            f"🚨 <b>УВАГА: ЗАГРОЗА ДЛЯ ВАШОГО РАЙОНУ ({dist_name.upper()})!</b>\n\n"
+            f"🚨 <b>УВАГА: ЗАГРОЗА ДЛЯ ВАШОГО СЕКТОРУ ({dist_name.upper()})!</b>\n\n"
             f"⚠️ <b>Характер загрози:</b> {threat_title}\n"
             f"📍 <b>Деталі:</b> {threat_desc}\n\n"
             f"🛡️ <i>Негайно перейдіть в укриття або дотримуйтесь правила «двох стін»!</i>"
