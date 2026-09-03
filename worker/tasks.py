@@ -246,14 +246,32 @@ def pipeline_cluster_and_save(self, data):
         # row and each INSERT a new incident instead of merging into one.
         db.execute(sql_text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": final_location_text})
 
-        # Incident Clustering: Look for active incident within 25 minutes
-        threshold_25m = msg_date - timedelta(minutes=25)
-        query = db.query(DetectedEvent).filter(
-            DetectedEvent.detected_at >= threshold_25m,
-            DetectedEvent.location_text == final_location_text
-        )
-        
-        cluster_match = query.order_by(DetectedEvent.detected_at.desc()).first()
+        # Incident Clustering (A.4 PostGIS Spatial Proximity + Text Fallback):
+        cluster_match = None
+        has_real_geom = bool(geom_wkt) and not is_fallback_geo
+
+        # Priority 1: Geographic clustering with PostGIS on real coordinates within 30m window
+        if has_real_geom:
+            threshold_30m = msg_date - timedelta(minutes=30)
+            try:
+                cluster_match = db.query(DetectedEvent).filter(
+                    DetectedEvent.detected_at >= threshold_30m,
+                    DetectedEvent.geom.isnot(None),
+                    DetectedEvent.is_fallback_geo == False,
+                    func.ST_DWithin(DetectedEvent.geom, func.ST_GeomFromText(geom_wkt, 4326), 0.08)
+                ).order_by(DetectedEvent.detected_at.desc()).first()
+            except Exception as e:
+                logger.warning(f"Spatial clustering lookup fallback: {e}")
+                cluster_match = None
+
+        # Priority 2: Fallback to original text-based clustering (25 min window)
+        if not cluster_match:
+            threshold_25m = msg_date - timedelta(minutes=25)
+            query = db.query(DetectedEvent).filter(
+                DetectedEvent.detected_at >= threshold_25m,
+                DetectedEvent.location_text == final_location_text
+            )
+            cluster_match = query.order_by(DetectedEvent.detected_at.desc()).first()
 
         if cluster_match:
             # MERGE into existing incident
