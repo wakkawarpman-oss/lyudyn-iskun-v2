@@ -813,12 +813,137 @@
             background-color: rgba(2, 132, 199, 0.4) !important;
             border: 1px solid var(--accent-cyan) !important;
         }
-        .marker-cluster div {
-            background-color: rgba(15, 23, 42, 0.9) !important;
-            color: var(--accent-cyan) !important;
-            font-family: var(--font-mono) !important;
-            font-weight: 800 !important;
-            font-size: 11px !important;
+        /* ─── Standard Tactical Modal ─── */
+        .tactical-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 7, 12, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 1500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .tactical-modal-overlay.open {
+            display: flex !important;
+        }
+        .tactical-modal-card {
+            background: rgba(13, 20, 32, 0.98);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 460px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(0, 229, 255, 0.15);
+            overflow: hidden;
+            animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-dim);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-title {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tactical-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-dim);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 13px;
+            font-family: var(--font-sans);
+            outline: none;
+            transition: all 0.2s;
+        }
+        .tactical-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+        }
+        .search-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 260px;
+            overflow-y: auto;
+            margin-top: 4px;
+        }
+        .search-result-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-dim);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s;
+        }
+        .search-result-item:hover {
+            background: rgba(0, 229, 255, 0.1);
+            border-color: var(--accent-cyan);
+        }
+        .modal-actions {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-dim);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .tactical-btn-primary {
+            background: rgba(0, 229, 255, 0.2);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tactical-btn-primary:hover {
+            background: var(--accent-cyan);
+            color: #04070c;
+        }
+        .tactical-btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-dim);
+            color: var(--text-secondary);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -1082,6 +1207,85 @@
                 ОСТАННІ ВЕРИФІКОВАНІ ПОДІЇ
             </div>
             <div class="event-feed-list" id="drawer-event-feed"></div>
+        </div>
+    </div>
+
+    <!-- 10. Search Modal -->
+    <div class="tactical-modal-overlay" id="search-modal">
+        <div class="tactical-modal-card">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <span>🔍</span> ШВИДКИЙ ПОШУК ОБ'ЄКТА / POI
+                </div>
+                <button class="header-btn" id="btn-close-search">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="search-input" class="tactical-input" placeholder="Введіть назву об'єкта, адресу (напр. ДніпроГЕС, Південмаш, ТЕЦ)..." autocomplete="off">
+                <div class="search-results-list" id="search-results-box">
+                    <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 16px;">
+                        Введіть від 2 символів для миттєвого пошуку стратегічних цілей
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. Add Mark Modal -->
+    <div class="tactical-modal-overlay" id="add-marker-modal">
+        <div class="tactical-modal-card">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <span>＋</span> НАНЕСЕННЯ ЦІЛІ / ПОДІЇ НА МАПУ
+                </div>
+                <button class="header-btn" id="btn-close-add">✕</button>
+            </div>
+            <div class="modal-body">
+                <label style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Тип загрози:</label>
+                <select id="add-marker-type" class="tactical-input">
+                    <option value="drone">🔴 БпЛА Shahed / Дрон-камікадзе</option>
+                    <option value="missile">🚀 Крилата / Балістична ракета</option>
+                    <option value="kab">💣 КАБ / Керована авіабомба</option>
+                    <option value="strike">💥 Влучання / Детонація</option>
+                    <option value="presents">🟢 Робота ППО (Збиття цілі)</option>
+                </select>
+
+                <label style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Область:</label>
+                <select id="add-marker-oblast" class="tactical-input">
+                    <option value="kyiv">🏙️ Київська область та м. Київ</option>
+                    <option value="dnipropetrovsk">🏭 Дніпропетровська область</option>
+                    <option value="zaporizhzhia">⚡ Запорізька область</option>
+                </select>
+
+                <label style="font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">Опис / Топонім:</label>
+                <input type="text" id="add-marker-text" class="tactical-input" placeholder="Наприклад: проліт БпЛА повз південний міст на висоті 150м">
+
+                <div style="font-size: 11px; color: var(--accent-cyan); font-family: var(--font-mono); margin-top: 4px;" id="add-marker-coord-display">
+                    📍 Координати: центр екрану
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="tactical-btn-secondary" id="btn-cancel-add">Скасувати</button>
+                <button class="tactical-btn-primary" id="btn-submit-add">✓ Нанести на мапу</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 12. Tactical Reports Modal -->
+    <div class="tactical-modal-overlay" id="reports-modal">
+        <div class="tactical-modal-card">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <span>▤</span> ТАКТИЧНЕ ЗВЕДЕННЯ ТА ЕКСПОРТ
+                </div>
+                <button class="header-btn" id="btn-close-reports">✕</button>
+            </div>
+            <div class="modal-body" id="reports-body-content">
+                <!-- Injected summary stats -->
+            </div>
+            <div class="modal-actions">
+                <button class="tactical-btn-secondary" id="btn-download-json">⬇ JSON Дані</button>
+                <button class="tactical-btn-primary" id="btn-download-cot">📡 Експорт CoT (ATAK)</button>
+            </div>
         </div>
     </div>
 
@@ -1737,6 +1941,369 @@
                 `;
             }).join('');
         }
+
+        // ─── 6b. Header & Mode Controllers ───
+        document.getElementById('btn-side-menu')?.addEventListener('click', () => {
+            overviewDrawer.classList.toggle('open');
+            layersSheet.classList.remove('open');
+            closeObjectSheet();
+            if (overviewDrawer.classList.contains('open')) renderDrawerFeed();
+        });
+
+        const modeBtns = {
+            'LIVE': document.getElementById('mode-btn-live'),
+            'REPLAY': document.getElementById('mode-btn-replay'),
+            'ANALYSIS': document.getElementById('mode-btn-analysis')
+        };
+
+        function setAppMode(mode) {
+            currentMode = mode;
+            Object.keys(modeBtns).forEach(k => {
+                if (modeBtns[k]) {
+                    if (k === mode) modeBtns[k].classList.add('active');
+                    else modeBtns[k].classList.remove('active');
+                }
+            });
+
+            const timelineWrap = document.getElementById('timeline-wrap');
+            if (mode === 'REPLAY') {
+                if (timelineWrap) timelineWrap.classList.remove('hidden');
+            } else if (mode === 'LIVE') {
+                if (timelineWrap) timelineWrap.classList.add('hidden');
+                pauseTimeline();
+                fetchRadarDrones();
+                fetchEventsAndZones();
+            } else if (mode === 'ANALYSIS') {
+                if (timelineWrap) timelineWrap.classList.add('hidden');
+                pauseTimeline();
+                setProfile('analyt');
+                overviewDrawer.classList.add('open');
+                renderDrawerFeed();
+            }
+        }
+
+        document.getElementById('mode-btn-live')?.addEventListener('click', () => setAppMode('LIVE'));
+        document.getElementById('mode-btn-replay')?.addEventListener('click', () => setAppMode('REPLAY'));
+        document.getElementById('mode-btn-analysis')?.addEventListener('click', () => setAppMode('ANALYSIS'));
+
+        // ─── 6c. Tactical Search Controller ───
+        const searchModal = document.getElementById('search-modal');
+        const searchInput = document.getElementById('search-input');
+        const searchResultsBox = document.getElementById('search-results-box');
+
+        function openSearchModal() {
+            searchModal.classList.add('open');
+            searchInput.value = '';
+            searchInput.focus();
+            renderSearchResults('');
+        }
+        function closeSearchModal() {
+            searchModal.classList.remove('open');
+        }
+
+        document.getElementById('btn-search')?.addEventListener('click', openSearchModal);
+        document.getElementById('btn-close-search')?.addEventListener('click', closeSearchModal);
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                openSearchModal();
+            }
+            if (e.key === 'Escape') {
+                closeSearchModal();
+                document.getElementById('add-marker-modal')?.classList.remove('open');
+                document.getElementById('reports-modal')?.classList.remove('open');
+            }
+        });
+
+        let allCachedPOIs = [];
+        async function ensurePOICache() {
+            if (allCachedPOIs.length > 0) return allCachedPOIs;
+            try {
+                const res = await fetch('/api/v1/infrastructure/critical?oblast=all');
+                const data = await res.json();
+                allCachedPOIs = data.features || [];
+            } catch(e) {}
+            return allCachedPOIs;
+        }
+
+        searchInput?.addEventListener('input', async (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            renderSearchResults(q);
+        });
+
+        async function renderSearchResults(q) {
+            if (!q || q.length < 2) {
+                searchResultsBox.innerHTML = `
+                    <div style="color: var(--text-secondary); font-size: 12px; text-align: center; padding: 16px;">
+                        Введіть від 2 символів для миттєвого пошуку стратегічних об'єктів
+                    </div>
+                `;
+                return;
+            }
+            const pois = await ensurePOICache();
+            const matches = pois.filter(f => {
+                const p = f.properties || {};
+                return (p.name && p.name.toLowerCase().includes(q)) ||
+                       (p.address && p.address.toLowerCase().includes(q)) ||
+                       (p.category_label && p.category_label.toLowerCase().includes(q));
+            }).slice(0, 15);
+
+            if (matches.length === 0) {
+                searchResultsBox.innerHTML = `
+                    <div style="color: #f87171; font-size: 12px; text-align: center; padding: 16px;">
+                        Об'єктів за запитом "${q}" не знайдено
+                    </div>
+                `;
+                return;
+            }
+
+            searchResultsBox.innerHTML = matches.map(f => {
+                const p = f.properties;
+                const coords = f.geometry.coordinates;
+                const safeName = (p.name || '').replace(/'/g, "\\'");
+                return `
+                    <div class="search-result-item" onclick="selectSearchResult(${coords[1]}, ${coords[0]}, '${safeName}')">
+                        <div>
+                            <div style="font-size: 13px; font-weight: 700; color: #fff;">${p.name}</div>
+                            <div style="font-size: 11px; color: #94a3b8;">${p.address}</div>
+                        </div>
+                        <span style="font-size: 10px; font-weight: 800; color: var(--accent-cyan); background: rgba(0,229,255,0.1); padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+                            ${p.oblast || 'POI'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectSearchResult = function(lat, lon, name) {
+            closeSearchModal();
+            map.flyTo([lat, lon], 14, { duration: 1.2 });
+            L.popup({ className: 'tactical-leaflet-popup' })
+                .setLatLng([lat, lon])
+                .setContent(`<div style="padding:4px; font-weight:800; color:#00e5ff;">🎯 ${name}</div>`)
+                .openOn(map);
+        };
+
+        // ─── 6d. Timeline Scrubbing & Animation ───
+        const timelineSlider = document.getElementById('timeline-slider');
+        const timelineTimeLbl = document.getElementById('timeline-time-lbl');
+        const btnTimelinePlay = document.getElementById('btn-timeline-play');
+        let timelineInterval = null;
+
+        timelineSlider?.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            selectedHours = val;
+            if (timelineTimeLbl) timelineTimeLbl.textContent = `${val} год`;
+            filterEventsByHours(val);
+        });
+
+        function filterEventsByHours(hrs) {
+            const cutoff = Date.now() - hrs * 3600 * 1000;
+            const filteredEvents = rawEvents.filter(e => new Date(e.detected_at).getTime() >= cutoff);
+            
+            clusterGroup.clearLayers();
+            discreteEventsGroup.clearLayers();
+            filteredEvents.forEach(e => {
+                const isStrike = (e.event_type || '').includes('strike') || (e.event_type || '').includes('explosion');
+                const emoji = isStrike ? '💥' : '⚠️';
+                const bg = isStrike ? 'rgba(239, 68, 68, 0.35)' : 'rgba(234, 179, 8, 0.3)';
+                const border = isStrike ? '#ef4444' : '#eab308';
+                const icon = L.divIcon({
+                    className: '',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    html: `<div style="width:30px; height:30px; border-radius:50%; background:${bg}; border:2px solid ${border}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${border}; font-size:14px;">${emoji}</div>`
+                });
+                const m = L.marker([e.lat, e.lon], { icon: icon });
+                m.on('click', () => openEventSheet(e));
+                if (isClusteringEnabled) clusterGroup.addLayer(m);
+                else discreteEventsGroup.addLayer(m);
+            });
+
+            const cntEvents = document.getElementById('cnt-events');
+            const peekEvents = document.getElementById('peek-events');
+            if (cntEvents) cntEvents.textContent = filteredEvents.length;
+            if (peekEvents) peekEvents.textContent = `${filteredEvents.length} подій`;
+        }
+
+        function toggleTimelinePlay() {
+            if (timelineInterval) pauseTimeline();
+            else startTimeline();
+        }
+
+        function startTimeline() {
+            if (btnTimelinePlay) btnTimelinePlay.textContent = '⏸';
+            timelineInterval = setInterval(() => {
+                let cur = parseInt(timelineSlider.value || '1');
+                cur = cur >= 72 ? 1 : cur + 1;
+                timelineSlider.value = cur;
+                timelineSlider.dispatchEvent(new Event('input'));
+            }, 400);
+        }
+
+        function pauseTimeline() {
+            if (timelineInterval) {
+                clearInterval(timelineInterval);
+                timelineInterval = null;
+            }
+            if (btnTimelinePlay) btnTimelinePlay.textContent = '▶';
+        }
+
+        btnTimelinePlay?.addEventListener('click', toggleTimelinePlay);
+
+        // ─── 6e. Bottom Navigation Tabs & Modals ───
+        const navTabs = {
+            'tab-map': document.getElementById('tab-map'),
+            'tab-events': document.getElementById('tab-events'),
+            'tab-add': document.getElementById('tab-add'),
+            'tab-reports': document.getElementById('tab-reports'),
+            'tab-layers-menu': document.getElementById('tab-layers-menu')
+        };
+
+        function setActiveTab(tabId) {
+            Object.keys(navTabs).forEach(k => {
+                if (navTabs[k]) {
+                    if (k === tabId) navTabs[k].classList.add('active');
+                    else navTabs[k].classList.remove('active');
+                }
+            });
+        }
+
+        document.getElementById('tab-map')?.addEventListener('click', () => {
+            setActiveTab('tab-map');
+            overviewDrawer.classList.remove('open');
+            layersSheet.classList.remove('open');
+            closeObjectSheet();
+        });
+
+        document.getElementById('tab-events')?.addEventListener('click', () => {
+            setActiveTab('tab-events');
+            overviewDrawer.classList.add('open');
+            layersSheet.classList.remove('open');
+            closeObjectSheet();
+            renderDrawerFeed();
+        });
+
+        // Add Marker Modal
+        const addModal = document.getElementById('add-marker-modal');
+        document.getElementById('tab-add')?.addEventListener('click', () => {
+            setActiveTab('tab-add');
+            const center = map.getCenter();
+            const coordDisplay = document.getElementById('add-marker-coord-display');
+            if (coordDisplay) {
+                coordDisplay.textContent = `📍 Координати: ${center.lat.toFixed(4)}°N, ${center.lng.toFixed(4)}°E`;
+            }
+            const obSelect = document.getElementById('add-marker-oblast');
+            if (obSelect && currentOblast !== 'all') {
+                obSelect.value = currentOblast;
+            }
+            addModal.classList.add('open');
+        });
+
+        document.getElementById('btn-close-add')?.addEventListener('click', () => {
+            addModal.classList.remove('open');
+            setActiveTab('tab-map');
+        });
+        document.getElementById('btn-cancel-add')?.addEventListener('click', () => {
+            addModal.classList.remove('open');
+            setActiveTab('tab-map');
+        });
+
+        document.getElementById('btn-submit-add')?.addEventListener('click', () => {
+            const center = map.getCenter();
+            const type = document.getElementById('add-marker-type')?.value || 'drone';
+            const desc = document.getElementById('add-marker-text')?.value || 'Ціль нанесена оператором';
+            const ob = document.getElementById('add-marker-oblast')?.value || currentOblast;
+
+            const manualEvent = {
+                id: Date.now(),
+                lat: center.lat,
+                lon: center.lng,
+                event_type: type,
+                location_text: desc,
+                detected_at: new Date().toISOString(),
+                is_official: false,
+                sources_count: 1,
+                source_channel: 'Operator OSINT',
+                oblast: ob
+            };
+            rawEvents.unshift(manualEvent);
+            renderDrawerFeed();
+            addModal.classList.remove('open');
+            setActiveTab('tab-map');
+
+            const mark = L.circleMarker([center.lat, center.lng], {
+                radius: 9,
+                fillColor: '#00e5ff',
+                color: '#ffffff',
+                weight: 2,
+                fillOpacity: 0.9
+            }).addTo(discreteEventsGroup);
+            mark.bindPopup(`<b>🎯 Оперативна позначка</b><br>${desc}<br><small>${new Date().toLocaleTimeString('uk-UA')}</small>`).openPopup();
+        });
+
+        // Tactical Reports Modal
+        const reportsModal = document.getElementById('reports-modal');
+        document.getElementById('tab-reports')?.addEventListener('click', () => {
+            setActiveTab('tab-reports');
+            const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
+            const activeThreatCount = activeDrones.filter(d => currentOblast === 'all' || (currentOblast === 'kyiv' && d.is_kyiv_threat) || (currentOblast === 'dnipropetrovsk' && d.is_dnipro_threat) || (currentOblast === 'zaporizhzhia' && d.is_zaporizhzhia_threat)).length;
+
+            const repBody = document.getElementById('reports-body-content');
+            if (repBody) {
+                repBody.innerHTML = `
+                    <div style="background:rgba(0,229,255,0.06); border:1px solid var(--border-glow); border-radius:12px; padding:12px; margin-bottom:12px;">
+                        <div style="font-size:11px; font-weight:800; color:var(--accent-cyan); text-transform:uppercase; margin-bottom:4px;">Сектор: ${cfg.name}</div>
+                        <div style="font-size:16px; font-weight:800; color:#fff;">Оперативна Довідка C4ISR</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Станом на ${new Date().toLocaleString('uk-UA')}</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+                        <div style="background:rgba(255,0,85,0.1); border:1px solid rgba(255,0,85,0.3); border-radius:8px; padding:10px; text-align:center;">
+                            <div style="font-size:20px; font-weight:900; color:#ff0055;">${activeThreatCount}</div>
+                            <div style="font-size:10px; font-weight:700; color:#cbd5e1;">Активних цілей БпЛА</div>
+                        </div>
+                        <div style="background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.3); border-radius:8px; padding:10px; text-align:center;">
+                            <div style="font-size:20px; font-weight:900; color:#00e5ff;">${rawEvents.length}</div>
+                            <div style="font-size:10px; font-weight:700; color:#cbd5e1;">Зафіксованих подій</div>
+                        </div>
+                    </div>
+                    <div style="font-size:12px; line-height:1.5; color:#cbd5e1; background:rgba(255,255,255,0.03); border:1px solid var(--border-dim); border-radius:8px; padding:10px;">
+                        • Моніторинг: <b>40 каналів (8 паралельних сесій Telethon)</b><br>
+                        • Алгоритм консенсусу: DBSCAN Spatio-Temporal<br>
+                        • Радарний потік РЛС «Нептун»: Live (опитування кожні 4с)<br>
+                        • Стратегічні POI під захистом: <b>96 об'єктів</b>
+                    </div>
+                `;
+            }
+            reportsModal.classList.add('open');
+        });
+
+        document.getElementById('btn-close-reports')?.addEventListener('click', () => {
+            reportsModal.classList.remove('open');
+            setActiveTab('tab-map');
+        });
+
+        document.getElementById('btn-download-json')?.addEventListener('click', () => {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                oblast: currentOblast,
+                drones: activeDrones,
+                events: rawEvents,
+                zones: rawZones
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `c4isr_report_${currentOblast}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('btn-download-cot')?.addEventListener('click', () => {
+            window.open('/api/v1/cot/stream', '_blank');
+        });
 
         // ─── 7. Locate & Zoom Controls ───
         document.getElementById('btn-locate')?.addEventListener('click', () => {
