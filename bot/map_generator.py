@@ -1,8 +1,17 @@
 import io
 import datetime
+import PIL.Image
+
+# Pillow 10+ compatibility fix for staticmap
+if not hasattr(PIL.Image, 'ANTIALIAS'):
+    PIL.Image.ANTIALIAS = PIL.Image.Resampling.LANCZOS
+
 from database.models import SessionLocal, DetectedEvent
 from sqlalchemy import func
 from staticmap.staticmap import StaticMap, Marker
+
+# Fast and reliable tile server (OpenStreetMap standard / CartoDB fallback)
+TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 def generate_static_map(hours: int = 24) -> io.BytesIO:
     """Generates a static map image of recent events."""
@@ -20,7 +29,7 @@ def generate_static_map(hours: int = 24) -> io.BytesIO:
             DetectedEvent.source_channel.not_ilike('test%')
         ).all()
 
-        m = StaticMap(800, 600)
+        m = StaticMap(800, 600, url_template=TILE_URL)
         
         # Color mapping based on event_type
         colors = {
@@ -47,8 +56,8 @@ def generate_static_map(hours: int = 24) -> io.BytesIO:
                 has_points = True
 
         if not has_points:
-            # If no points, just center on Kyiv
-            m.add_marker(Marker((30.5241, 50.4500), "#000000", 2))
+            # If no points, center on Kyiv
+            m.add_marker(Marker((30.5241, 50.4500), "#FF0000", 6))
 
         # Render image
         img = m.render()
