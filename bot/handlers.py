@@ -1085,11 +1085,26 @@ async def cmd_analytics(message: types.Message):
         sorted_sources = sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:5]
         sources_str = "\n".join([f"• {format_source_display(ch)}: <b>{cnt} повідомлень</b>" for ch, cnt in sorted_sources]) or "• Немає даних"
 
+        # Time Window Analytics & Dynamic Spike Detection (A.2 Contract)
+        try:
+            from worker.tasks import get_time_window_stats
+            time_stats = get_time_window_stats(db)
+            spike_badge = "🔴 <b>СПАЙК АКТИВНОСТІ (Хвиля / Залп)</b>" if time_stats.get("spike") else "🟢 <b>Спокійно (Фонова активність)</b>"
+            window_str = (
+                f"⏱️ <b>Динаміка активності за часовими вікнами:</b>\n"
+                f"• 5 хв: <code>{time_stats.get('events_5m', 0)}</code> | 15 хв: <code>{time_stats.get('events_15m', 0)}</code> | 60 хв: <code>{time_stats.get('events_60m', 0)}</code>\n"
+                f"• ⚡ <b>Спайк-детектор:</b> {spike_badge}\n\n"
+            )
+        except Exception as twe:
+            logger.warning(f"Time window calculation warning: {twe}")
+            window_str = ""
+
         text = (
             "📊 <b>ОПЕРАТИВНА OSINT-АНАЛІТИКА КИЄВА ТА ОБЛАСТІ (24г)</b>\n\n"
             f"• 📈 <b>Усього унікальних подій:</b> <code>{total_24h}</code>\n"
             f"• ⚡ <b>Середній рівень резонансу:</b> <code>{avg_resonance}/100</code>\n"
             f"• 🟢 <b>Крос-мовна дедублікація:</b> <code>100% Верифіковано</code>\n\n"
+            f"{window_str}"
             "🎯 <b>Структура загроз за 24 години:</b>\n"
             f"• 🛸 <b>БпЛА / Радарні треки:</b> <code>{cats['bpla']}</code>\n"
             f"• 💥 <b>Підтверджені прильоти / Вибухи:</b> <code>{cats['strike']}</code>\n"

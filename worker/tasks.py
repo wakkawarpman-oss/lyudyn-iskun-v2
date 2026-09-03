@@ -6,7 +6,7 @@ import redis
 from celery import shared_task
 from geoalchemy2.elements import WKTElement
 from database.models import SessionLocal, DetectedEvent
-from sqlalchemy import text as sql_text
+from sqlalchemy import func, or_, text as sql_text
 from geopy.geocoders import Nominatim
 from datetime import datetime, timedelta
 
@@ -331,16 +331,95 @@ def pipeline_cluster_and_save(self, data):
     finally:
         db.close()
 
+def get_time_window_stats(db, hours_lookback: int = 6) -> dict:
+    """
+    Returns time-windowed incident counts (5m, 15m, 60m) and dynamic spike detection.
+
+    Spike Rule (A.2 Contract):
+    - is_spike = True if recent_5m >= 3 and recent_5m >= (recent_60m / 12.0) * 2.0
+    - If recent_60m == 0 or recent_5m < 3: is_spike = False (fail-safe)
+    """
+    now_utc = datetime.utcnow()
+    
+    recent_5m = db.query(func.count(DetectedEvent.id)).filter(
+        DetectedEvent.detected_at >= now_utc - timedelta(minutes=5),
+        DetectedEvent.source_channel.not_ilike("test%")
+    ).scalar() or 0
+
+    recent_15m = db.query(func.count(DetectedEvent.id)).filter(
+        DetectedEvent.detected_at >= now_utc - timedelta(minutes=15),
+        DetectedEvent.source_channel.not_ilike("test%")
+    ).scalar() or 0
+
+    recent_60m = db.query(func.count(DetectedEvent.id)).filter(
+        DetectedEvent.detected_at >= now_utc - timedelta(minutes=60),
+        DetectedEvent.source_channel.not_ilike("test%")
+    ).scalar() or 0
+
+    avg_per_5m = recent_60m / 12.0
+    is_spike = (recent_5m >= 3) and (recent_5m >= avg_per_5m * 2.0) if recent_60m > 0 else False
+
+    return {
+        "events_5m": recent_5m,
+        "events_15m": recent_15m,
+        "events_60m": recent_60m,
+        "spike": is_spike,
+        "avg_per_5m": round(avg_per_5m, 2),
+    }
+
+
 @shared_task(name="worker.tasks.cleanup_old_events")
 def cleanup_old_events(retention_hours: int = 24):
+    """
+    Tiered Retention Task (A.4 / Retention Contract):
+    - Tier 1: Delete low-significance noise (general_alert, significance < 40) older than 24h.
+    - Tier 2: Archive confirmed physical strikes older than 90d (verification_status='ARCHIVED').
+    """
     db = SessionLocal()
     deleted = 0
     try:
-        threshold = datetime.utcnow() - timedelta(hours=retention_hours)
-        deleted = db.query(DetectedEvent).filter(DetectedEvent.detected_at < threshold).delete()
-        db.commit()
-        logger.info(f"Daily Prune: Cleaned up {deleted} events older than {retention_hours}h.")
+        threshold_24h = datetime.utcnow() - timedelta(hours=retention_hours)
         
+        # Tier 1: Delete noise older than 24h
+        garbage_deleted = db.query(DetectedEvent).filter(
+            DetectedEvent.detected_at < threshold_24h,
+            or_(
+                DetectedEvent.significance_score < 40,
+                DetectedEvent.event_type == "general_alert"
+            ),
+            ~DetectedEvent.event_type.in_([
+                "direct_strike",
+                "explosion",
+                "fire",
+                "destruction",
+                "casualties",
+                "air_defense"
+            ])
+        ).delete(synchronize_session=False)
+        db.commit()
+
+        # Tier 2: Archive physical strikes older than 90d (never delete)
+        threshold_90d = datetime.utcnow() - timedelta(days=90)
+        archived_count = db.query(DetectedEvent).filter(
+            DetectedEvent.detected_at < threshold_90d,
+            DetectedEvent.event_type.in_([
+                "direct_strike",
+                "explosion",
+                "fire",
+                "destruction",
+                "casualties",
+                "air_defense"
+            ]),
+            DetectedEvent.verification_status != "ARCHIVED"
+        ).update({"verification_status": "ARCHIVED"}, synchronize_session=False)
+        db.commit()
+
+        deleted = garbage_deleted + archived_count
+        logger.info(
+            f"Daily Prune (Tiered): Deleted {garbage_deleted} noise records (>24h), "
+            f"Archived {archived_count} physical strike records (>90d)."
+        )
+
         # Flush redis API caches so all map/stats caches refresh immediately
         try:
             r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
@@ -349,8 +428,13 @@ def cleanup_old_events(retention_hours: int = 24):
             logger.info("Daily Prune: Flushed stale API caches from Redis.")
         except Exception as re:
             logger.warning(f"Redis cache flush warning: {re}")
-            
-        return {"deleted_events": deleted, "retention_hours": retention_hours, "status": "success"}
+
+        return {
+            "tier1_deleted_24h_garbage": garbage_deleted,
+            "tier2_archived_90d_strikes": archived_count,
+            "total_operations": deleted,
+            "status": "success"
+        }
     except Exception as e:
         db.rollback()
         logger.error(f"Cleanup Error: {e}")

@@ -148,12 +148,19 @@ def get_stats(db: Session = Depends(get_db)):
     
     sources = [{"channel": ch, "count": cnt} for ch, cnt in sources_raw]
     
+    try:
+        from worker.tasks import get_time_window_stats
+        time_windows = get_time_window_stats(db)
+    except Exception:
+        time_windows = {"events_5m": 0, "events_15m": 0, "events_60m": 0, "spike": False, "avg_per_5m": 0.0}
+
     res = {
         "total_events": total_events,
         "events_24h": events_24h,
         "avg_resonance": round(float(avg_resonance), 1),
         "categories": categories,
-        "sources": sources
+        "sources": sources,
+        "time_windows": time_windows
     }
     set_cached("api:stats", res, ttl=60)
     return res

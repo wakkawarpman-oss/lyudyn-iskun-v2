@@ -45,8 +45,16 @@ def calculate_confidence_score(
     has_photo_evidence: bool = False
 ) -> int:
     """
-    Computes Verification Confidence (0 - 100).
-    Measures the degree of cross-source consensus and source reliability.
+    Computes Verification Confidence (0 - 100) based on weighted multi-source consensus.
+
+    Scale (A.5 Contract):
+    - combined_weight >= 2.0 and official_count >= 1 -> 95 (Official + corroboration)
+    - official_count >= 1                            -> 90 (Official report)
+    - combined_weight >= 1.5                         -> 85 (2+ Monitors)
+    - combined_weight >= 1.2                         -> 70 (Monitor + Aggregator)
+    - monitoring_count >= 1                          -> 60 (Single Monitor)
+    - else                                           -> 40 (Aggregators only)
+    - Photo / Vision AI evidence                     -> +8 points booster
     """
     if isinstance(sources, str):
         src_list = [s.strip().replace("@", "") for s in sources.split(",") if s.strip()]
@@ -63,36 +71,29 @@ def calculate_confidence_score(
 
     for src in src_list:
         meta = get_source_metadata(src)
-        total_weight += meta["base_weight"]
-        if meta["type"] in ["OFFICIAL", "MILITARY"]:
+        total_weight += meta.get("base_weight", 0.40)
+        src_type = meta.get("type", "AGGREGATOR")
+        if src_type in ["OFFICIAL", "MILITARY"]:
             official_count += 1
-        elif "MONITOR" in meta["type"]:
+        elif "MONITOR" in src_type:
             monitoring_count += 1
 
-    # 2. Multi-source consensus computation
-    unique_sources = len(set(src_list))
-    
-    if official_count >= 1:
-        base_score = 90 + min(10, unique_sources * 2)
-    elif unique_sources >= 3:
-        base_score = 85 + min(10, unique_sources * 2)
-    elif unique_sources == 2:
-        base_score = 70 + int(total_weight * 5)
+    # 2. Weighted consensus scoring
+    if official_count >= 1 and total_weight >= 2.0:
+        base_score = 95
+    elif official_count >= 1 or is_official:
+        base_score = 90
+    elif total_weight >= 1.5:
+        base_score = 85
+    elif total_weight >= 1.2:
+        base_score = 70
+    elif monitoring_count >= 1:
+        base_score = 60
     else:
-        # Single source
-        single_meta = get_source_metadata(src_list[0])
-        if single_meta["type"] in ["OFFICIAL", "MILITARY"]:
-            base_score = 90
-        elif "MONITOR" in single_meta["type"]:
-            base_score = 60
-        else:
-            base_score = 35
+        base_score = 40
 
     if has_photo_evidence:
         base_score += 8
-
-    if is_official:
-        base_score = max(base_score, 90)
 
     return min(100, max(15, base_score))
 
