@@ -1,4 +1,5 @@
 from worker.llm_engine import process_with_llm
+from worker.osint.sentiment import sentiment_analyzer
 import os
 import json
 import logging
