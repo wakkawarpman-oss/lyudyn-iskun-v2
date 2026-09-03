@@ -165,7 +165,7 @@ def _call_openai_vision(text: str, media_path: str, sys_prompt: str) -> requests
     }
     return requests.post(OPENAI_URL, headers=headers, json=data, timeout=20)
 
-def _call_groq_text(text: str, sys_prompt: str, model: str = "llama-3.1-70b-versatile") -> requests.Response:
+def _call_groq_text(text: str, sys_prompt: str, model: str = "openai/gpt-oss-120b") -> requests.Response:
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
     data = {
         "model": model,

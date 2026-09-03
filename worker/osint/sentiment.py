@@ -27,7 +27,7 @@ class SentimentAnalyzer:
         
         try:
             # Використовуємо найшвидшу модель для сентименту
-            resp = _call_groq_text(text, prompt, model="llama-3.1-8b-instant")
+            resp = _call_groq_text(text, prompt, model="openai/gpt-oss-20b")
             if resp.status_code == 200:
                 content = resp.json()["choices"][0]["message"]["content"]
                 data = json.loads(content)
