@@ -11,7 +11,6 @@ def get_main_keyboard():
     builder.button(text="📋 Звіт (12 год)")
     builder.button(text="📊 Аналітика")
     builder.button(text="🌐 Веб-мапа")
-    builder.button(text="🖼 PNG-мапа")
     builder.button(text="📡 Статус системи")
     builder.button(text="🔍 Глибокий OSINT")
     builder.button(text="🔑 Мій ключ")
@@ -19,7 +18,7 @@ def get_main_keyboard():
     builder.button(text="📊 Експорт CSV")
     builder.button(text="📥 Експорт прес-релізу")
     builder.button(text="🐾 ТУПО МЯВ")
-    builder.adjust(2, 2, 2, 2, 2, 2, 2, 2, 1)
+    builder.adjust(2, 2, 2, 2, 2, 2, 3, 1)
     return builder.as_markup(resize_keyboard=True)
 
 def get_meme_keyboard():

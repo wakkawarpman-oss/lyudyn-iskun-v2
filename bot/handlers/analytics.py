@@ -57,23 +57,6 @@ async def cmd_csv_export(message: types.Message):
         await message.answer("❌ Помилка експорту.")
 
 
-@router.message(Command("map_png"))
-@router.message(F.text == "🖼 PNG-мапа")
-async def cmd_static_map(message: types.Message):
-    await message.answer("⏳ Рендеринг тактичної мапи...")
-    try:
-        loop = asyncio.get_event_loop()
-        map_file = await loop.run_in_executor(None, functools.partial(generate_static_map, hours=24))
-        
-        await message.answer_photo(
-            photo=types.BufferedInputFile(map_file.getvalue(), filename=map_file.name),
-            caption="🗺️ <b>Знімок тактичної мапи за останні 24 години</b>\nЧервоний: Вибухи/Влучання | Помаранчевий: Шахеди/Радари",
-            parse_mode=ParseMode.HTML
-        )
-    except Exception as e:
-        logger.error(f"Map generation error: {e}")
-        await message.answer("❌ Помилка рендерингу мапи.")
-
 
 @router.message(Command("report"))
 @router.message(F.text.contains("Звіт"))
