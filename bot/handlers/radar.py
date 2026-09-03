@@ -33,7 +33,7 @@ async def cmd_radar_kontur(message: types.Message):
                 DetectedEvent.source_channel.not_ilike('test%')
             )
             .order_by(DetectedEvent.detected_at.desc())
-            .limit(6)
+            .limit(10)
             .all()
         )
         for e in events:
@@ -205,7 +205,7 @@ async def cmd_top_events(message: types.Message):
                 DetectedEvent.event_type.in_(CONFIRMED_INCIDENT_TYPES),
                 KYIV_REGION_FILTER
             )
-            .order_by(DetectedEvent.resonance_score.desc(), DetectedEvent.detected_at.desc())
+            .order_by(DetectedEvent.detected_at.desc(), DetectedEvent.resonance_score.desc())
             .all()
         )
 

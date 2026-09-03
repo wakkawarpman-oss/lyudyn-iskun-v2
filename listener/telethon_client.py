@@ -39,7 +39,7 @@ async def perform_sync(client, valid_channels):
     for entity in valid_channels:
         try:
             ch_name = getattr(entity, 'username', None) or str(entity.id)
-            recent_msgs = await client.get_messages(entity, limit=5)
+            recent_msgs = await client.get_messages(entity, limit=10)
             for msg in recent_msgs:
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
                     payload = {
@@ -123,25 +123,24 @@ async def main():
         print("No valid channels found. Exiting.")
         return
 
-    # Distribute channels evenly across the pool
-    chunk_size = max(1, len(valid_channels_names) // len(clients))
-    channel_chunks = list(chunk_list(valid_channels_names, chunk_size))
+    # Distribute channels evenly across the pool (round-robin)
+    clients_dict = {client: [] for client in clients}
+    for idx, ch in enumerate(valid_channels_names):
+        assigned_client = clients[idx % len(clients)]
+        clients_dict[assigned_client].append(ch)
     
-    clients_dict = {}
-    
-    for idx, client in enumerate(clients):
-        # Handle case where clients > channels
-        if idx >= len(channel_chunks):
-            break
-            
-        assigned_channels = channel_chunks[idx]
+    for idx, (client, assigned_channels) in enumerate(clients_dict.items()):
+        if not assigned_channels:
+            continue
         print(f"🤖 Assigning {len(assigned_channels)} channels to Session {idx+1}")
         
         valid_entities = []
         for ch in assigned_channels:
-            valid_entities.append(await client.get_entity(ch))
-            
-        clients_dict[client] = valid_entities
+            try:
+                ent = await client.get_entity(ch)
+                valid_entities.append(ent)
+            except Exception as e:
+                print(f"⚠️ Error resolving {ch} on Session {idx+1}: {e}")
         
         # Register handler specifically for this client's chunk of channels
         @client.on(events.NewMessage(chats=valid_entities))
@@ -210,6 +209,18 @@ async def main():
             await asyncio.sleep(60)
             
     asyncio.create_task(heartbeat_redis())
+    
+    # Background periodic sync every 45s so no messages are ever lost or delayed
+    async def periodic_sync():
+        while True:
+            await asyncio.sleep(45)
+            try:
+                tasks = [perform_sync(c, chs) for c, chs in clients_dict.items()]
+                await asyncio.gather(*tasks)
+            except Exception as pe:
+                print(f"Periodic sync warning: {pe}")
+                
+    asyncio.create_task(periodic_sync())
 
     print(f"Listener active for {len(valid_channels_names)} channels across {len(clients)} sessions. Waiting for live messages...")
     await asyncio.gather(*[client.run_until_disconnected() for client in clients])

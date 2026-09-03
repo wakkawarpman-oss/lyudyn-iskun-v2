@@ -22,7 +22,8 @@ KYIV_TZ = ZoneInfo("Europe/Kyiv")
 
 CONFIRMED_INCIDENT_TYPES = [
     'direct_strike', 'explosion', 'fire', 'destruction',
-    'casualties', 'armed_conflict', 'shelling'
+    'casualties', 'armed_conflict', 'shelling',
+    'radar_track', 'general_alert', 'air_defense', 'drone_attack'
 ]
 
 # Strict Kyiv & Kyiv Region Geographical Filter
