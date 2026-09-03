@@ -24,10 +24,11 @@ async def cmd_deep_osint(message: types.Message):
     db = SessionLocal()
     try:
         user_api_key, effective_key = await _get_effective_openai_key(message)
-        if not effective_key:
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not effective_key and not groq_api_key:
             await safe_send(
                 message,
-                "🔒 <b>Для глибокого OSINT-аналізу потрібен OpenAI API Key.</b>\n\n"
+                "🔒 <b>Для глибокого OSINT-аналізу потрібен API Key.</b>\n\n"
                 "Підключіть персональний ключ командою:\n"
                 "<code>/key sk-ваш-токен</code>\n\n"
                 "<i>(Отримати ключ: platform.openai.com/api-keys)</i>",
@@ -102,29 +103,30 @@ async def cmd_deep_osint(message: types.Message):
             "ВХІДНІ ДАНІ:\n" + context_text
         )
         
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-        data = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            "temperature": 0.1
-        }
-        
-        resp = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=35)
-        
-        if resp.status_code == 200:
-            analysis = resp.json()["choices"][0]["message"]["content"]
-            try:
-                redis_client.setex(cache_key, 300, analysis)
-            except Exception:
-                pass
-            await safe_send(message, f"🔍 <b>ГЛИБОКИЙ OSINT ЗВІТ</b> 🔍\n\n{analysis}")
-            return
+        if api_key:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            data = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.1
+            }
+            
+            resp = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=35)
+            
+            if resp.status_code == 200:
+                analysis = resp.json()["choices"][0]["message"]["content"]
+                try:
+                    redis_client.setex(cache_key, 300, analysis)
+                except Exception:
+                    pass
+                await safe_send(message, f"🔍 <b>ГЛИБОКИЙ OSINT ЗВІТ</b> 🔍\n\n{analysis}")
+                return
 
         # Attempt graceful failover to Groq LLaMA 3.3
         groq_api_key = os.getenv("GROQ_API_KEY")
