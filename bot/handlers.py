@@ -6,16 +6,16 @@ from aiogram.filters import Command
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.types import WebAppInfo
-from database.models import SessionLocal, DetectedEvent, UserApiKey, BombShelter
+from database.models import SessionLocal, DetectedEvent, UserApiKey, BombShelter, encrypt_key, decrypt_key
 from sqlalchemy import func, text, or_
 
 import os
 import requests
 import base64
 import json
-from datetime import timedelta
+import time
+import threading
 import redis
-import os
 from bot.broadcaster import broadcaster
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -86,7 +86,7 @@ async def cmd_csv_export(message: types.Message):
         logger.error(f"CSV error: {e}")
         await message.answer("❌ Помилка експорту.")
 
-@router.message(Command("map"))
+@router.message(Command("map_png"))
 @router.message(F.text == "🗺️ Згенерувати Мапу (.png)")
 async def cmd_static_map(message: types.Message):
     await message.answer("⏳ Рендеринг тактичної мапи...")
@@ -205,7 +205,6 @@ async def cmd_deep_osint(message: types.Message):
             await message.answer("🔒 Для глибокого OSINT-аналізу потрібен OpenAI API Key (Vision).\nВстановіть його командою:\n`/key sk-...`", parse_mode=ParseMode.MARKDOWN)
             return
             
-        from database.models import decrypt_key
         api_key = decrypt_key(user_key.openai_api_key)
         
         # Get strikes in last 12 hours
@@ -540,21 +539,53 @@ KYIV_TOPONYM_MAP = {
     'михайлівськ': (50.4550, 30.5220)
 }
 
+# Nominatim's usage policy caps public API use at 1 request/second — this lock
+# serializes ALL geocode_kyiv_street calls (each runs in its own thread via
+# asyncio.to_thread) so concurrent users can't burst past that and get the
+# bot's IP banned.
+_nominatim_lock = threading.Lock()
+_nominatim_last_call = 0.0
+_NOMINATIM_MIN_INTERVAL = 1.0
+
+
 def geocode_kyiv_street(query_text: str):
     """Universal OpenStreetMap geocoder for any street or district in Kyiv."""
     import urllib.request
     import urllib.parse
     clean_q = query_text.strip()
+    cache_key = f"geo:{clean_q.lower()}"
+
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            lat, lon, display_name = json.loads(cached)
+            return lat, lon, display_name
+    except Exception as e:
+        logger.warning(f"Geocode cache read error: {e}")
+
     headers = {"User-Agent": "LyudynIskunBot2/1.0 (contact@iskun.ua)"}
-    
+
     for q_variant in [f"{clean_q}, Київ", f"вулиця {clean_q}, Київ", f"мікрорайон {clean_q}, Київ"]:
         url = "https://nominatim.openstreetmap.org/search?format=json&q=" + urllib.parse.quote(q_variant)
         try:
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=4) as resp:
-                data = json.loads(resp.read().decode())
-                if data:
-                    return float(data[0]["lat"]), float(data[0]["lon"]), data[0].get("display_name", clean_q)
+            with _nominatim_lock:
+                global _nominatim_last_call
+                wait = _NOMINATIM_MIN_INTERVAL - (time.monotonic() - _nominatim_last_call)
+                if wait > 0:
+                    time.sleep(wait)
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=4) as resp:
+                    data = json.loads(resp.read().decode())
+                _nominatim_last_call = time.monotonic()
+            if data:
+                lat = float(data[0]["lat"])
+                lon = float(data[0]["lon"])
+                display_name = data[0].get("display_name", clean_q)
+                try:
+                    redis_client.setex(cache_key, 3600, json.dumps([lat, lon, display_name]))
+                except Exception as e:
+                    logger.warning(f"Geocode cache write error: {e}")
+                return lat, lon, display_name
         except Exception as e:
             logger.warning(f"Geocoding exception for {q_variant}: {e}")
     return None, None, None
@@ -1189,7 +1220,6 @@ async def _save_user_key(message: types.Message, raw_key: str):
             user_key.openai_api_key = encrypt_key(raw_key)
             user_key.username = uname
         else:
-            from database.models import encrypt_key, decrypt_key
             user_key = UserApiKey(user_id=uid, username=uname, openai_api_key=encrypt_key(raw_key))
             db.add(user_key)
         db.commit()
@@ -1232,7 +1262,6 @@ async def cmd_my_key(message: types.Message):
         uid = message.from_user.id
         user_key = db.query(UserApiKey).filter(UserApiKey.user_id == uid).first()
         if user_key:
-            from database.models import decrypt_key
             k = decrypt_key(user_key.openai_api_key)
             masked = k[:7] + "..." + k[-4:]
             await safe_send(
@@ -1259,7 +1288,6 @@ async def cmd_premium(message: types.Message):
         uid = message.from_user.id
         user_key = db.query(UserApiKey).filter(UserApiKey.user_id == uid).first()
         if user_key:
-            from database.models import decrypt_key
             k = decrypt_key(user_key.openai_api_key)
             masked = k[:7] + "..." + k[-4:]
             await safe_send(
@@ -1300,7 +1328,6 @@ async def handle_photo(message: types.Message, bot: Bot):
     try:
         uk = db.query(UserApiKey).filter(UserApiKey.user_id == message.from_user.id).first()
         if uk:
-            from database.models import decrypt_key
             user_api_key = decrypt_key(uk.openai_api_key)
     finally:
         db.close()
@@ -1323,54 +1350,60 @@ async def handle_photo(message: types.Message, bot: Bot):
     file_bytes = downloaded_file.read()
     base64_image = base64.b64encode(file_bytes).decode('utf-8')
 
-    # Save temp file for EXIF / GeoSpy
-    temp_path = f"temp_{file_id}.jpg"
+    # Save temp file for EXIF / GeoSpy. Namespaced with user_id: Telegram
+    # reuses the same file_id for a photo forwarded by multiple users, so
+    # file_id alone collided between concurrent requests.
+    temp_path = f"temp_{message.from_user.id}_{file_id}.jpg"
     with open(temp_path, "wb") as f_temp:
         f_temp.write(file_bytes)
 
     parts = ["\U0001f50e <b>РЕЗУЛЬТАТИ OSINT-АНАЛІЗУ</b>\n"]
+    exif = {}
 
-    # ── 1. EXIF ──
     try:
-        from worker.osint.exif_extractor import EXIFExtractor
-        exif = EXIFExtractor().extract(temp_path)
-        if exif.get("has_gps"):
-            parts.append(f"\U0001f4e1 <b>EXIF GPS:</b> {exif['latitude']}, {exif['longitude']}")
-            if exif.get("datetime"):
-                parts.append(f"\u23f0 <b>EXIF Час:</b> {exif['datetime']}")
-        else:
-            parts.append(
-                "\U0001f4e1 <b>EXIF метадані:</b> Очищені або відсутні "
-                "(можливо, фото з Telegram/Viber)."
-            )
-    except Exception as exc:
-        logger.warning(f"EXIF extraction error: {exc}")
+        # ── 1. EXIF ──
+        try:
+            from worker.osint.exif_extractor import EXIFExtractor
+            exif = EXIFExtractor().extract(temp_path)
+            if exif.get("has_gps"):
+                parts.append(f"\U0001f4e1 <b>EXIF GPS:</b> {exif['latitude']}, {exif['longitude']}")
+                if exif.get("datetime"):
+                    parts.append(f"\u23f0 <b>EXIF Час:</b> {exif['datetime']}")
+            else:
+                parts.append(
+                    "\U0001f4e1 <b>EXIF метадані:</b> Очищені або відсутні "
+                    "(можливо, фото з Telegram/Viber)."
+                )
+        except Exception as exc:
+            logger.warning(f"EXIF extraction error: {exc}")
 
-    # ── 2. GeoSpy AI ──
-    try:
-        from worker.osint.ai_geolocation import ai_geo
-        geospy = await asyncio.to_thread(ai_geo.analyze_image, temp_path)
-        if geospy and geospy.get("coordinates"):
-            loc_name = geospy.get('predicted_location', 'Знайдено')
-            coords = geospy['coordinates']
-            parts.append(f"\U0001f30d <b>GeoSpy AI:</b> {loc_name}")
-            parts.append(f"\U0001f4cd <b>Координати:</b> {coords[0]}, {coords[1]}")
-    except Exception as exc:
-        logger.warning(f"GeoSpy error: {exc}")
+        # ── 2. GeoSpy AI ──
+        try:
+            from worker.osint.ai_geolocation import ai_geo
+            geospy = await asyncio.to_thread(ai_geo.analyze_image, temp_path)
+            if geospy and geospy.get("coordinates"):
+                loc_name = geospy.get('predicted_location', 'Знайдено')
+                coords = geospy['coordinates']
+                parts.append(f"\U0001f30d <b>GeoSpy AI:</b> {loc_name}")
+                parts.append(f"\U0001f4cd <b>Координати:</b> {coords[0]}, {coords[1]}")
+        except Exception as exc:
+            logger.warning(f"GeoSpy error: {exc}")
 
-    # ── 3. Solar Chrono-Location (Anti-IPSO Shadow Verification) ──
-    try:
-        from worker.osint.geoint_engine import geoint_engine
-        lat_c = exif.get("latitude") if (exif and exif.get("has_gps")) else 50.4501
-        lon_c = exif.get("longitude") if (exif and exif.get("has_gps")) else 30.5234
-        sun_data = geoint_engine.calculate_sun_position(lat_c, lon_c)
-        parts.append(f"☀️ <b>Сонячний азимут (Chrono-verify):</b> {sun_data['solar_azimuth_deg']}° | 📐 <b>Кут тіней:</b> {sun_data['shadow_direction_deg']}°")
-    except Exception as exc:
-        logger.warning(f"Chrono-location error: {exc}")
-
-    # Clean up temp file
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
+        # ── 3. Solar Chrono-Location (Anti-IPSO Shadow Verification) ──
+        try:
+            from worker.osint.geoint_engine import geoint_engine
+            lat_c = exif.get("latitude") if (exif and exif.get("has_gps")) else 50.4501
+            lon_c = exif.get("longitude") if (exif and exif.get("has_gps")) else 30.5234
+            sun_data = geoint_engine.calculate_sun_position(lat_c, lon_c)
+            parts.append(f"☀️ <b>Сонячний азимут (Chrono-verify):</b> {sun_data['solar_azimuth_deg']}° | 📐 <b>Кут тіней:</b> {sun_data['shadow_direction_deg']}°")
+        except Exception as exc:
+            logger.warning(f"Chrono-location error: {exc}")
+    finally:
+        # Always clean up the temp file, including on cancellation
+        # (asyncio.CancelledError isn't an Exception subclass, so the
+        # per-step try/excepts above don't catch it).
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
     parts.append("")  # blank line before Vision AI
 
@@ -1621,57 +1654,13 @@ Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
         caption="✅ Верифікований прес-реліз готовий до публікації."
     )
 
-# 2. Meme Generator (The Second Head)
-@router.callback_query(F.data.startswith("meme_"))
-async def callback_meme(callback: types.CallbackQuery):
-    await callback.message.edit_text("⏳ Нейромережа генерує базу...")
-    
-    import requests
-    import os
-    from database.models import SessionLocal, UserApiKey
-    
-    db = SessionLocal()
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        user_key = db.query(UserApiKey).filter(UserApiKey.user_id == callback.from_user.id).first()
-        if user_key and user_key.openai_api_key:
-            from database.models import decrypt_key
-            api_key = decrypt_key(user_key.openai_api_key)
-    db.close()
-    
-    if not api_key:
-        await callback.message.edit_text("🔒 Для мемів потрібен OpenAI API Key.")
-        return
-        
-    action = callback.data.split("_")[1]
-    topics = {
-        "more": "чорний гумор про русню",
-        "harder": "максимально жорсткий сарказм про невдачі армії РФ",
-        "cat": "мем про котика, який ігнорує сирену і спить",
-        "man": "мем про суворого українського мужика, який п'є каву під час вибухів",
-        "winter": "мем про те, як українці готуються до зими і відключень світла (оптимістично-сарказмічно)",
-        "dacha": "мем про діда, який збив шахед банкою огірків на дачі"
-    }
-    topic = topics.get(action, "чорний гумор")
-    
-    prompt = f"Напиши один короткий, дуже смішний і саркастичний жарт (мем) українською мовою на тему: {topic}. Ніякого моралізаторства, тільки чистий гумор."
-    
-    try:
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
-        data = {
-            "model": "gpt-4o-mini",
-            "messages": [{"role": "system", "content": "Ти — саркастичний український мемолог. Твоя ціль — розрядити обстановку чорним гумором."},
-                         {"role": "user", "content": prompt}],
-            "temperature": 0.8
-        }
-        resp = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=15)
-        meme_text = resp.json()["choices"][0]["message"]["content"]
-        
-        from bot.keyboards import get_meme_keyboard
-        await callback.message.edit_text(f"🎭 **МЕМОЛОГІЯ:**\n\n{meme_text}", parse_mode="Markdown", reply_markup=get_meme_keyboard())
-    except Exception as e:
-        logger.error(f"Meme error: {e}")
-        await callback.message.edit_text("❌ Мемолог втомився. Спробуйте пізніше.")
+# NOTE: an older AI-generated meme handler (OpenAI call per "meme_*" button
+# press) used to live here, registered on the same `F.data.startswith("meme_")`
+# filter as cb_meme_filter above. Since aiogram dispatches to the first
+# matching handler in registration order, cb_meme_filter (registered earlier,
+# serving curated jokes from bot/memes_db.py for free) always won and this
+# handler was unreachable dead code — removed rather than merged, since the
+# live behavior users actually see is cb_meme_filter's.
 
 # ──────────────────────── /clean & /flush ──────────────────────────────
 
@@ -1681,7 +1670,7 @@ async def callback_meme(callback: types.CallbackQuery):
 async def cmd_manual_cleanup(message: types.Message):
     from worker.tasks import cleanup_old_events
     await message.answer("⏳ Запускаю ротацію бази даних та скидання застарілого кешу...")
-    res = cleanup_old_events(retention_hours=24)
+    res = await asyncio.to_thread(cleanup_old_events, retention_hours=24)
     del_cnt = res.get("deleted_events", 0)
     await message.answer(
         f"✅ **РОТАЦІЮ БД ТА КЕШУ ЗАВЕРШЕНО!**\n\n"
