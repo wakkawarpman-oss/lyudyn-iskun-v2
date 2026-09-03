@@ -11,6 +11,11 @@ logger = logging.getLogger(__name__)
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 KYIV_LAT = 50.4501
 KYIV_LON = 30.5234
+DNIPRO_LAT = 48.4647
+DNIPRO_LON = 35.0462
+ZAPORIZHZHIA_LAT = 47.8388
+ZAPORIZHZHIA_LON = 35.1396
+
 CACHE_KEY = "radar:neptun:live_drones"
 CACHE_TTL = 15  # 15 seconds cache
 
@@ -88,6 +93,8 @@ def get_live_radar_threats(force_refresh: bool = False) -> dict:
 
     drones = []
     kyiv_threats = 0
+    dnipro_threats = 0
+    zaporizhzhia_threats = 0
 
     for m in raw_markers:
         lat = m.get("lat")
@@ -96,7 +103,9 @@ def get_live_radar_threats(force_refresh: bool = False) -> dict:
             continue
 
         label, color, category = classify_threat(m.get("threat_type"), m.get("text"))
-        dist_kyiv = calculate_distance_km(lat, lng)
+        dist_kyiv = calculate_distance_km(lat, lng, KYIV_LAT, KYIV_LON)
+        dist_dnipro = calculate_distance_km(lat, lng, DNIPRO_LAT, DNIPRO_LON)
+        dist_zp = calculate_distance_km(lat, lng, ZAPORIZHZHIA_LAT, ZAPORIZHZHIA_LON)
 
         # Build trail (last 20 coordinates)
         raw_positions = m.get("positions") or []
@@ -109,6 +118,14 @@ def get_live_radar_threats(force_refresh: bool = False) -> dict:
         is_kyiv_threat = dist_kyiv <= 180.0
         if is_kyiv_threat:
             kyiv_threats += 1
+
+        is_dnipro_threat = dist_dnipro <= 180.0
+        if is_dnipro_threat:
+            dnipro_threats += 1
+
+        is_zp_threat = dist_zp <= 180.0
+        if is_zp_threat:
+            zaporizhzhia_threats += 1
 
         drone_obj = {
             "id": str(m.get("id") or m.get("track_id") or f"{lat:.4f}_{lng:.4f}"),
@@ -126,7 +143,11 @@ def get_live_radar_threats(force_refresh: bool = False) -> dict:
             "text": m.get("text") or "",
             "time": m.get("date") or datetime.datetime.utcnow().isoformat() + "Z",
             "distance_to_kyiv_km": dist_kyiv,
+            "distance_to_dnipro_km": dist_dnipro,
+            "distance_to_zaporizhzhia_km": dist_zp,
             "is_kyiv_threat": is_kyiv_threat,
+            "is_dnipro_threat": is_dnipro_threat,
+            "is_zaporizhzhia_threat": is_zp_threat,
             "trail": trail,
         }
         drones.append(drone_obj)
@@ -137,6 +158,13 @@ def get_live_radar_threats(force_refresh: bool = False) -> dict:
     result = {
         "count": len(drones),
         "kyiv_threat_count": kyiv_threats,
+        "dnipro_threat_count": dnipro_threats,
+        "zaporizhzhia_threat_count": zaporizhzhia_threats,
+        "oblast_threat_counts": {
+            "kyiv": kyiv_threats,
+            "dnipropetrovsk": dnipro_threats,
+            "zaporizhzhia": zaporizhzhia_threats
+        },
         "ballistic_threat": ballistic,
         "drones": drones,
         "source": "Neptun (neptun.in.ua)",

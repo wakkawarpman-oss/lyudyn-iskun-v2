@@ -38,6 +38,36 @@ def test_match_poi_bridge():
     assert match.category == "bridge"
 
 
+def test_match_poi_dnipro_pivdenmash():
+    text = "Вибухи у Дніпрі в районі заводу Південмаш, піднявся стовп диму"
+    match = match_poi(text)
+    assert match is not None
+    assert "Південмаш" in match.name
+    assert match.category == "defense_industry"
+    assert match.oblast == "dnipropetrovsk"
+
+
+def test_match_poi_zaporizhzhia_dniprohes():
+    text = "Ракетний удар по греблі ДніпроГЕС у Запоріжжі"
+    match = match_poi(text)
+    assert match is not None
+    assert "ДніпроГЕС" in match.name
+    assert match.category == "energy"
+    assert match.oblast == "zaporizhzhia"
+
+
+def test_match_poi_with_oblast_filter():
+    text = "Атака на ДніпроГЕС"
+    # Should match when filter is zaporizhzhia
+    match_zp = match_poi(text, oblast="zaporizhzhia")
+    assert match_zp is not None
+    assert "ДніпроГЕС" in match_zp.name
+
+    # Should NOT match when filter is kyiv
+    match_kyiv = match_poi(text, oblast="kyiv")
+    assert match_kyiv is None
+
+
 def test_no_poi_match():
     assert match_poi("💥Бучанський р-н - вибухи") is None
     assert match_poi("") is None

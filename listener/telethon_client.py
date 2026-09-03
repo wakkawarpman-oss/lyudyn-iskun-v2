@@ -12,7 +12,46 @@ API_HASH = os.getenv("API_HASH", "")
 # Accept comma-separated strings for session pooling
 SESSION_STRINGS_RAW = os.getenv("SESSION_STRING", "")
 SESSION_STRINGS = [s.strip() for s in SESSION_STRINGS_RAW.split(",") if s.strip()]
-TARGET_CHANNELS = [ch.strip() for ch in os.getenv("TARGET_CHANNELS", "").split(",") if ch.strip()]
+
+CHANNELS_REGISTRY_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "channels", "channel_registry.json")
+
+def load_target_channels():
+    if os.path.exists(CHANNELS_REGISTRY_PATH):
+        try:
+            with open(CHANNELS_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                reg = json.load(f)
+            channels = []
+            for ob, ch_list in reg.items():
+                for c in ch_list:
+                    uname = c.get("username", "").strip()
+                    if uname:
+                        if not uname.startswith("@"):
+                            uname = f"@{uname}"
+                        if uname not in channels:
+                            channels.append(uname)
+            if channels:
+                print(f"📡 Loaded {len(channels)} target channels from {CHANNELS_REGISTRY_PATH}")
+                return channels
+        except Exception as e:
+            print(f"⚠️ Warning loading channel_registry.json: {e}")
+    return [ch.strip() for ch in os.getenv("TARGET_CHANNELS", "").split(",") if ch.strip()]
+
+def get_channel_oblast_map():
+    mapping = {}
+    if os.path.exists(CHANNELS_REGISTRY_PATH):
+        try:
+            with open(CHANNELS_REGISTRY_PATH, "r", encoding="utf-8") as f:
+                reg = json.load(f)
+            for ob, ch_list in reg.items():
+                for c in ch_list:
+                    uname = c.get("username", "").strip().lstrip("@").lower()
+                    mapping[uname] = ob
+        except Exception:
+            pass
+    return mapping
+
+TARGET_CHANNELS = load_target_channels()
+CHANNEL_OBLAST_MAP = get_channel_oblast_map()
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 MAX_VIDEO_DURATION_S = 120
 MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
@@ -44,8 +83,10 @@ async def perform_sync(client, valid_channels):
             recent_msgs = await client.get_messages(entity, limit=10)
             for msg in recent_msgs:
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
+                    ch_clean = str(ch_name).lstrip("@").lower()
                     payload = {
                         "channel": ch_name,
+                        "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
                         "message_id": msg.id,
                         "text": msg.text or "",
                         "date": msg.date.isoformat() if msg.date else None,
@@ -178,8 +219,11 @@ async def main():
                 except Exception as e:
                     print(f"Failed to download video: {e}")
 
+            ch_raw = event.chat.username or str(event.chat_id)
+            ch_clean = str(ch_raw).lstrip("@").lower()
             payload = {
-                "channel": event.chat.username or str(event.chat_id),
+                "channel": ch_raw,
+                "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
                 "message_id": msg.id,
                 "text": msg.text or "",
                 "date": msg.date.isoformat() if msg.date else None,
