@@ -676,73 +676,7 @@ async def cmd_radar_kontur(message: types.Message):
 
 
 
-# ──────────────────────── /analytics ──────────────────────────────
-
-@router.message(Command("analytics"))
-@router.message(F.text == "\U0001f4ca Аналітика")
-async def cmd_analytics(message: types.Message):
-    db = SessionLocal()
-    try:
-        threshold = datetime.utcnow() - timedelta(hours=24)
-        base_filter = [
-            DetectedEvent.detected_at >= threshold,
-            DetectedEvent.source_channel.not_ilike('test%')
-        ]
-        total = db.query(func.count(DetectedEvent.id)).filter(*base_filter).scalar() or 0
-        if total == 0:
-            await message.answer("📊 За останні 24 години подій для аналітики немає.")
-            return
-
-        avg_res = db.query(func.avg(DetectedEvent.resonance_score)).filter(*base_filter).scalar() or 0
-        
-        categories_raw = (
-            db.query(DetectedEvent.event_type, func.count(DetectedEvent.id))
-            .filter(*base_filter)
-            .group_by(DetectedEvent.event_type)
-            .all()
-        )
-        
-        sources_raw = (
-            db.query(DetectedEvent.source_channel, func.count(DetectedEvent.id))
-            .filter(*base_filter)
-            .group_by(DetectedEvent.source_channel)
-            .order_by(func.count(DetectedEvent.id).desc())
-            .limit(3)
-            .all()
-        )
-        
-        lines = [
-            "\U0001f4ca <b>ОПЕРАТИВНА OSINT-АНАЛІТИКА (24 год)</b>\n",
-            f"\U0001f4c8 <b>Всього зафіксовано подій:</b> {total}",
-            f"\u26a1 <b>Середній індекс резонансу:</b> {round(float(avg_res), 1)}/100\n",
-            "\U0001f6e1 <b>Розподіл за категоріями:</b>"
-        ]
-        
-        cat_icons = {
-            "direct_strike": "\U0001f534 Прямі удари",
-            "shelling": "\U0001f534 Обстріли",
-            "explosion": "\U0001f4a5 Вибухи",
-            "fire": "\U0001f525 Пожежі/Руйнування",
-            "destruction": "\U0001f3da Руйнування",
-            "armed_conflict": "\U0001f7e3 Спецоперації/Конфлікти",
-            "air_defense": "\U0001f7e2 Робота ППО",
-            "false_alarm": "\u26aa Хибні тривоги"
-        }
-        
-        for ev_type, count in categories_raw:
-            label = cat_icons.get(ev_type, f"\U0001f539 {ev_type.upper()}")
-            percent = int((count / total) * 100)
-            lines.append(f"\u2022 {label}: <b>{count}</b> ({percent}%)")
-            
-        lines.append("\n\U0001f4e1 <b>Топ джерел моніторингу:</b>")
-        for ch, count in sources_raw:
-            lines.append(f"\u2022 {format_source_display(ch)}: <b>{count}</b> повід.")
-            
-        lines.append(f"\n\U0001f5fa\ufe0f <b>Інтерактивна мапа та дашборд:</b>\n\U0001f449 <a href='{DASHBOARD_URL}'>Відкрити OSINT Мапу</a>")
-        
-        await safe_send(message, "\n".join(lines), disable_web_page_preview=True)
-    finally:
-        db.close()
+# Legacy duplicate cmd_analytics removed (unified into primary handler below)
 
 
 import re

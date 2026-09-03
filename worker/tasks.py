@@ -47,7 +47,6 @@ def _get_tier_info(channel: str) -> tuple:
 exif_extractor = EXIFExtractor()
 
 
-from functools import lru_cache
 import threading
 
 _geocode_lock = threading.Lock()

@@ -5,7 +5,7 @@ import base64
 import requests
 import datetime
 from zoneinfo import ZoneInfo
-from worker.schemas import ParsedEventSchema, EventTypeEnum, DamageLevelEnum
+from worker.schemas import ParsedEventSchema
 
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
