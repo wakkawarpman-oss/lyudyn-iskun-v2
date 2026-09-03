@@ -129,13 +129,16 @@ def pipeline_extract(self, payload_str):
 
     is_kyiv_region = llm_data.get("is_kyiv_region", False)
     channel_clean = payload.get("channel", "").lstrip("@").lower()
-    kyiv_channels = [
+    
+    # Pure Kyiv-only channels that only post about Kyiv / Kyiv region
+    pure_kyiv_channels = [
         "1181169156", "kyivlive", "kyiv_novosti", "t_kyiv", "kyiv_alarm", "va_kyiv", "vakyiv",
         "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map",
-        "eradarrua", "povitryanatrivogaaa", "dsns_kyiv_region", "kyiv24", "war_monitor", "kpszsu"
+        "dsns_kyiv_region", "kyiv24"
     ]
-    if channel_clean in kyiv_channels:
+    if channel_clean in pure_kyiv_channels:
         is_kyiv_region = True
+        
     if not is_kyiv_region:
         return {"skip": True, "reason": "not_kyiv"}
 

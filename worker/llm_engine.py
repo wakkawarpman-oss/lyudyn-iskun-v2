@@ -103,11 +103,27 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     text = str(raw_text)
     t_lower = text.lower()
     
-    regional_cities = ['бровар', 'вишгород', 'бориспіл', 'ірпін', 'ірпен', 'буч', 'фастів', 'фастов', 'біл', 'церкв', 'обухів', 'обухов']
-    kyiv_districts = ['оболон', 'поділ', 'печерс', 'солом', 'дарниц', 'шевченківськ', 'голосіївськ', 'святошин', 'деснян', 'дніпровськ']
+    regional_cities = [
+        'бровар', 'вишгород', 'бориспіл', 'ірпін', 'ірпен', 'буч', 'фастів', 'фастов', 
+        'біл', 'церкв', 'обухів', 'обухов', 'гостомель', 'ворзель', 'боярк', 'глевах', 
+        'васильк', 'макарів', 'трипілл', 'українк', 'славутич', 'переяслав', 'яготин', 
+        'коцюбинськ', 'баришівк', 'бородянк', 'кагарлик', 'миронівк', 'таращ', 'чабани',
+        'софіївськ', 'петропавлівськ', 'вишнев'
+    ]
+    kyiv_districts = ['оболон', 'поділ', 'печерс', 'солом', 'дарниц', 'шевченківськ', 'голосіївськ', 'святошин', 'деснян', 'дніпровськ', 'троєщин', 'борщагівк', 'позняк', 'осокорк', 'виноградар']
     kyiv_keywords = ['київ', 'києв', 'київськ', 'столиц', 'kyiv'] + regional_cities + kyiv_districts
     
-    is_kyiv = any(k in t_lower for k in kyiv_keywords)
+    non_kyiv_cities = [
+        'кропивницьк', 'одес', 'харків', 'дніпр', 'запоріжж', 'полтав', 'кривий ріг', 'криворіж', 
+        'сумськ', 'суми', 'черкас', 'вінниц', 'житомир', 'хмельницьк', 'львів', 'миколаїв', 
+        'херсон', 'севастопол', 'донецьк', 'луганськ', 'бахмут', 'куп\'янськ', 'нікопол', 'павлоград', 'чернігів'
+    ]
+    
+    has_kyiv = any(k in t_lower for k in kyiv_keywords)
+    has_non_kyiv = any(k in t_lower for k in non_kyiv_cities)
+    
+    # If it mentions another city and doesn't explicitly mention Kyiv region toponyms, it's not Kyiv!
+    is_kyiv = has_kyiv and not (has_non_kyiv and not any(k in t_lower for k in regional_cities + kyiv_districts + ['київ', 'києв', 'столиц']))
     
     event_type = "general_alert"
     if 'вибух' in t_lower: event_type = "explosion"
