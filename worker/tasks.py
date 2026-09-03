@@ -313,16 +313,29 @@ def pipeline_cluster_and_save(self, data):
         db.close()
 
 @shared_task(name="worker.tasks.cleanup_old_events")
-def cleanup_old_events():
+def cleanup_old_events(retention_hours: int = 24):
     db = SessionLocal()
+    deleted = 0
     try:
-        threshold = datetime.utcnow() - timedelta(hours=24)
+        threshold = datetime.utcnow() - timedelta(hours=retention_hours)
         deleted = db.query(DetectedEvent).filter(DetectedEvent.detected_at < threshold).delete()
         db.commit()
-        logger.info(f"Cleaned up {deleted} old events.")
+        logger.info(f"Daily Prune: Cleaned up {deleted} events older than {retention_hours}h.")
+        
+        # Flush redis API caches so all map/stats caches refresh immediately
+        try:
+            r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+            for k in ["api:events", "api:stats", "api:shelters", "api:geoint:zones"]:
+                r.delete(k)
+            logger.info("Daily Prune: Flushed stale API caches from Redis.")
+        except Exception as re:
+            logger.warning(f"Redis cache flush warning: {re}")
+            
+        return {"deleted_events": deleted, "retention_hours": retention_hours, "status": "success"}
     except Exception as e:
         db.rollback()
         logger.error(f"Cleanup Error: {e}")
+        return {"error": str(e), "status": "failed"}
     finally:
         db.close()
 

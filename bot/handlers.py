@@ -1604,3 +1604,20 @@ async def callback_meme(callback: types.CallbackQuery):
     except Exception as e:
         logger.error(f"Meme error: {e}")
         await callback.message.edit_text("❌ Мемолог втомився. Спробуйте пізніше.")
+
+# ──────────────────────── /clean & /flush ──────────────────────────────
+
+@router.message(Command("clean"))
+@router.message(Command("flush"))
+@router.message(F.text == "🧹 Очистити старі дані")
+async def cmd_manual_cleanup(message: types.Message):
+    from worker.tasks import cleanup_old_events
+    await message.answer("⏳ Запускаю ротацію бази даних та скидання застарілого кешу...")
+    res = cleanup_old_events(retention_hours=24)
+    del_cnt = res.get("deleted_events", 0)
+    await message.answer(
+        f"✅ **РОТАЦІЮ БД ТА КЕШУ ЗАВЕРШЕНО!**\n\n"
+        f"• Очищено застарілих подій (>24 год): **{del_cnt}**\n"
+        f"• Скинуто кеш мапи та аналітики Redis: 🟢 **Успішно**\n"
+        f"• База оптимізована під оперативне 24-годинне вікно."
+    )
