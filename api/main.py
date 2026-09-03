@@ -250,6 +250,14 @@ def get_radar_ew_interference():
     from worker.sensors.sentinel_rfi import get_live_ew_interference
     return get_live_ew_interference()
 
+@app.get("/api/v1/alert/status")
+def get_live_alert_status():
+    from bot.alert_monitor import get_current_kyiv_alert_status
+    status = get_current_kyiv_alert_status()
+    if isinstance(status.get("timestamp"), datetime.datetime):
+        status["timestamp"] = status["timestamp"].isoformat()
+    return status
+
 @app.get("/api/v1/network/forward-graph")
 def get_network_forward_graph(min_weight: int = 1, limit: int = 100, hours: int = 48, db: Session = Depends(get_db)):
     from database.repository import NetworkGraphRepository

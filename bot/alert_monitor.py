@@ -66,23 +66,26 @@ def format_all_clear_banner(
     event_time: Optional[datetime] = None,
     source: str = "КМВА / Офіційний моніторинг тривог (@kyiv_alarm)"
 ) -> str:
-    """Formats the large green high-visibility all-clear banner."""
+    """Formats the large green high-visibility all-clear banner with business & transit status."""
     dt = event_time or datetime.utcnow()
-    # Format Europe/Kyiv time (UTC+2 / UTC+3)
-    kyiv_time = dt + timedelta(hours=3) # Kyiv Summer Time
+    kyiv_time = dt + timedelta(hours=3)  # Kyiv Summer Time (UTC+3)
     time_str = kyiv_time.strftime("%H:%M:%S")
     date_str = kyiv_time.strftime("%d.%m.%Y")
 
     return (
-        "🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n"
-        "🟩     <b>ВІДБІЙ ТРИВОГИ!</b>     🟩\n"
-        "🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n\n"
+        "🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n"
+        "🟩    <b>🟢 ВІДБІЙ ТРИВОГИ! 🟢</b>    🟩\n"
+        "🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n\n"
         "🟢 <b>ВІДБІЙ ПОВІТРЯНОЇ ТРИВОГИ</b>\n"
-        f"📍 <b>Регіон:</b> {region}\n\n"
-        f"🕒 <b>Час сигналу:</b> {time_str} (за Києвом) · {date_str}\n"
-        f"📡 <b>Джерело підтвердження:</b> {source}\n"
-        "🛡️ <b>Статус:</b> Загроза ворожих ударів минула. Можна повертатися зі сховищ до звичного ритму.\n\n"
-        "<i>Тактична служба оперативного оповіщення «ОКІНТ-ПРО»</i>\n"
+        f"📍 <b>Регіон:</b> {region}\n"
+        f"🕒 <b>Час сигналу:</b> <code>{time_str}</code> (за Києвом) · {date_str}\n"
+        f"📡 <b>Підтверджено:</b> {source}\n\n"
+        "🏪 <b>МАГАЗИНИ ТА ЗАКЛАДИ:</b>\n"
+        "✅ ТРЦ, супермаркети, кафе, аптеки та сервіси <b>ВІДЧИНЯЮТЬСЯ ТА ВІДНОВЛЮЮТЬ РОБОТУ</b>!\n\n"
+        "🚌 <b>ТРАНСПОРТ ТА МЕТРО:</b>\n"
+        "✅ Наземний комунальний транспорт відновлює рух за маршрутами.\n"
+        "✅ Станції метро повертаються зі спецрежиму укриття до штатного перевезення.\n\n"
+        "🛡️ <i>Загроза ворожих ударів минула. Дякуємо силам ППО України!</i>\n"
         "<i>«ЗБИРАЄМО • АНАЛІЗУЄМО • ПЕРЕМАГАЄМО»</i>"
     )
 
@@ -98,16 +101,20 @@ def format_active_alert_banner(
     time_str = kyiv_time.strftime("%H:%M:%S")
 
     return (
-        "🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n"
-        "🟥    <b>ПОВІТРЯНА ТРИВОГА!</b>    🟥\n"
-        "🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n\n"
-        f"🔴 <b>УВАГА: У РЕГІОНІ ТРИВАЄ ПОВІТРЯНА ТРИВОГА!</b>\n"
+        "🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n"
+        "🟥   <b>🔴 ТРИВОГА ТРИВАЄ! 🔴</b>   🟥\n"
+        "🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n\n"
+        "🔴 <b>УВАГА: У РЕГІОНІ ТРИВАЄ ПОВІТРЯНА ТРИВОГА!</b>\n"
         f"📍 <b>Регіон:</b> {region}\n"
         f"⚠️ <b>Характер загрози:</b> {threat_info}\n"
-        f"🕒 <b>Початок тривоги:</b> {time_str}\n\n"
-        "📍 <i>Залишайтеся в укриттях або дотримуйтесь правила «двох стін»!</i>\n\n"
-        "🔔 <b>РЕЖИМ МОНІТОРИНГУ ВІДБОЮ АКТИВОВАНО:</b>\n"
-        "Щойно КМВА та Повітряні Сили оголосять відбій — ви отримаєте миттєве сповіщення з великим зеленим банером."
+        f"🕒 <b>Початок тривоги:</b> <code>{time_str}</code> (за Києвом)\n\n"
+        "🚫 <b>ОБМЕЖЕННЯ ТА ЗАКРИТТЯ:</b>\n"
+        "• ТРЦ, магазини та установи <b>ЗАЧИНЕНІ</b> (діють безпекові протоколи воєнного стану).\n"
+        "• Рух наземного комунального транспорту через мости та відкриті ділянки <b>ПРИЗУПИНЕНО</b>.\n\n"
+        "⏳ <b>РЕЖИМ МОНІТОРИНГУ ВІДБОЮ АКТИВОВАНО:</b>\n"
+        "Скрипт безперервно відстежує найшвидші офіційні джерела (КМВА, єРадар, ПС ЗСУ). "
+        "<b>Щойно пролунає відбій — ви миттєво отримаєте ВЕЛИКИЙ ЗЕЛЕНИЙ БАНЕР</b> про відкриття магазинів та відновлення руху!\n\n"
+        "<i>Ви можете зупинити моніторинг у будь-який момент кнопкою нижче:</i>"
     )
 
 
@@ -124,38 +131,52 @@ def format_stop_monitoring_banner(region: str = "м. Київ та Київсь�
 def get_current_kyiv_alert_status() -> Dict[str, any]:
     """
     Checks the latest air raid alert status for Kyiv and Kyiv Oblast.
-    Queries recent database events from official channels and checks cached external feeds.
+    Queries recent database events from fastest official and verified monitoring channels.
     """
     db = SessionLocal()
     try:
-        # Check last 6 hours of official alerts
+        from sqlalchemy import func
         since = datetime.utcnow() - timedelta(hours=6)
+        target_channels = [
+            "kyiv_alarm", "va_kyiv", "kyivcityofficial", "kpszsu",
+            "air_alert_ua", "1181169156", "eradarrua", "kievreal1", "vanek_nikolaev", "monitor_ukr"
+        ]
         official_events = db.query(
             DetectedEvent.message_text,
             DetectedEvent.detected_at,
             DetectedEvent.source_channel
         ).filter(
             DetectedEvent.detected_at >= since,
-            DetectedEvent.source_channel.in_(["kyiv_alarm", "va_kyiv", "kyivcityofficial", "kpszsu", "air_alert_ua", "1181169156"])
-        ).order_by(DetectedEvent.detected_at.desc()).limit(10).all()
+            func.lower(DetectedEvent.source_channel).in_(target_channels)
+        ).order_by(DetectedEvent.detected_at.desc()).limit(20).all()
 
         for ev in official_events:
             text_lower = (ev.message_text or "").lower()
-            if any(w in text_lower for w in ["відбій", "отбой", "чисто", "clear", "відбій тривоги"]):
+            ch_lower = (ev.source_channel or "").lower()
+            is_kyiv_relevant = (
+                any(k in ch_lower for k in ["kyiv", "kiev", "1181169156"]) or
+                any(w in text_lower for w in ["київ", "киев", "київщин", "столиц", "бровар", "борисп", "ірп", "буч"])
+            )
+            if not is_kyiv_relevant:
+                continue
+
+            if any(w in text_lower for w in ["відбій", "отбой", "чисто", "clear"]):
                 return {
                     "is_alert": False,
                     "status_text": "CLEAR",
                     "source": f"@{ev.source_channel}",
                     "timestamp": ev.detected_at,
-                    "message": ev.message_text
+                    "message": ev.message_text,
+                    "civilian_status": "Магазини, ТРЦ та транспорт відновлюють роботу"
                 }
-            elif any(w in text_lower for w in ["тривога", "ракетна небезпека", "тривоги", "увага"]):
+            elif any(w in text_lower for w in ["тривога", "ракетна небезпека", "загроза", "бпла над києвом", "пуск"]):
                 return {
                     "is_alert": True,
                     "status_text": "ACTIVE",
                     "source": f"@{ev.source_channel}",
                     "timestamp": ev.detected_at,
-                    "message": ev.message_text
+                    "message": ev.message_text,
+                    "civilian_status": "Магазини та транспорт зачинені"
                 }
 
         # Fallback: check Redis cached state or external API
@@ -168,7 +189,8 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
                 "status_text": state_str,
                 "source": "Офіційні дані КМВА / alerts.in.ua",
                 "timestamp": datetime.utcnow(),
-                "message": "Поточний стан повітряного простору"
+                "message": "Поточний стан повітряного простору",
+                "civilian_status": "Зачинено під час тривоги" if is_active else "Відчинено, все працює"
             }
 
         # Default safe state
@@ -177,7 +199,8 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
             "status_text": "CLEAR",
             "source": "КМВА / Офіційний моніторинг тривог (@kyiv_alarm)",
             "timestamp": datetime.utcnow(),
-            "message": "Повітряна тривога в місті Київ не оголошена."
+            "message": "Повітряна тривога в місті Київ не оголошена.",
+            "civilian_status": "Магазини, ТРЦ та транспорт працюють у штатному режимі"
         }
     except Exception as e:
         logger.error(f"Error checking alert status: {e}")

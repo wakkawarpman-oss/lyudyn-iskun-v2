@@ -442,6 +442,105 @@
             color: #fff;
         }
 
+        /* Large Tactical Vidbiy / All-Clear Monitor Banner */
+        .vidbiy-large-banner {
+            position: fixed;
+            top: 52px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10005;
+            width: 95vw;
+            max-width: 820px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(14px);
+            box-sizing: border-box;
+            gap: 12px;
+        }
+        .vidbiy-large-banner.hidden {
+            display: none !important;
+        }
+        .vidbiy-large-banner.alert-red {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.96), rgba(153, 27, 27, 0.96));
+            border: 2px solid #ef4444;
+            color: #ffffff;
+            animation: pulse-red-banner 2s infinite;
+        }
+        .vidbiy-large-banner.alert-green {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.97), rgba(5, 150, 105, 0.97));
+            border: 2px solid #34d399;
+            color: #ffffff;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.7), 0 0 35px rgba(16, 185, 129, 0.6);
+            animation: pulse-green-banner 2.2s infinite;
+        }
+        @keyframes pulse-red-banner {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.85); }
+        }
+        @keyframes pulse-green-banner {
+            0%, 100% { box-shadow: 0 0 18px rgba(52, 211, 153, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(52, 211, 153, 0.9); }
+        }
+        .vidbiy-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .vidbiy-status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            flex-shrink: 0;
+        }
+        .vidbiy-text-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .vidbiy-title {
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: 0.2px;
+        }
+        .vidbiy-subtitle {
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.95;
+            line-height: 1.25;
+        }
+        .vidbiy-action-btn {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .vidbiy-action-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            border-color: #fff;
+        }
+
         /* Live OSINT News Ticker */
         .live-osint-ticker {
             position: fixed;
@@ -683,6 +782,18 @@
     </style>
 </head>
 <body>
+    <!-- Large Tactical Vidbiy / All-Clear Monitor Banner -->
+    <div id="vidbiy-large-banner" class="vidbiy-large-banner hidden alert-red">
+        <div class="vidbiy-banner-content">
+            <span id="vidbiy-badge" class="vidbiy-status-badge">🔴 ТРИВОГА ТРИВАЄ</span>
+            <div class="vidbiy-text-wrap">
+                <div id="vidbiy-title" class="vidbiy-title">⚠️ У КИЄВІ ТРИВАЄ ПОВІТРЯНА ТРИВОГА</div>
+                <div id="vidbiy-subtitle" class="vidbiy-subtitle">🚫 Магазини, ТРЦ та транспорт зачинені. Скрипт очікує підтвердження відбою...</div>
+            </div>
+        </div>
+        <button id="btn-vidbiy-action" class="vidbiy-action-btn">🛑 Зупинити моніторинг</button>
+    </div>
+
     <!-- Compact Tactical Threat Banner -->
     <div id="tactical-alert-banner" class="tactical-alert-banner hidden">
         <span class="live-dot" style="background:#fff; width:6px; height:6px; flex-shrink:0;"></span>
@@ -706,6 +817,11 @@
                 <span class="live-dot-pulse"></span>
                 <span class="btn-label-long">LIVE: ВИМК</span>
                 <span class="btn-label-short">LIVE</span>
+            </button>
+            <button class="hud-btn" id="btn-vidbiy-monitor" title="Моніторинг відбою тривоги (відкриття магазинів/транспорту)" style="border-color:#10b981; color:#34d399;">
+                <span>🟢</span>
+                <span class="btn-label-long">Відбій-Монітор</span>
+                <span class="btn-label-short">Відбій</span>
             </button>
             <button class="hud-btn" id="btn-network" title="Граф зв'язків ІПСО (Telerecon)">
                 <span class="btn-label-long">🕸️ Мережа</span>
@@ -1154,6 +1270,99 @@
                 defaultRadarInterval = setInterval(loadRadarDrones, 15000);
 
                 document.getElementById('live-osint-ticker')?.classList.add('hidden');
+            }
+        }
+
+        // ─── ВІДБІЙ-МОНІТОР (All-Clear Watcher for Civilian Life & Transit) ───
+        let isVidbiyMonitorActive = false;
+        let vidbiyPollTimer = null;
+        let lastKnownAlertState = null;
+
+        const vidbiyBtn = document.getElementById('btn-vidbiy-monitor');
+        vidbiyBtn?.addEventListener('click', () => {
+            toggleVidbiyMonitor();
+        });
+
+        async function checkVidbiyStatus() {
+            if (!isVidbiyMonitorActive) return;
+            try {
+                const res = await fetch('/api/v1/alert/status');
+                if (!res.ok) return;
+                const data = await res.json();
+                const banner = document.getElementById('vidbiy-large-banner');
+                const badge = document.getElementById('vidbiy-badge');
+                const title = document.getElementById('vidbiy-title');
+                const subtitle = document.getElementById('vidbiy-subtitle');
+                const actionBtn = document.getElementById('btn-vidbiy-action');
+                if (!banner) return;
+
+                if (data.is_alert) {
+                    // RED BANNER: Alert is active
+                    banner.className = 'vidbiy-large-banner alert-red';
+                    if (badge) badge.innerHTML = '🔴 ТРИВОГА ТРИВАЄ';
+                    if (title) title.innerHTML = '⚠️ У КИЄВІ ТА ОБЛАСТІ ТРИВАЄ ПОВІТРЯНА ТРИВОГА!';
+                    if (subtitle) subtitle.innerHTML = '🚫 <b>Магазини, ТРЦ та транспорт зачинені.</b> Скрипт чергує найшвидше джерело на підтвердження відбою...';
+                    if (actionBtn) {
+                        actionBtn.textContent = '🛑 Зупинити моніторинг';
+                        actionBtn.onclick = () => toggleVidbiyMonitor(false);
+                    }
+                    banner.classList.remove('hidden');
+                } else {
+                    // GREEN BANNER: All-clear detected
+                    const wasAlert = (lastKnownAlertState === true);
+                    banner.className = 'vidbiy-large-banner alert-green';
+                    if (badge) badge.innerHTML = '🟢 ВІДБІЙ ТРИВОГИ!';
+                    if (title) title.innerHTML = '🟢 ВІДБІЙ ПОВІТРЯНОЇ ТРИВОГИ ПО М. КИЇВ ТА ОБЛАСТІ!';
+                    if (subtitle) subtitle.innerHTML = '✅ <b>Магазини, ТРЦ, супермаркети та транспорт ВІДНОВЛЮЮТЬ ШТАТНУ РОБОТУ!</b> Всі заклади відчиняються.';
+                    if (actionBtn) {
+                        actionBtn.textContent = '✕ Закрити банер';
+                        actionBtn.onclick = () => {
+                            banner.classList.add('hidden');
+                            toggleVidbiyMonitor(false);
+                        };
+                    }
+                    banner.classList.remove('hidden');
+                    if (wasAlert) {
+                        playTacticalBeep(587, 0.2);
+                        setTimeout(() => playTacticalBeep(880, 0.35), 220);
+                    }
+                }
+                lastKnownAlertState = data.is_alert;
+            } catch(err) {
+                console.warn('Vidbiy check error:', err);
+            }
+        }
+
+        function toggleVidbiyMonitor(forceState = null) {
+            isVidbiyMonitorActive = forceState !== null ? forceState : !isVidbiyMonitorActive;
+            const btn = document.getElementById('btn-vidbiy-monitor');
+            const banner = document.getElementById('vidbiy-large-banner');
+            
+            if (isVidbiyMonitorActive) {
+                if (btn) {
+                    btn.style.borderColor = '#ef4444';
+                    btn.style.color = '#f87171';
+                    const lLong = btn.querySelector('.btn-label-long');
+                    const lShort = btn.querySelector('.btn-label-short');
+                    if (lLong) lLong.textContent = 'Відбій: УВІМК';
+                    if (lShort) lShort.textContent = 'ВІДБІЙ 🔴';
+                }
+                checkVidbiyStatus();
+                if (vidbiyPollTimer) clearInterval(vidbiyPollTimer);
+                vidbiyPollTimer = setInterval(checkVidbiyStatus, 3000);
+                showLiveOsintTicker('🟢 Моніторинг відбою активовано: очікування сигналу відкриття магазинів та транспорту');
+                playTacticalBeep(659, 0.15);
+            } else {
+                if (btn) {
+                    btn.style.borderColor = '#10b981';
+                    btn.style.color = '#34d399';
+                    const lLong = btn.querySelector('.btn-label-long');
+                    const lShort = btn.querySelector('.btn-label-short');
+                    if (lLong) lLong.textContent = 'Відбій-Монітор';
+                    if (lShort) lShort.textContent = 'Відбій';
+                }
+                if (vidbiyPollTimer) clearInterval(vidbiyPollTimer);
+                if (banner) banner.classList.add('hidden');
             }
         }
 

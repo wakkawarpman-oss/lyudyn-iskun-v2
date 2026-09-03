@@ -129,7 +129,24 @@ async def cmd_vidbiy_monitoring(message: types.Message):
             event_time=status.get("timestamp"),
             source=status.get("source", "КМВА / Офіційний моніторинг тривог (@kyiv_alarm)")
         )
-        await safe_send(message, msg_text)
+        inline_kb = InlineKeyboardBuilder()
+        inline_kb.button(text="🔔 Чергувати наступний відбій", callback_data="vidbiy:subscribe_next")
+        inline_kb.adjust(1)
+        await safe_send(message, msg_text, reply_markup=inline_kb.as_markup())
+
+
+@router.callback_query(F.data == "vidbiy:subscribe_next")
+async def cb_subscribe_next(callback: types.CallbackQuery):
+    register_vidbiy_subscriber(callback.message.chat.id)
+    await callback.answer("✅ Підписку на відбій активовано!", show_alert=True)
+    inline_kb = InlineKeyboardBuilder()
+    inline_kb.button(text="🛑 СТОП МОНІТОРИНГ", callback_data="vidbiy:stop")
+    inline_kb.adjust(1)
+    await callback.message.reply(
+        "🔔 <b>РЕЖИМ ОЧІКУВАННЯ ВІДБОЮ АКТИВОВАНО:</b>\n"
+        "Скрипт постійно чергує найшвидші джерела. При оголошенні відбою ви негайно отримаєте великий зелений банер про відкриття магазинів та транспорту.",
+        reply_markup=inline_kb.as_markup()
+    )
 
 
 @router.callback_query(F.data == "vidbiy:stop")
@@ -137,13 +154,17 @@ async def cb_stop_vidbiy_monitoring(callback: types.CallbackQuery):
     unregister_vidbiy_subscriber(callback.message.chat.id)
     stop_banner = format_stop_monitoring_banner()
     await callback.answer("🛑 Моніторинг відбою зупинено!", show_alert=False)
+    inline_kb = InlineKeyboardBuilder()
+    inline_kb.button(text="🟢 ВІДБІЙ МОНІТОРИНГ", callback_data="vidbiy:subscribe_next")
+    inline_kb.adjust(1)
     try:
         await callback.message.edit_text(
             f"{callback.message.html_text}\n\n➖➖➖➖➖➖➖➖➖➖\n{stop_banner}",
+            reply_markup=inline_kb.as_markup(),
             parse_mode=ParseMode.HTML
         )
     except Exception:
-        await callback.message.answer(stop_banner, parse_mode=ParseMode.HTML)
+        await callback.message.answer(stop_banner, reply_markup=inline_kb.as_markup(), parse_mode=ParseMode.HTML)
 
 
 @router.message(Command("stop_vidbiy"))
@@ -155,4 +176,7 @@ async def cb_stop_vidbiy_monitoring(callback: types.CallbackQuery):
 async def cmd_stop_vidbiy(message: types.Message):
     unregister_vidbiy_subscriber(message.chat.id)
     stop_banner = format_stop_monitoring_banner()
-    await safe_send(message, stop_banner)
+    inline_kb = InlineKeyboardBuilder()
+    inline_kb.button(text="🟢 УВІМКНУТИ МОНІТОРИНГ", callback_data="vidbiy:subscribe_next")
+    inline_kb.adjust(1)
+    await safe_send(message, stop_banner, reply_markup=inline_kb.as_markup())
