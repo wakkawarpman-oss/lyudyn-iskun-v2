@@ -915,9 +915,10 @@ async def cmd_top_events(message: types.Message):
             mid = e.message_id or 0
             label = get_event_type_label(e.event_type)
             snippet = clean_event_snippet(e.message_text, 100)
+            time_str = format_kyiv_time(e.detected_at)
             
             lines.append(
-                f"<b>{idx}. {label}</b> [Резонанс: <b>{e.resonance_score}/100</b>]\n"
+                f"<b>{idx}. {label}</b> [Резонанс: <b>{e.resonance_score}/100</b>] | 🕒 <code>{time_str}</code>\n"
                 f"📍 <b>Локація:</b> {html.escape(loc)}\n"
                 f"🛡️ {badge}\n"
                 f"📝 <i>{snippet}</i>\n"
@@ -972,7 +973,7 @@ async def cmd_resonance(message: types.Message):
             snippet = clean_event_snippet(e.message_text, 110)
 
             lines.append(
-                f"<b>{idx}. {label}</b> [{e.resonance_score}/100] • <code>{time_str}</code>\n"
+                f"<b>{idx}. {label}</b> [{e.resonance_score}/100] | 🕒 <code>{time_str}</code>\n"
                 f"📍 <b>Локація:</b> {html.escape(loc)}\n"
                 f"🛡️ {badge}\n"
                 f"📝 <i>{snippet}</i>\n"
