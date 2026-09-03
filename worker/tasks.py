@@ -21,14 +21,16 @@ geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
 
 
 def flush_api_caches():
-    """Deletes the cached API responses so the web map/stats pick up a
-    change on their NEXT poll instead of waiting out the cache TTL
-    (api/main.py: 30-60s). Previously only called once a day from
-    cleanup_old_events — meaning a brand new incident was invisible to the
-    map for up to ~60-90s (TTL + poll interval) the rest of the day."""
+    """Deletes cached API and analytics responses so the web map and bot pick up
+    new incidents on their NEXT poll/query instead of waiting out cache TTLs."""
     try:
-        for k in ["api:events", "api:stats", "api:shelters", "api:geoint:zones"]:
-            redis_client.delete(k)
+        keys_to_delete = ["api:events", "api:stats", "api:shelters", "api:geoint:zones", "osint:deep_analysis"]
+        for pattern in ["api:events:*", "api:zones:*"]:
+            matched = redis_client.keys(pattern)
+            if matched:
+                keys_to_delete.extend([k.decode("utf-8") if isinstance(k, bytes) else str(k) for k in matched])
+        if keys_to_delete:
+            redis_client.delete(*set(keys_to_delete))
     except Exception as re:
         logger.warning(f"Redis cache flush warning: {re}")
 logger = logging.getLogger(__name__)

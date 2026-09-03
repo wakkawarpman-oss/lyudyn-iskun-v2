@@ -19,6 +19,7 @@ app.conf.update(
     enable_utc=True,
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    task_default_queue='messages',
     task_routes={
         'worker.tasks.process_message': {'queue': 'messages'}
     }
