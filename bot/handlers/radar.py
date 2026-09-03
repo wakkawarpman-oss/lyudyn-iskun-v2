@@ -149,6 +149,48 @@ async def cmd_reference(message: types.Message):
     await safe_send(message, card, disable_web_page_preview=True)
 
 
+@router.message(Command("thermal"))
+@router.message(Command("firms"))
+@router.message(F.text == "🔥 Супутник NASA")
+@router.message(F.text.ilike("%супутник%"))
+@router.message(F.text.ilike("%термо%"))
+async def cmd_thermal_satellite(message: types.Message):
+    from worker.osint.firms_viirs import fetch_ukraine_thermal_anomalies
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, fetch_ukraine_thermal_anomalies)
+    anomalies = data.get("anomalies", [])
+    total_count = len(anomalies)
+
+    high_frp = [a for a in anomalies if (a.get("frp_mw") or 0) >= 15.0]
+    high_frp_sorted = sorted(high_frp, key=lambda x: x.get("frp_mw", 0), reverse=True)[:5]
+
+    lines = [
+        "🛰️ <b>СУПУТНИКОВИЙ МОНІТОРИНГ ТЕРМО-АНОМАЛІЙ (NASA FIRMS)</b>",
+        "<i>Орбітальний радіометр Suomi-NPP VIIRS (375м) у режимі реального часу.</i>\n",
+        f"🔥 <b>Зафіксовано теплових спалахів по Україні (24г):</b> <code>{total_count:,}</code>",
+        f"⚡ <b>Потужних осередків горіння / вибухів (&gt;15 МВт):</b> <code>{len(high_frp)}</code>\n"
+    ]
+
+    if high_frp_sorted:
+        lines.append("🔴 <b>Найбільш інтенсивні теплові аномалії:</b>")
+        for idx, a in enumerate(high_frp_sorted, 1):
+            frp = a.get("frp_mw")
+            temp_c = int((a.get("brightness_k") or 300) - 273.15)
+            dt_raw = a.get("acq_time", "")
+            t_str = dt_raw[11:16] if "T" in dt_raw else ""
+            t_disp = f" (фіксація {t_str} UTC)" if t_str else ""
+            lines.append(f"  {idx}. <code>{a.get('lat'):.3f}, {a.get('lon'):.3f}</code> — <b>{frp} МВт</b> (~{temp_c}°C){t_disp}")
+        lines.append("")
+
+    lines.append("🗺️ <i>Перегляньте всі осередки з динамічним радіусом на інтерактивній веб-мапі:</i>")
+
+    inline_kb = InlineKeyboardBuilder()
+    inline_kb.button(text="🔥 Відкрити шар NASA на мапі", url=get_dashboard_url())
+    inline_kb.adjust(1)
+
+    await safe_send(message, "\n".join(lines), reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)
+
+
 @router.message(Command("top"))
 @router.message(F.text == "🎖 Ключові інциденти")
 async def cmd_top_events(message: types.Message):
