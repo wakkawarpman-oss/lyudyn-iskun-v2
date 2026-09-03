@@ -1,6 +1,5 @@
 services:
   ai_worker:
-    build: .
     command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 50
     depends_on:
     - redis
@@ -35,7 +34,6 @@ services:
     volumes:
     - postgres_data:/var/lib/postgresql/data
   listener:
-    build: .
     command: python -m listener.telethon_client
     depends_on:
     - redis
@@ -51,7 +49,6 @@ services:
     volumes:
     - redis_data:/data
   web_api:
-    build: .
     command: uvicorn api.main:app --host 0.0.0.0 --port 80
     depends_on:
     - db
