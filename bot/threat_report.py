@@ -268,12 +268,14 @@ def generate_live_threat_assessment(custom_query: str = "", lang: str = "ua") ->
             source_link = format_verified_source_link(e.source_channel, e.message_id, lang=lang)
 
             # C2 Verification Tag
-            if getattr(e, "is_official", False) or e.source_channel.lower().lstrip('@') in OFFICIAL_CHANNELS:
+            source_weight = getattr(e, "source_weight", 0.5)
+            source_tier = getattr(e, "source_tier", "B")
+            if getattr(e, "is_official", False) or e.source_channel.lower().lstrip('@') in OFFICIAL_CHANNELS or source_tier == 'S':
                 verif_badge = "🏛️ [OFFICIAL]" if lang == "en" else "🏛️ [ОФІЦІЙНО]"
-            elif getattr(e, "sources_count", 1) >= 2:
+            elif getattr(e, "verification_status", "") == "VERIFIED" or source_weight >= 1.2:
                 verif_badge = f"🟢 [VERIFIED {e.sources_count} src.]" if lang == "en" else f"🟢 [ВЕРИФІКОВАНО {e.sources_count} дж.]"
             else:
-                verif_badge = "🟡 [1 SOURCE]" if lang == "en" else "🟡 [1 ДЖЕРЕЛО]"
+                verif_badge = "🟡 [UNVERIFIED]" if lang == "en" else "🟡 [НЕПІДТВЕРДЖЕНО]"
 
             source_label = "Source" if lang == "en" else "Джерело"
             loc_label = e.location_text or ("Kyiv Region" if lang == "en" else "Київщина")

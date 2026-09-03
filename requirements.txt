@@ -17,3 +17,8 @@ alembic==1.13.1
 gevent==23.9.1
 pytest==8.0.0
 cryptography==42.0.5
+feedparser==6.0.11
+requests==2.31.0
+staticmap==0.2.0
+matplotlib==3.8.2
+pandas==2.2.0

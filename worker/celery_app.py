@@ -34,4 +34,8 @@ app.conf.beat_schedule = {
         'task': 'worker.tasks.run_watchdog',
         'schedule': 900.0, # Every 15 minutes (15 * 60 seconds)
     },
+    'fetch-rss-news': {
+        'task': 'worker.tasks.fetch_rss_news_task',
+        'schedule': 300.0, # Every 5 minutes
+    },
 }

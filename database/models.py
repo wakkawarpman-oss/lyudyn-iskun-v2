@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean, Float
 from sqlalchemy.orm import declarative_base, sessionmaker
 from geoalchemy2 import Geometry
 from datetime import datetime
@@ -41,6 +41,10 @@ class DetectedEvent(Base):
     sources_count = Column(Integer, default=1)
     sources_list = Column(String, default="") # Comma-separated channel names
     is_official = Column(Boolean, default=False)
+    
+    # Trust Tier System
+    source_tier = Column(String, default="B", index=True) # 'S', 'A', 'B'
+    source_weight = Column(Float, default=0.5)
 
 class BombShelter(Base):
     __tablename__ = "bomb_shelters"
