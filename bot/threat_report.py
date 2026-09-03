@@ -1,9 +1,7 @@
-import os
 import datetime
 import logging
 from zoneinfo import ZoneInfo
 from database.models import SessionLocal, DetectedEvent
-from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 KYIV_TZ = ZoneInfo("Europe/Kyiv")

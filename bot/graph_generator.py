@@ -2,9 +2,7 @@ import io
 import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from database.models import SessionLocal, DetectedEvent
-from sqlalchemy import func
 
 def generate_analytics_graph(hours: int = 24) -> io.BytesIO:
     """Generates a graph of events over the last 24 hours."""

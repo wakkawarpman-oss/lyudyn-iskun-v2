@@ -1,5 +1,7 @@
 __pycache__/
+.pytest_cache/
 *.pyc
+*.bak
 *.pyo
 *.pyd
 .env
@@ -9,3 +11,5 @@ __pycache__/
 temp_*
 node_modules/
 .DS_Store
+.omc/
+.venv/

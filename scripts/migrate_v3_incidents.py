@@ -3,10 +3,8 @@ Migration & Retroactive Incident Normalization Script (V3)
 1. Ensures columns 'incident_id', 'significance_score', 'confidence_score', 'first_seen_at', 'last_seen_at' exist in PostgreSQL.
 2. Retroactively resolves canonical toponyms, computes 2D scores, and assigns Incident IDs to all records.
 """
-import os
 import re
-from datetime import datetime, timedelta
-from sqlalchemy import text
+from datetime import datetime
 from database.models import SessionLocal, DetectedEvent, engine
 from worker.canonical_geo import resolve_canonical_toponym
 from worker.scoring import calculate_significance_score, calculate_confidence_score, compute_composite_resonance
@@ -45,7 +43,7 @@ def migrate_and_normalize():
 
     for e in events:
         # Canonicalize location
-        canon_loc, lat, lon = resolve_canonical_toponym(e.location_text)
+        canon_loc, lat, lon, _is_fallback_geo = resolve_canonical_toponym(e.location_text)
         e.location_text = canon_loc
         if lat is not None and lon is not None and e.geom is None:
             e.geom = WKTElement(f"POINT({lon} {lat})", srid=4326)

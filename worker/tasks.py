@@ -1,13 +1,12 @@
 from worker.llm_engine import process_with_llm
-from worker.osint.sentiment import sentiment_analyzer
 import os
 import json
 import logging
-import base64
+import redis
 from celery import shared_task
 from geoalchemy2.elements import WKTElement
 from database.models import SessionLocal, DetectedEvent
-import requests
+from sqlalchemy import text as sql_text
 from geopy.geocoders import Nominatim
 from datetime import datetime, timedelta
 
@@ -169,17 +168,20 @@ def pipeline_geocode(self, data):
     geom_wkt = data.get("geom_wkt")
     
     raw_location = llm_data.get("location") or "Київ та область"
-    canonical_name, lat, lon = resolve_canonical_toponym(raw_location)
-    
+    canonical_name, lat, lon, is_fallback_geo = resolve_canonical_toponym(raw_location)
+
     # Store normalized canonical name
     llm_data["location"] = canonical_name
-    
+
     if lat is not None and lon is not None:
         geom_wkt = f"POINT({lon} {lat})"
     elif not geom_wkt:
+        # is_fallback_geo is already True here — resolve_canonical_toponym
+        # only returns lat=lon=None (forcing this branch) when it fell back.
         geom_wkt = cached_geocode(f"{canonical_name}, Київська область, Україна")
-            
+
     data["geom_wkt"] = geom_wkt
+    data["is_fallback_geo"] = is_fallback_geo
     return data
 
 @shared_task(name="worker.tasks.pipeline_cluster_and_save", bind=True)
@@ -190,6 +192,7 @@ def pipeline_cluster_and_save(self, data):
     payload = data["payload"]
     llm_data = data["llm_data"]
     geom_wkt = data["geom_wkt"]
+    is_fallback_geo = data.get("is_fallback_geo", False)
     osint_location = data.get("osint_location")
     payload_str = data["payload_str"]
     
@@ -236,6 +239,12 @@ def pipeline_cluster_and_save(self, data):
             existing.event_type = event_type
             db.commit()
             return
+
+        # Serialize clustering per location within this transaction: without
+        # this, two workers processing messages for the same location_text
+        # at nearly the same time can both miss each other's not-yet-committed
+        # row and each INSERT a new incident instead of merging into one.
+        db.execute(sql_text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": final_location_text})
 
         # Incident Clustering: Look for active incident within 25 minutes
         threshold_25m = msg_date - timedelta(minutes=25)
@@ -297,6 +306,7 @@ def pipeline_cluster_and_save(self, data):
             event_type=event_type,
             location_text=final_location_text,
             geom=WKTElement(geom_wkt, srid=4326) if geom_wkt else None,
+            is_fallback_geo=is_fallback_geo,
             significance_score=sig_score,
             confidence_score=conf_score,
             resonance_score=res_score,

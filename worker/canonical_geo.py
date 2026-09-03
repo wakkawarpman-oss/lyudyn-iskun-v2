@@ -118,23 +118,29 @@ CANONICAL_TOPONYMS: Dict[str, Dict] = {
     "чорнобиль": {"canonical": "Чорнобиль", "lat": 51.2725, "lon": 30.2245, "type": "settlement"},
 }
 
-def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], Optional[float]]:
+def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], Optional[float], bool]:
     """
     Normalizes raw location string into a canonical entity with accurate coordinates.
-    Returns: (canonical_name, latitude, longitude)
+    Returns: (canonical_name, latitude, longitude, is_fallback_geo)
+
+    is_fallback_geo is True when the coordinates are a generic last-resort
+    guess (city/region centroid) rather than a match against an actual named
+    place in the text — callers should use this to distinguish "this really
+    is downtown/Maidan" from "we don't know where this is, defaulting to the
+    city center", since both currently produce the same coordinates.
     """
     if not raw_location or not raw_location.strip():
-        return "Київ та область", 50.450034, 30.524136
+        return "Київ та область", 50.450034, 30.524136, True
 
     cleaned = raw_location.strip().lower()
     cleaned = re.sub(r'["\']', '', cleaned)
-    
-    # 1. Exact lookup
+
+    # 1. Exact lookup — a genuine named place in the text, not a fallback.
     if cleaned in CANONICAL_TOPONYMS and CANONICAL_TOPONYMS[cleaned]:
         entry = CANONICAL_TOPONYMS[cleaned]
-        return entry["canonical"], entry["lat"], entry["lon"]
+        return entry["canonical"], entry["lat"], entry["lon"], False
 
-    # 2. Fuzzy/Substring scan (matching longest canonical key first)
+    # 2. Fuzzy/Substring scan (matching longest canonical key first) — also genuine.
     sorted_keys = sorted(CANONICAL_TOPONYMS.keys(), key=lambda k: len(k), reverse=True)
     for key in sorted_keys:
         val = CANONICAL_TOPONYMS[key]
@@ -143,10 +149,10 @@ def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], 
         # If key is inside cleaned raw location
         pattern = r'\b' + re.escape(key) + r'\b'
         if re.search(pattern, cleaned) or key in cleaned:
-            return val["canonical"], val["lat"], val["lon"]
+            return val["canonical"], val["lat"], val["lon"], False
 
-    # 3. Fallback: If it contains 'київ' or 'область'
+    # 3. Fallback: If it contains 'київ' or 'область', but nothing more specific matched.
     if "київ" in cleaned:
-        return "Київ та область", 50.450034, 30.524136
+        return "Київ та область", 50.450034, 30.524136, True
 
-    return raw_location.strip(), None, None
+    return raw_location.strip(), None, None, True

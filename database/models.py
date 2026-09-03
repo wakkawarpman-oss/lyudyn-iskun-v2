@@ -44,6 +44,11 @@ class DetectedEvent(Base):
     last_seen_at = Column(DateTime, default=datetime.utcnow)
     
     has_media = Column(Boolean, default=False)
+    # True when geom is a generic city/region-centroid guess (no specific
+    # toponym matched in the text), not an actual named location. Lets
+    # consumers exclude "we don't know where this is" points near the
+    # Maidan-area centroid without also hiding real Maidan-area incidents.
+    is_fallback_geo = Column(Boolean, default=False, server_default="false")
     raw_message = Column(String) # JSON snapshot of the Telethon message
     
     # Autonomous Factchecking & Multi-Source Consensus
@@ -82,34 +87,51 @@ class UserApiKey(Base):
 import base64
 import hashlib
 
-SECRET_SALT = os.getenv("SECRET_KEY", "iskun_master_secret_salt_2026")
+SECRET_SALT: str = os.getenv("SECRET_KEY") or ""
+if not SECRET_SALT:
+    raise RuntimeError("SECRET_KEY env is REQUIRED — refusing to start with a weak default")
+
+# Legacy default salt, kept ONLY so decrypt_key can still read keys that were
+# encrypted before SECRET_KEY became mandatory. Never used for encryption.
+_OLD_SECRET_SALT = "iskun_master_secret_salt_2026"
+
+
+def _fernet_for(salt: str):
+    from cryptography.fernet import Fernet
+    key_32 = base64.urlsafe_b64encode(hashlib.sha256(salt.encode()).digest())
+    return Fernet(key_32)
+
 
 def encrypt_key(raw_key: str) -> str:
     """Safely encrypts user API key using Fernet derived from SECRET_KEY."""
     if not raw_key:
         return ""
     try:
-        from cryptography.fernet import Fernet
-        key_32 = base64.urlsafe_b64encode(hashlib.sha256(SECRET_SALT.encode()).digest())
-        f = Fernet(key_32)
-        return f.encrypt(raw_key.strip().encode()).decode()
+        return _fernet_for(SECRET_SALT).encrypt(raw_key.strip().encode()).decode()
     except Exception:
         return base64.b64encode(raw_key.strip().encode()).decode()
 
 def decrypt_key(stored_key: str) -> str:
-    """Safely decrypts user API key."""
+    """Safely decrypts user API key.
+
+    Tries the current SECRET_KEY first, then falls back to the legacy
+    hardcoded salt for keys encrypted before rotation (soft-rotation:
+    callers should re-encrypt and save on successful legacy decrypt).
+    """
     if not stored_key:
         return ""
     try:
-        from cryptography.fernet import Fernet
-        key_32 = base64.urlsafe_b64encode(hashlib.sha256(SECRET_SALT.encode()).digest())
-        f = Fernet(key_32)
-        return f.decrypt(stored_key.encode()).decode()
+        return _fernet_for(SECRET_SALT).decrypt(stored_key.encode()).decode()
     except Exception:
-        try:
-            return base64.b64decode(stored_key.encode()).decode()
-        except Exception:
-            return stored_key
+        pass
+    try:
+        return _fernet_for(_OLD_SECRET_SALT).decrypt(stored_key.encode()).decode()
+    except Exception:
+        pass
+    try:
+        return base64.b64decode(stored_key.encode()).decode()
+    except Exception:
+        return stored_key
 
 def init_db():
     Base.metadata.create_all(bind=engine)

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "stabilization/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Never real values — nothing here needs a live DB/Redis, tests mock
+      # what they touch. These only exist so importing database/models.py
+      # (which requires SECRET_KEY and builds a SQLAlchemy engine from
+      # DATABASE_URL) doesn't crash at import time in CI.
+      SECRET_KEY: ci-placeholder-not-a-real-secret
+      DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci_placeholder
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system build deps
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc libpq-dev
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -q
+
+      - name: Lint (unused imports / redefinitions)
+        run: |
+          pip install ruff==0.6.9
+          ruff check . --select F401,F811
+
+      - name: Syntax-check every Python file
+        run: |
+          python3 -c "
+          import ast, glob, sys
+          failed = False
+          for f in glob.glob('**/*.py', recursive=True):
+              if '.venv' in f or '/venv/' in f:
+                  continue
+              try:
+                  ast.parse(open(f, encoding='utf-8').read(), filename=f)
+              except SyntaxError as e:
+                  print(f'SyntaxError in {f}: {e}')
+                  failed = True
+          sys.exit(1 if failed else 0)
+          "
