@@ -623,11 +623,6 @@
             .hud-btn span.btn-label-long { display: none; }
             .hud-btn span.btn-label-short { display: inline; }
 
-            /* Strictly suppress Leaflet desktop popups on mobile so they never overflow at top */
-            .leaflet-popup {
-                display: none !important;
-            }
-
             .live-osint-ticker {
                 top: 72px;
                 padding: 2px 8px;
@@ -1267,7 +1262,7 @@
         <div class="section-label">📋 Тактична Легенда</div>
         <div class="legend">
             <div class="legend-item">
-                <div class="legend-left"><span>✈️</span> <b>БпЛА Shahed / Дрон</b></div>
+                <div class="legend-left"><span>🔴</span> <b>БпЛА Shahed / Дрон</b></div>
                 <span style="color:#ff0055; font-weight:700;">📡 Neptun</span>
             </div>
             <div class="legend-item">
@@ -1827,6 +1822,50 @@
             document.getElementById('tactical-bottom-sheet')?.classList.add('collapsed');
         }
 
+        function showDroneBottomSheet(d) {
+            const sheet = document.getElementById('tactical-bottom-sheet');
+            const body = document.getElementById('sheet-body');
+            if (!sheet || !body) return;
+
+            const isKyivThreat = d.is_kyiv_threat || d.distance_to_kyiv_km <= 180;
+            const targetColor = isKyivThreat ? '#ff0055' : '#f59e0b';
+            const effectiveSpeed = d.speed_kmh ? Math.round(d.speed_kmh) : 185;
+
+            body.innerHTML = `
+                <div class="sheet-header-row">
+                    <span class="verif-badge-confirmed" style="background:rgba(239,68,68,0.25); border-color:#ef4444; color:#ff4d6d;">🔴 РАДАРНА ЦІЛЬ (LIVE)</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11px; color:#94a3b8; font-weight:600;">📡 Neptun Live</span>
+                        <button class="sheet-close-btn" style="padding:2px 8px; border-radius:50%;" onclick="closeTacticalBottomSheet()">✕</button>
+                    </div>
+                </div>
+                <div class="sheet-title" style="color:${targetColor};">
+                    🔴 ${d.label || 'БпЛА Shahed-136'}
+                </div>
+                <div class="sheet-location">
+                    📍 <b>${d.place || d.region || 'Київська область'}</b>
+                </div>
+
+                <div class="sheet-chips-row">
+                    <div class="sheet-chip">🎯 До Києва: <b>~${d.distance_to_kyiv_km} км</b></div>
+                    <div class="sheet-chip">🧭 Курс: <b>${d.heading || 0}°</b></div>
+                    <div class="sheet-chip">⚡ Швидкість: <b>~${effectiveSpeed} км/год</b></div>
+                    ${d.confidence ? `<div class="sheet-chip">🛡️ Впевненість: <b>${d.confidence}%</b></div>` : ''}
+                </div>
+
+                <div class="sheet-message-box">
+                    📝 ${d.text || `Зафіксовано рух ворожого БпЛА курсом на ${d.place || 'Київ'}. Розрахункова траєкторія екстраполюється в реальному часі.`}
+                </div>
+
+                <div class="sheet-actions-row">
+                    <button class="sheet-action-btn" onclick="map.flyTo([${d.lat}, ${d.lng}], 12, {duration: 0.8});">🎯 Навести камеру</button>
+                    <button class="sheet-close-btn" onclick="closeTacticalBottomSheet()">Закрити</button>
+                </div>
+            `;
+
+            sheet.classList.remove('collapsed');
+        }
+
         // Swipe down on bottom sheet drag bar to dismiss
         let sheetTouchStartY = 0;
         const dragHandle = document.getElementById('sheet-drag-bar');
@@ -1917,7 +1956,7 @@
                 return { emoji: '🚀', bg: 'rgba(239, 68, 68, 0.3)', border: '#ef4444', shadow: '#ef4444', title: 'Крилата / Балістична ракета' };
             }
             if (type.includes('radar') || type.includes('drone') || type.includes('shahed') || type.includes('uav') || type.includes('бпла')) {
-                return { emoji: '✈️', bg: 'rgba(249, 115, 22, 0.3)', border: '#f97316', shadow: '#f97316', title: 'БпЛА Shahed / Дрон' };
+                return { emoji: '🔴', bg: 'rgba(239, 68, 68, 0.25)', border: '#ef4444', shadow: '#ef4444', title: 'БпЛА Shahed / Дрон' };
             }
             if (type.includes('strike') || type.includes('shelling') || type.includes('приліт') || type.includes('влучан')) {
                 return { emoji: '💥', bg: 'rgba(220, 38, 38, 0.35)', border: '#dc2626', shadow: '#dc2626', title: 'Влучання / Удар' };
@@ -2111,19 +2150,12 @@
                         </div>
                     `;
 
-                    if (window.innerWidth > 768) {
-                        marker.bindPopup(popupContent);
-                    }
-                    marker.on('click', (ev) => {
+                    marker.bindPopup(popupContent);
+                    marker.on('click', () => {
                         if (window.innerWidth <= 768) {
-                            if (ev && ev.originalEvent) {
-                                ev.originalEvent.preventDefault();
-                                ev.originalEvent.stopPropagation();
-                            }
-                            map.closePopup();
                             showTacticalBottomSheet(e, spec, dt, statusBadge, statusDesc, srcDisplay, srcLink);
                             const pt = map.project([e.lat, e.lon], map.getZoom()).subtract([0, 140]);
-                            map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.4 });
+                            map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.3 });
                         }
                     });
                     cachedEventMarkers.push({ marker, timestampMs, id: e.id });
@@ -2139,27 +2171,16 @@
                     const popupContent = popupMap[z.event_id] || `<div style="color:#f1f5f9; font-family:-apple-system,sans-serif;"><b>📍 ${z.location_text}</b><br>💥 Зона ураження вибуху: ${z.shrapnel_zone_m}м</div>`;
 
                     const group = L.layerGroup();
-                    if (window.innerWidth > 768) {
-                        L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).bindPopup(popupContent).addTo(group);
-                        L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).bindPopup(popupContent).addTo(group);
-                        L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).bindPopup(popupContent).addTo(group);
-                    } else {
-                        L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).addTo(group);
-                        L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).addTo(group);
-                        L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).addTo(group);
-                    }
+                    L.circle(center, { radius: z.shrapnel_zone_m, color: '#fffa65', fillColor: '#fffa65', fillOpacity: 0.12, weight: 1.5 }).bindPopup(popupContent).addTo(group);
+                    L.circle(center, { radius: z.shockwave_zone_m, color: '#ff9f1a', fillColor: '#ff9f1a', fillOpacity: 0.22, weight: 2 }).bindPopup(popupContent).addTo(group);
+                    L.circle(center, { radius: z.fatal_zone_m, color: '#ff3838', fillColor: '#ff3838', fillOpacity: 0.4, weight: 2.5 }).bindPopup(popupContent).addTo(group);
 
-                    group.on('click', (ev) => {
-                        if (window.innerWidth <= 768 && popupEventMap[z.event_id]) {
-                            if (ev && ev.originalEvent) {
-                                ev.originalEvent.preventDefault();
-                                ev.originalEvent.stopPropagation();
-                            }
-                            map.closePopup();
+                    group.on('click', () => {
+                        if (popupEventMap[z.event_id] && window.innerWidth <= 768) {
                             const p = popupEventMap[z.event_id];
                             showTacticalBottomSheet(p.e, p.spec, p.dt, p.statusBadge, p.statusDesc, p.srcDisplay, p.srcLink);
                             const pt = map.project(center, map.getZoom()).subtract([0, 140]);
-                            map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.4 });
+                            map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.3 });
                         }
                     });
 
@@ -2370,7 +2391,7 @@
                     marker.bindPopup(`
                         <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:190px; font-size:12px;">
                             <div style="font-weight:700; color:${targetColor}; font-size:13px; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:3px;">
-                                ✈️ ${d.label}
+                                🔴 ${d.label}
                             </div>
                             <div>📍 <b>Локація:</b> ${d.place || d.region || 'Невідомо'}</div>
                             <div>🎯 <b>До Києва:</b> ~${d.distance_to_kyiv_km} км</div>
@@ -2380,6 +2401,14 @@
                             <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Джерело: Neptun Live (LIVE активний)</div>
                         </div>
                     `);
+
+                    marker.on('click', () => {
+                        showDroneBottomSheet(d);
+                        if (window.innerWidth <= 768) {
+                            const pt = map.project([d.lat, d.lng], map.getZoom()).subtract([0, 140]);
+                            map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.3 });
+                        }
+                    });
 
                     marker.addTo(radarLayer);
                     droneMarkers.push(marker);
