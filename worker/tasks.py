@@ -512,6 +512,19 @@ def pipeline_cluster_and_save(self, data):
             except Exception as e:
                 logger.warning(f"FIRMS cross-verification warning: {e}")
 
+        # Sightline Critical Infrastructure Proximity Check
+        nearby_infra_text = None
+        if lat and lon and event_type in ['direct_strike', 'explosion', 'fire', 'destruction', 'shelling', 'radar_track']:
+            try:
+                from worker.geo_extractors.poi_matcher import find_nearby_critical_infrastructure
+                infra_matches = find_nearby_critical_infrastructure(lat, lon, max_radius_m=1200.0)
+                if infra_matches:
+                    closest = infra_matches[0]
+                    nearby_infra_text = f"{closest.category_label}: {closest.name} ({int(closest.distance_m)} м)"
+                    logger.info(f"Sightline matched critical infrastructure for {new_incident_id}: {nearby_infra_text}")
+            except Exception as e_infra:
+                logger.warning(f"Sightline proximity warning: {e_infra}")
+
         event = DetectedEvent(
             incident_id=new_incident_id,
             source_channel=channel,
@@ -537,7 +550,8 @@ def pipeline_cluster_and_save(self, data):
             sources_list=channel,
             is_official=is_official_src,
             source_tier=source_tier,
-            source_weight=source_weight
+            source_weight=source_weight,
+            nearby_infrastructure=nearby_infra_text
         )
         db.add(event)
         db.commit()

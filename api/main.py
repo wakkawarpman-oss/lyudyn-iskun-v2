@@ -244,6 +244,11 @@ def get_radar_thermal():
     from worker.osint.firms_viirs import fetch_ukraine_thermal_anomalies
     return fetch_ukraine_thermal_anomalies()
 
+@app.get("/api/v1/radar/ew-interference")
+def get_radar_ew_interference():
+    from worker.sensors.sentinel_rfi import get_live_ew_interference
+    return get_live_ew_interference()
+
 @app.get("/api/v1/network/forward-graph")
 def get_network_forward_graph(min_weight: int = 1, limit: int = 100, hours: int = 48, db: Session = Depends(get_db)):
     from database.repository import NetworkGraphRepository
@@ -261,6 +266,71 @@ def get_network_channel_lineage(channel: str, db: Session = Depends(get_db)):
     from database.repository import NetworkGraphRepository
     repo = NetworkGraphRepository(db)
     return repo.get_channel_lineage(channel)
+
+@app.get("/api/v1/infrastructure/critical")
+def get_critical_infrastructure():
+    from worker.geo_extractors.poi_matcher import KYIV_POI_DATABASE, INFRASTRUCTURE_CATEGORY_LABELS
+    features = []
+    critical_categories = {
+        "substation", "energy", "fuel_depot", "telecom", "defense_industry",
+        "railway", "airport", "bridge"
+    }
+    for name, data in KYIV_POI_DATABASE.items():
+        cat = data.get("category", "")
+        if cat in critical_categories and "lat" in data and "lon" in data:
+            features.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [data["lon"], data["lat"]]
+                },
+                "properties": {
+                    "name": name,
+                    "category": cat,
+                    "category_label": INFRASTRUCTURE_CATEGORY_LABELS.get(cat, "Стратегічний об'єкт"),
+                    "address": data.get("address", name)
+                }
+            })
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "count": len(features)
+    }
+
+class DroneRaycastRequest(BaseModel):
+    drone_lat: float
+    drone_lon: float
+    drone_alt_m: float
+    gimbal_pitch_deg: float
+    gimbal_yaw_deg: float
+    hfov_deg: float = 84.0
+    px_norm: float = 0.0
+    py_norm: float = 0.0
+    ground_alt_m: float = 120.0
+
+@app.post("/api/v1/osint/drone-raycast")
+def api_drone_raycast(req: DroneRaycastRequest):
+    from worker.osint.drone_raycast import calculate_raycast_target
+    res = calculate_raycast_target(
+        drone_lat=req.drone_lat,
+        drone_lon=req.drone_lon,
+        drone_alt_m=req.drone_alt_m,
+        gimbal_pitch_deg=req.gimbal_pitch_deg,
+        gimbal_yaw_deg=req.gimbal_yaw_deg,
+        hfov_deg=req.hfov_deg,
+        px_norm=req.px_norm,
+        py_norm=req.py_norm,
+        ground_alt_m=req.ground_alt_m
+    )
+    return {
+        "status": "success",
+        "target_lat": res.target_lat,
+        "target_lon": res.target_lon,
+        "target_alt_m": res.target_alt_m,
+        "ground_range_m": res.ground_range_m,
+        "slant_range_m": res.slant_range_m,
+        "confidence": res.confidence
+    }
 
 # Serve the static HTML frontend
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")

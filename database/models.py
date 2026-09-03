@@ -69,6 +69,9 @@ class DetectedEvent(Base):
     source_tier = Column(String, default="B", index=True) # 'S', 'A', 'B'
     source_weight = Column(Float, default=0.5)
 
+    # Sightline Critical Infrastructure Proximity
+    nearby_infrastructure = Column(String, nullable=True) # E.g. "⚡ ПС 330 кВ «Північна» (87 м)"
+
 class BombShelter(Base):
     __tablename__ = "bomb_shelters"
 

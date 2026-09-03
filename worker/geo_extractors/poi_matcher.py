@@ -3,6 +3,7 @@ Tactical Point of Interest (POI) Matcher for Kyiv & Kyiv Oblast.
 Matches high-value civilian, logistical, industrial, and transportation landmarks.
 """
 import json
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -22,6 +23,30 @@ class PoiMatch:
     precision: str = "building"  # ±50m
 
 
+@dataclass
+class NearbyInfrastructureMatch:
+    name: str
+    category: str
+    category_label: str
+    lat: float
+    lon: float
+    distance_m: float
+    address: str
+
+
+INFRASTRUCTURE_CATEGORY_LABELS = {
+    "substation": "⚡ Електрична підстанція",
+    "energy": "⚡ Електростанція / ТЕЦ",
+    "fuel_depot": "⛽ Нафтобаза / Склад ПММ",
+    "telecom": "📡 Телекомунікаційний вузол / Телевежа",
+    "defense_industry": "🏭 Об'єкт оборонної промисловості / ВПК",
+    "railway": "🚆 Залізничний логістичний вузол",
+    "logistics": "📦 Логістичний хаб",
+    "airport": "🛫 Аеродром / Аеропорт",
+    "bridge": "🌉 Мостовий перехід"
+}
+
+
 def _load_poi_database() -> Dict[str, dict]:
     """Loads POI database from JSON."""
     if not os.path.exists(POI_DB_PATH):
@@ -34,6 +59,59 @@ def _load_poi_database() -> Dict[str, dict]:
 
 
 KYIV_POI_DATABASE = _load_poi_database()
+
+
+def calculate_haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance between two points on the Earth in meters."""
+    R = 6371000.0  # Earth radius in meters
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return R * c
+
+
+def find_nearby_critical_infrastructure(lat: float, lon: float, max_radius_m: float = 1200.0) -> List[NearbyInfrastructureMatch]:
+    """
+    Sightline Engine Proximity Search:
+    Scans strategic critical infrastructure assets and returns those within max_radius_m,
+    sorted by proximity ascending.
+    """
+    if lat is None or lon is None:
+        return []
+
+    matches = []
+    critical_categories = {
+        "substation", "energy", "fuel_depot", "telecom", "defense_industry",
+        "railway", "airport", "bridge"
+    }
+
+    for name, data in KYIV_POI_DATABASE.items():
+        cat = data.get("category", "")
+        if cat not in critical_categories:
+            continue
+
+        poi_lat = data.get("lat")
+        poi_lon = data.get("lon")
+        if poi_lat is None or poi_lon is None:
+            continue
+
+        dist = calculate_haversine_distance_m(lat, lon, poi_lat, poi_lon)
+        if dist <= max_radius_m:
+            cat_label = INFRASTRUCTURE_CATEGORY_LABELS.get(cat, "⚠️ Стратегічний об'єкт")
+            matches.append(NearbyInfrastructureMatch(
+                name=name,
+                category=cat,
+                category_label=cat_label,
+                lat=poi_lat,
+                lon=poi_lon,
+                distance_m=round(dist, 1),
+                address=data.get("address", name)
+            ))
+
+    matches.sort(key=lambda x: x.distance_m)
+    return matches
 
 
 def match_poi(text: str) -> Optional[PoiMatch]:

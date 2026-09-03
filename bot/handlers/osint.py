@@ -516,3 +516,111 @@ async def cmd_network_graph(message: types.Message):
 async def on_refresh_network_graph(callback: types.CallbackQuery):
     await callback.answer("Оновлюю граф мережі...")
     await cmd_network_graph(callback.message)
+
+
+@router.message(Command("raycast"))
+async def cmd_drone_raycast(message: types.Message):
+    """
+    OpenAthena Drone Raycast Command.
+    Usage: /raycast <lat> <lon> <alt_m> <pitch_deg> <yaw_deg>
+    Example: /raycast 50.4500 30.5200 320 -45 90
+    """
+    args = (message.text or "").split()[1:]
+    if len(args) < 5:
+        await safe_send(
+            message,
+            "🎯 <b>КАЛЬКУЛЯТОР ЦІЛЕЙ З ДРОНІВ (OpenAthena Core)</b>\n\n"
+            "Розрахунок точних GPS-координат цілі на землі за кутами камери БпЛА та рельєфом (DEM).\n\n"
+            "<b>Формат команди:</b>\n"
+            "<code>/raycast &lt;lat&gt; &lt;lon&gt; &lt;alt_m&gt; &lt;pitch&gt; &lt;yaw&gt;</code>\n\n"
+            "<b>Приклад (DJI Mavic / Autel):</b>\n"
+            "<code>/raycast 50.4500 30.5200 320 -45 90</code>\n"
+            "<i>(де -45° — нахил камери вниз, 90° — курс на схід)</i>"
+        )
+        return
+
+    try:
+        lat = float(args[0])
+        lon = float(args[1])
+        alt = float(args[2])
+        pitch = float(args[3])
+        yaw = float(args[4])
+    except ValueError:
+        await safe_send(message, "❌ Помилка: аргументи повинні бути числовими значеннями.")
+        return
+
+    from worker.osint.drone_raycast import calculate_raycast_target
+    res = calculate_raycast_target(
+        drone_lat=lat,
+        drone_lon=lon,
+        drone_alt_m=alt,
+        gimbal_pitch_deg=pitch,
+        gimbal_yaw_deg=yaw,
+        ground_alt_m=120.0
+    )
+
+    gmap_url = f"https://www.google.com/maps?q={res.target_lat},{res.target_lon}"
+
+    text = (
+        "🎯 <b>РЕЗУЛЬТАТ РОЗРАХУНКУ ЦІЛІ (OpenAthena)</b>\n\n"
+        f"📍 <b>Координати цілі:</b> <code>{res.target_lat}, {res.target_lon}</code>\n"
+        f"📏 <b>Дистанція по землі:</b> ~{int(res.ground_range_m)} м\n"
+        f"📐 <b>Похила дальність (Slant range):</b> ~{int(res.slant_range_m)} м\n"
+        f"🏔 <b>Висота рельєфу цілі:</b> ~{res.target_alt_m} м (DEM)\n"
+        f"🚁 <b>Позиція БпЛА:</b> <code>{res.drone_lat}, {res.drone_lon}</code> (alt: {res.drone_alt_m} м)\n"
+        f"🧭 <b>Кути:</b> Тангаж: {res.gimbal_pitch_deg}°, Курс: {res.gimbal_yaw_deg}°\n"
+        f"🟢 <b>Надійність розрахунку:</b> {res.confidence}\n\n"
+        f"🗺️ <a href='{gmap_url}'>Відкрити ціль на карті Google</a>"
+    )
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🗺️ Точка удару на карті", url=gmap_url)
+    await safe_send(message, text, reply_markup=builder.as_markup(), disable_web_page_preview=True)
+
+
+@router.message(Command("ew"))
+@router.message(Command("jamming"))
+@router.message(Command("rfi"))
+@router.message(F.text == "📡 Радіозавади та РЕБ")
+async def cmd_ew_interference(message: types.Message):
+    """
+    Sentinel-1 CSAR 5 GHz Radio Frequency Interference (RFI) / EW Tracker.
+    """
+    from worker.sensors.sentinel_rfi import get_live_ew_interference
+    data = get_live_ew_interference()
+    features = data.get("features", [])
+
+    dash_url = get_dashboard_url()
+
+    lines = [
+        "📡 <b>СУПУТНИКОВИЙ МОНІТОРИНГ РЕБ ТА РЛС (Sentinel-1 CSAR 5 GHz)</b>",
+        f"🛰️ <i>Сенсор:</i> <b>{data.get('sensor')}</b> | <i>Виявлено вузлів:</i> <b>{len(features)}</b>\n",
+        "⚡ <b>АКТИВНІ СЕКТОРИ РАДІОВИПРОМІНЮВАННЯ ТА ЗАВАД:</b>"
+    ]
+
+    for idx, f in enumerate(features, 1):
+        props = f["properties"]
+        lines.append(
+            f"<b>{idx}. {props['name']}</b>\n"
+            f"   • {props['emitter_label']}\n"
+            f"   • <i>Інтенсивність:</i> <b>{props['intensity']}</b> | Азимут: {props['azimuth_deg']}°\n"
+            f"   • <code>{f['geometry']['coordinates'][1]:.4f}, {f['geometry']['coordinates'][0]:.4f}</code>\n"
+        )
+
+    lines.append(
+        f"🗺️ <b>Тактична карта РЕБ:</b>\n"
+        f"👉 <a href='{dash_url}'>Переглянути шар радіозавад на карті</a>"
+    )
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🌐 Відкрити карту РЕБ", url=dash_url)
+    builder.button(text="🔄 Оновити дані", callback_data="refresh_ew_data")
+    builder.adjust(1)
+
+    await safe_send(message, "\n".join(lines), reply_markup=builder.as_markup(), disable_web_page_preview=True)
+
+
+@router.callback_query(F.data == "refresh_ew_data")
+async def on_refresh_ew_data(callback: types.CallbackQuery):
+    await callback.answer("Оновлюю дані Sentinel-1 RFI...")
+    await cmd_ew_interference(callback.message)

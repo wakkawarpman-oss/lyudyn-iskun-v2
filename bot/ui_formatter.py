@@ -182,6 +182,10 @@ def format_human_event_card(idx: int, e: DetectedEvent, show_snippet: bool = Tru
         f"{badge} — <i>{explanation}.</i>"
     ]
 
+    nearby_infra = getattr(e, "nearby_infrastructure", None)
+    if nearby_infra:
+        lines.append(f"🎯 <b>Ймовірна ціль:</b> {html.escape(nearby_infra)}")
+
     if show_snippet and e.message_text:
         snippet = clean_event_snippet(e.message_text, 110)
         if snippet:
