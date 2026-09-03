@@ -143,16 +143,16 @@ async def main():
 
     os.makedirs("/app/media", exist_ok=True)
     
-    print(f"Initializing {len(SESSION_STRINGS)} Telethon sessions (Pool Mode)...")
+    print(f"Initializing {len(SESSION_STRINGS)} Telethon sessions (Pool Mode)...", flush=True)
     clients = []
     for idx, sstr in enumerate(SESSION_STRINGS):
         client = TelegramClient(StringSession(sstr), API_ID, API_HASH)
         await client.start()
         clients.append(client)
-        print(f"✅ Session {idx+1}/{len(SESSION_STRINGS)} authenticated.")
+        print(f"✅ Session {idx+1}/{len(SESSION_STRINGS)} authenticated.", flush=True)
 
     # Validate channels using the first client (they are global anyway)
-    print("Validating channels...")
+    print("Validating channels...", flush=True)
     valid_channels_names = []
     for ch in TARGET_CHANNELS:
         try:
@@ -160,36 +160,31 @@ async def main():
             await clients[0].get_entity(ch)
             valid_channels_names.append(ch)
         except Exception as e:
-            print(f"❌ Skipping invalid channel {ch}: {e}")
+            print(f"❌ Skipping invalid channel {ch}: {e}", flush=True)
 
     if not valid_channels_names:
-        print("No valid channels found. Exiting.")
+        print("No valid channels found. Exiting.", flush=True)
         return
 
-    # Distribute channels evenly across the pool (round-robin)
+    # Bind all channels to clients. Primary session (Session 1) has full resolving rights
     clients_dict = {client: [] for client in clients}
-    for idx, ch in enumerate(valid_channels_names):
-        assigned_client = clients[idx % len(clients)]
-        clients_dict[assigned_client].append(ch)
-    
-    for idx, (client, assigned_channels) in enumerate(clients_dict.items()):
-        if not assigned_channels:
-            continue
-        print(f"🤖 Assigning {len(assigned_channels)} channels to Session {idx+1}")
-        
-        valid_entities = []
-        for ch in assigned_channels:
-            try:
-                ent = await client.get_entity(ch)
-                valid_entities.append(ent)
-            except Exception as e:
-                print(f"⚠️ Error resolving {ch} on Session {idx+1}: {e}")
-        
-        clients_dict[client] = valid_entities
-        
-        # Register handler specifically for this client's chunk of channels
-        @client.on(events.NewMessage(chats=valid_entities))
-        async def handler(event, current_client=client): # Capture client in closure
+    primary_client = clients[0]
+
+    primary_entities = []
+    for ch in valid_channels_names:
+        try:
+            ent = await primary_client.get_entity(ch)
+            primary_entities.append(ent)
+        except Exception as e:
+            print(f"⚠️ Error resolving {ch} on primary client: {e}", flush=True)
+
+    print(f"📡 Primary Session bound to {len(primary_entities)} active channels across Ukraine!", flush=True)
+    clients_dict[primary_client] = primary_entities
+
+    # Register NewMessage handler on primary client
+    if primary_entities:
+        @primary_client.on(events.NewMessage(chats=primary_entities))
+        async def primary_handler(event):
             msg = event.message
             media_path = None
             if getattr(msg, 'photo', None):
@@ -201,11 +196,6 @@ async def main():
                 except Exception as e:
                     print(f"Failed to download media: {e}")
             elif getattr(msg, 'video', None):
-                # Videos were previously ignored entirely (has_media=True but
-                # media_path stayed None, so no OSINT ever ran on them).
-                # Bound duration/size before downloading — strike footage is
-                # usually short; long videos aren't worth the bandwidth/disk
-                # for a single representative frame downstream.
                 try:
                     duration = getattr(msg.file, 'duration', None) or 0
                     size = getattr(msg.file, 'size', None) or 0
@@ -235,7 +225,7 @@ async def main():
             }
             
             celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
-            print(f"Pushed live msg {msg.id} from {payload['channel']} to Celery (via Session)")
+            print(f"⚡ Live event from {payload['channel']} (ID: {msg.id}) -> Celery Worker")
 
     # Initial sync
     sync_tasks = []
