@@ -74,7 +74,9 @@ def test_full_pipeline_creates_one_incident():
         "short_summary": "Вибух на Оболоні",
     })
 
-    with patch("worker.llm_engine.requests.post", return_value=_mock_llm_response(llm_reply)):
+    fake_db = _FakeSession()
+    with patch("worker.tasks.SessionLocal", return_value=fake_db), \
+         patch("worker.llm_engine.requests.post", return_value=_mock_llm_response(llm_reply)):
         extracted = pipeline_extract(payload_str)
 
     assert extracted["skip"] is False
@@ -83,7 +85,6 @@ def test_full_pipeline_creates_one_incident():
     assert geocoded["geom_wkt"] is not None
     assert geocoded["is_fallback_geo"] is False  # "Оболонь" is a real toponym match
 
-    fake_db = _FakeSession()
     with patch("worker.tasks.SessionLocal", return_value=fake_db):
         pipeline_cluster_and_save(geocoded)
 
@@ -109,7 +110,8 @@ def test_pipeline_skips_non_kyiv_messages():
         "event_type": "explosion",
         "location": "Одеса",
     })
-    with patch("worker.llm_engine.requests.post", return_value=_mock_llm_response(llm_reply)):
+    with patch("worker.tasks.SessionLocal", return_value=_FakeSession()), \
+         patch("worker.llm_engine.requests.post", return_value=_mock_llm_response(llm_reply)):
         extracted = pipeline_extract(json.dumps(payload))
 
     assert extracted["skip"] is True

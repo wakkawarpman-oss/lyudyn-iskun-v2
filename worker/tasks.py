@@ -18,6 +18,19 @@ from worker.osint.video_frame_extractor import is_video_file, extract_representa
 
 
 geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
+
+
+def flush_api_caches():
+    """Deletes the cached API responses so the web map/stats pick up a
+    change on their NEXT poll instead of waiting out the cache TTL
+    (api/main.py: 30-60s). Previously only called once a day from
+    cleanup_old_events — meaning a brand new incident was invisible to the
+    map for up to ~60-90s (TTL + poll interval) the rest of the day."""
+    try:
+        for k in ["api:events", "api:stats", "api:shelters", "api:geoint:zones"]:
+            redis_client.delete(k)
+    except Exception as re:
+        logger.warning(f"Redis cache flush warning: {re}")
 logger = logging.getLogger(__name__)
 
 # Official government/military channels
@@ -120,9 +133,31 @@ def pipeline_extract(self, payload_str):
     payload = json.loads(payload_str)
     text = payload.get("text", "")
     media_path = payload.get("media_path")
-    
+
     if not text and not media_path:
         return {"skip": True, "reason": "empty"}
+
+    # Cheap early exit BEFORE the Groq LLM call: RSS re-fetches its 1-hour
+    # window every 5 minutes and /sync re-fetches the last 5 messages per
+    # channel unconditionally, so the same message routinely arrives here
+    # already-processed. The only other duplicate check lives at the very
+    # end of the chain (pipeline_cluster_and_save), so without this, a
+    # message that's already in the DB still pays for a full LLM call and
+    # geocode attempt before being discarded. That final check stays in
+    # place as a second line of defense against duplicate rows for two
+    # near-simultaneous submissions of the same message.
+    channel = payload.get("channel", "")
+    message_id = payload.get("message_id")
+    if channel and message_id is not None:
+        db = SessionLocal()
+        try:
+            if db.query(DetectedEvent.id).filter(
+                DetectedEvent.source_channel == channel,
+                DetectedEvent.message_id == message_id
+            ).first():
+                return {"skip": True, "reason": "already_processed"}
+        finally:
+            db.close()
         
     geom_wkt = None
     osint_location = None
@@ -414,6 +449,7 @@ def pipeline_cluster_and_save(self, data):
                 cluster_match.verification_status = "OFFICIAL"
 
             db.commit()
+            flush_api_caches()
             return
 
         # NEW Incident
@@ -465,6 +501,7 @@ def pipeline_cluster_and_save(self, data):
         )
         db.add(event)
         db.commit()
+        flush_api_caches()
     except Exception as e:
         db.rollback()
         logger.error(f"DB Error: {e}")
@@ -561,14 +598,8 @@ def cleanup_old_events(retention_hours: int = 24):
             f"Archived {archived_count} physical strike records (>90d)."
         )
 
-        # Flush redis API caches so all map/stats caches refresh immediately
-        try:
-            r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
-            for k in ["api:events", "api:stats", "api:shelters", "api:geoint:zones"]:
-                r.delete(k)
-            logger.info("Daily Prune: Flushed stale API caches from Redis.")
-        except Exception as re:
-            logger.warning(f"Redis cache flush warning: {re}")
+        flush_api_caches()
+        logger.info("Daily Prune: Flushed stale API caches from Redis.")
 
         return {
             "tier1_deleted_24h_garbage": garbage_deleted,

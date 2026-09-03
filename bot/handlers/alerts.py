@@ -1,4 +1,3 @@
-import asyncio
 import os
 from datetime import datetime, timedelta
 from aiogram import Router, types, F
@@ -49,32 +48,41 @@ async def cmd_sync_events(message: types.Message):
         "• ШІ-аналіз та геоприв'язка нових інцидентів...</i>"
     )
     
+    # Snapshot BEFORE triggering sync — this is the pre-sync baseline, not a
+    # result of the sync we're about to kick off (see below for why we can't
+    # honestly report a post-sync count here).
+    db = SessionLocal()
+    total_24h_before = 0
+    try:
+        threshold = datetime.utcnow() - timedelta(hours=24)
+        total_24h_before = db.query(func.count(DetectedEvent.id)).filter(
+            DetectedEvent.detected_at >= threshold,
+            DetectedEvent.source_channel.not_ilike('test%')
+        ).scalar() or 0
+    finally:
+        db.close()
+
     import redis.asyncio as aioredis
     try:
         r = aioredis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
         await r.publish("sync_commands", "sync_now")
     except Exception as e:
         logger.error(f"Redis publish error: {e}")
-        
-    await asyncio.sleep(4)
-    
-    db = SessionLocal()
-    total_24h = 0
-    try:
-        threshold = datetime.utcnow() - timedelta(hours=24)
-        total_24h = db.query(func.count(DetectedEvent.id)).filter(
-            DetectedEvent.detected_at >= threshold,
-            DetectedEvent.source_channel.not_ilike('test%')
-        ).scalar() or 0
-    finally:
-        db.close()
-        
+
+    # NOT claiming completion here: the listener re-fetches up to 5 messages
+    # from each of 20+ channels, and each one runs the full LLM+geocode
+    # pipeline (real Groq API calls) asynchronously via Celery — that
+    # reliably takes longer than any fixed short wait would cover. Only say
+    # what's actually true: it was triggered, and processing runs in the
+    # background.
     await safe_send(
         message,
-        "✅ <b>АКТУАЛІЗАЦІЮ ПОДІЙ УСПІШНО ЗАВЕРШЕНО!</b>\n\n"
-        f"📊 <b>Усього актуальних інцидентів у базі (24 год):</b> <code>{total_24h}</code>\n"
-        "Стрічка свіжих подій та інтерактивна мапа повністю синхронізовані.\n\n"
-        "👉 Натисніть <b>💥 Резонанс</b> або <b>🎖 Ключові інциденти</b> для перегляду."
+        "🔄 <b>Актуалізацію ЗАПУЩЕНО у фоні.</b>\n\n"
+        f"📊 <b>Інцидентів у базі станом ЗАРАЗ (24 год, до цього запуску):</b> <code>{total_24h_before}</code>\n"
+        "20+ джерел опитуються, нові повідомлення проходять ШІ-аналіз та геоприв'язку — "
+        "це займає час, не миттєво. Нові/оновлені дані з'являться в стрічці та на мапі "
+        "протягом ~30-60 секунд по мірі обробки.\n\n"
+        "👉 Натисніть <b>💥 Резонанс</b> або <b>🎖 Ключові інциденти</b> за хвилину-дві для перегляду."
     )
 
 

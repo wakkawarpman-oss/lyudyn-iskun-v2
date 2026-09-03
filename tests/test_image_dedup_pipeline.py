@@ -78,7 +78,9 @@ def test_image_phash_is_computed_and_saved_on_the_event(tmp_path):
         "short_summary": "Вибух на Оболоні",
     })
 
-    with patch("worker.osint.exif_extractor.EXIFExtractor.extract", return_value={"has_gps": False}), \
+    fake_db = _FakeSession()
+    with patch("worker.tasks.SessionLocal", return_value=fake_db), \
+         patch("worker.osint.exif_extractor.EXIFExtractor.extract", return_value={"has_gps": False}), \
          patch("worker.osint.ai_geolocation.ai_geo.analyze_image", return_value=None), \
          patch("worker.llm_engine.requests.post", return_value=_mock_llm_response(llm_reply)):
         extracted = pipeline_extract(json.dumps(payload))
@@ -87,7 +89,6 @@ def test_image_phash_is_computed_and_saved_on_the_event(tmp_path):
 
     geocoded = pipeline_geocode(extracted)
 
-    fake_db = _FakeSession()
     with patch("worker.tasks.SessionLocal", return_value=fake_db):
         pipeline_cluster_and_save(geocoded)
 

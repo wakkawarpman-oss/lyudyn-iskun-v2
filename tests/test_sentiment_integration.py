@@ -70,10 +70,11 @@ def _run_pipeline(text: str, sentiment_reply: dict):
         "short_summary": text[:80],
     }
     side_effect = _make_dual_mock(llm_reply, sentiment_reply)
-    with patch("worker.llm_engine.requests.post", side_effect=side_effect):
+    fake_db = _FakeSession()
+    with patch("worker.tasks.SessionLocal", return_value=fake_db), \
+         patch("worker.llm_engine.requests.post", side_effect=side_effect):
         extracted = pipeline_extract(json.dumps(payload))
     geocoded = pipeline_geocode(extracted)
-    fake_db = _FakeSession()
     with patch("worker.tasks.SessionLocal", return_value=fake_db):
         with patch("worker.llm_engine.requests.post", side_effect=side_effect):
             pipeline_cluster_and_save(geocoded)
@@ -118,7 +119,8 @@ def test_sentiment_not_computed_for_unconfirmed_alerts():
         calls.append(json["messages"][0]["content"])
         return _groq_response(llm_reply)
 
-    with patch("worker.llm_engine.requests.post", side_effect=_side_effect):
+    with patch("worker.tasks.SessionLocal", return_value=_FakeSession()), \
+         patch("worker.llm_engine.requests.post", side_effect=_side_effect):
         extracted = pipeline_extract(json.dumps(payload))
 
     assert extracted["skip"] is False

@@ -86,17 +86,21 @@ def test_tiered_cleanup_execution():
     mock_session.query.return_value.filter.return_value.update.return_value = 2
 
     with patch("worker.tasks.SessionLocal", return_value=mock_session), \
-         patch("worker.tasks.redis.Redis.from_url") as mock_redis:
-        
+         patch("worker.tasks.redis_client") as mock_redis_client:
+        # cleanup_old_events now flushes caches via the shared
+        # flush_api_caches() helper (also called on every new/merged
+        # incident, not just the nightly prune) — reuses the module-level
+        # redis_client instead of opening a fresh connection each time.
+
         result = cleanup_old_events(retention_hours=24)
-        
+
         assert result["status"] == "success"
         assert result["tier1_deleted_24h_garbage"] == 5
         assert result["tier2_archived_90d_strikes"] == 2
         assert result["total_operations"] == 7
-        
+
         # Verify commit called twice (once for Tier 1, once for Tier 2)
         assert mock_session.commit.call_count == 2
         # Verify Redis flush called for stale caches
-        mock_redis.return_value.delete.assert_any_call("api:events")
-        mock_redis.return_value.delete.assert_any_call("api:stats")
+        mock_redis_client.delete.assert_any_call("api:events")
+        mock_redis_client.delete.assert_any_call("api:stats")

@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["NONE"]
+    volumes:
+    - ./bot:/app/bot
   cloudflared:
     command: tunnel --url http://web_api:80
     depends_on:
