@@ -356,9 +356,9 @@ def get_radar_ew_interference():
     return get_live_ew_interference()
 
 @app.get("/api/v1/alert/status")
-def get_live_alert_status():
+def get_live_alert_status(oblast: Optional[str] = None):
     from bot.alert_monitor import get_current_kyiv_alert_status
-    status = get_current_kyiv_alert_status()
+    status = get_current_kyiv_alert_status(oblast=oblast)
     if isinstance(status.get("timestamp"), datetime.datetime):
         status["timestamp"] = status["timestamp"].isoformat()
     return status

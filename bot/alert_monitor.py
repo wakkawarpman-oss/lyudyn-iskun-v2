@@ -6,7 +6,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 import redis
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -128,9 +128,39 @@ def format_stop_monitoring_banner(region: str = "м. Київ та Київсь�
     )
 
 
-def get_current_kyiv_alert_status() -> Dict[str, any]:
+OBLAST_ALERT_KEYWORDS: Dict[str, List[str]] = {
+    "kyiv_city": ["київ", "киев", "столиц"],
+    "kyiv_oblast": ["київщин", "бровар", "борисп", "ірп", "буч", "біла церква", "васильків", "обухів"],
+    "vinnytsia": ["вінниц", "винниц"],
+    "volyn": ["волин", "луцьк", "ковель"],
+    "dnipropetrovsk": ["дніпр", "днепр", "кривий ріг", "нікопол", "павлоград", "кам'янське"],
+    "donetsk": ["донецьк", "краматорськ", "слов'янськ", "покровськ"],
+    "zhytomyr": ["житомир", "бердичів", "коростень"],
+    "zakarpattia": ["закарпат", "ужгород", "мукачево"],
+    "zaporizhzhia": ["запоріж", "запорож", "мелітопол", "бердянськ"],
+    "ivano_frankivsk": ["івано-франків", "прикарпат", "коломи"],
+    "kirovohrad": ["кіровоград", "кропивницьк", "олександрі"],
+    "luhansk": ["луганськ", "сєвєродонецьк"],
+    "lviv": ["львів", "львов", "стрий", "дрогобич"],
+    "mykolaiv": ["миколаїв", "николаев", "очаків"],
+    "odesa": ["одес", "чорноморськ", "ізмаїл", "білгород"],
+    "poltava": ["полтав", "кременчук", "миргород"],
+    "rivne": ["рівнен", "ровно", "дубно", "сарни"],
+    "sumy": ["сумськ", "суми", "конотоп", "шостк", "охтирк"],
+    "ternopil": ["тернопіль", "тернополь", "чо Bones"],
+    "kharkiv": ["харків", "харьков", "чугуїв", "куп'янськ", "лозова"],
+    "kherson": ["херсон", "берислав", "каховка"],
+    "khmelnytskyi": ["хмельницьк", "кам'янець", "шепетівк", "старокостянтинів"],
+    "cherkasy": ["черкас", "умань", "сміла"],
+    "chernivtsi": ["чернівц", "буковин"],
+    "chernihiv": ["чернігів", "ніжин", "прилуки"],
+    "crimea": ["крим", "севастопол", "сімферопол", "керч"],
+    "sevastopol": ["севастопол"]
+}
+
+def get_current_kyiv_alert_status(oblast: Optional[str] = None) -> Dict[str, any]:
     """
-    Checks the latest air raid alert status for Kyiv and Kyiv Oblast.
+    Checks the latest air raid alert status for a specific oblast or Kyiv.
     Queries recent database events from fastest official and verified monitoring channels.
     """
     db = SessionLocal()
@@ -139,7 +169,8 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
         since = datetime.utcnow() - timedelta(hours=6)
         target_channels = [
             "kyiv_alarm", "va_kyiv", "kyivcityofficial", "kpszsu",
-            "air_alert_ua", "1181169156", "eradarrua", "kievreal1", "vanek_nikolaev", "monitor_ukr"
+            "air_alert_ua", "1181169156", "eradarrua", "kievreal1", "vanek_nikolaev", "monitor_ukr",
+            "suspilnednipro", "dnipropetrovskaoda", "synegubov", "suspilnekharkiv"
         ]
         official_events = db.query(
             DetectedEvent.message_text,
@@ -148,17 +179,22 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
         ).filter(
             DetectedEvent.detected_at >= since,
             func.lower(DetectedEvent.source_channel).in_(target_channels)
-        ).order_by(DetectedEvent.detected_at.desc()).limit(20).all()
+        ).order_by(DetectedEvent.detected_at.desc()).limit(30).all()
+
+        target_kws = None
+        if oblast and oblast in OBLAST_ALERT_KEYWORDS:
+            target_kws = OBLAST_ALERT_KEYWORDS[oblast]
+        elif not oblast or oblast in ("kyiv", "kyiv_city"):
+            target_kws = ["київ", "киев", "столиц"]
 
         for ev in official_events:
             text_lower = (ev.message_text or "").lower()
             ch_lower = (ev.source_channel or "").lower()
-            is_kyiv_relevant = (
-                any(k in ch_lower for k in ["kyiv", "kiev", "1181169156"]) or
-                any(w in text_lower for w in ["київ", "киев", "київщин", "столиц", "бровар", "борисп", "ірп", "буч"])
-            )
-            if not is_kyiv_relevant:
-                continue
+
+            if target_kws:
+                is_relevant = any(k in ch_lower for k in target_kws) or any(w in text_lower for w in target_kws)
+                if not is_relevant:
+                    continue
 
             if any(w in text_lower for w in ["відбій", "отбой", "чисто", "clear"]):
                 return {
@@ -169,7 +205,7 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
                     "message": ev.message_text,
                     "civilian_status": "Магазини, ТРЦ та транспорт відновлюють роботу"
                 }
-            elif any(w in text_lower for w in ["тривога", "ракетна небезпека", "загроза", "бпла над києвом", "пуск"]):
+            elif any(w in text_lower for w in ["тривога", "ракетна небезпека", "загроза", "пуск", "увага"]):
                 return {
                     "is_alert": True,
                     "status_text": "ACTIVE",
@@ -178,6 +214,16 @@ def get_current_kyiv_alert_status() -> Dict[str, any]:
                     "message": ev.message_text,
                     "civilian_status": "Магазини та транспорт зачинені"
                 }
+
+        # Fallback default: all clear
+        return {
+            "is_alert": False,
+            "status_text": "CLEAR",
+            "source": "Офіційні канали ОВА / ПС ЗСУ",
+            "timestamp": datetime.utcnow(),
+            "message": "Активних тривог не зафіксовано",
+            "civilian_status": "Магазини, ТРЦ та транспорт працюють у штатному режимі"
+        }
 
         # Fallback: check Redis cached state or external API
         cached_state = redis_client.get(ALERT_STATE_KEY)

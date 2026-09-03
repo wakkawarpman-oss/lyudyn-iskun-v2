@@ -80,6 +80,7 @@ services:
     - ./api:/app/api
     - ./worker:/app/worker
     - ./database:/app/database
+    - ./bot:/app/bot
 volumes:
   media_data: null
   postgres_data: null
