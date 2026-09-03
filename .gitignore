@@ -13,3 +13,10 @@ node_modules/
 .DS_Store
 .omc/
 .venv/
+*.session
+*.session-journal
+*.tar.gz
+*.zip
+working_sessions.json
+active_pool*.txt
+graphify-out/
