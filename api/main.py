@@ -60,6 +60,8 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
         DetectedEvent.is_official,
         DetectedEvent.has_media,
         DetectedEvent.is_fallback_geo,
+        DetectedEvent.geo_precision,
+        DetectedEvent.geo_radius_m,
         DetectedEvent.message_text,
         func.ST_Y(DetectedEvent.geom).label('lat'),
         func.ST_X(DetectedEvent.geom).label('lon')
@@ -74,7 +76,18 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
         if e.is_fallback_geo:
             continue
 
-        if e.has_media:
+        prec = getattr(e, "geo_precision", "settlement") or "settlement"
+        rad = getattr(e, "geo_radius_m", 2000) or 2000
+
+        if prec == "exact":
+            logic = f"🎯 Точні GPS координати (EXIF ±{rad}м)"
+        elif prec == "building":
+            logic = f"🏢 Тактичний об'єкт POI (±{rad}м)"
+        elif prec == "address":
+            logic = f"📍 Точна адреса будинку (±{rad}м)"
+        elif prec == "street":
+            logic = f"🛣️ Вулиця / Магістраль (±{rad}м)"
+        elif e.has_media:
             logic = "📸 Фото EXIF GPS / Vision AI"
         elif e.is_official:
             logic = "🏛️ Офіційний звіт КМВА / Мера"
@@ -97,6 +110,8 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
             "sources_count": e.sources_count or 1,
             "is_official": e.is_official or False,
             "has_media": e.has_media or False,
+            "geo_precision": prec,
+            "geo_radius_m": rad,
             "geocoding_logic": logic,
             "message_text": e.message_text[:140] if e.message_text else ""
         })

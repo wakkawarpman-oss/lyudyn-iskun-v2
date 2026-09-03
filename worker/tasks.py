@@ -400,6 +400,8 @@ def pipeline_cluster_and_save(self, data):
             location_text=final_location_text,
             geom=WKTElement(geom_wkt, srid=4326) if geom_wkt else None,
             is_fallback_geo=is_fallback_geo,
+            geo_precision=data.get("precision_tier", "settlement"),
+            geo_radius_m=data.get("precision_radius_m", 2000),
             significance_score=sig_score,
             confidence_score=conf_score,
             resonance_score=res_score,

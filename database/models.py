@@ -57,6 +57,10 @@ class DetectedEvent(Base):
     sources_list = Column(String, default="") # Comma-separated channel names
     is_official = Column(Boolean, default=False)
     
+    # High-Precision Spatial Metrics
+    geo_precision = Column(String, default="settlement", index=True) # exact | building | address | street | settlement | district | region
+    geo_radius_m = Column(Integer, default=2000) # Uncertainty radius in meters
+
     # Trust Tier System
     source_tier = Column(String, default="B", index=True) # 'S', 'A', 'B'
     source_weight = Column(Float, default=0.5)
