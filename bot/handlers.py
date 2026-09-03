@@ -19,9 +19,29 @@ import redis
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+ADMIN_ID = os.getenv("ADMIN_ID", "123456789")
 
 import asyncio
 import html
+import functools
+
+
+def admin_only(handler):
+    """Restricts a handler to ADMIN_ID. Shared-state / shared-cost actions
+    only — never put this on a self-service action scoped to the caller's
+    own data (e.g. deleting one's own saved API key would stop working for
+    everyone else if gated this way)."""
+    @functools.wraps(handler)
+    async def wrapper(message: types.Message, *args, **kwargs):
+        if str(message.from_user.id) != ADMIN_ID:
+            await message.answer("⛔ Недостатньо прав.")
+            return
+        return await handler(message, *args, **kwargs)
+    return wrapper
+
+
+def is_admin(user_id) -> bool:
+    return str(user_id) == ADMIN_ID
 
 def format_source_display(src):
     if not src: return "невідомо"
@@ -338,6 +358,7 @@ async def cmd_start(message: types.Message):
 @router.message(F.text == "\U0001f504 АКТУАЛІЗАЦІЯ ПОДІЙ")
 @router.message(F.text.ilike("%актуалізація%"))
 @router.message(F.text.ilike("%актуализация%"))
+@admin_only
 async def cmd_sync_events(message: types.Message):
     await safe_send(
         message,
@@ -1185,6 +1206,7 @@ async def _save_user_key(message: types.Message, raw_key: str):
 
 
 @router.message(Command("delkey"))
+@admin_only
 async def cmd_del_key(message: types.Message):
     db = SessionLocal()
     try:
@@ -1275,6 +1297,21 @@ async def handle_photo(message: types.Message, bot: Bot):
             user_api_key = decrypt_key(uk.openai_api_key)
     finally:
         db.close()
+
+    # Photo OSINT falls back to the bot's own shared OPENAI_API_KEY when the
+    # user has no personal one -- that cost lands on the bot owner, so gate
+    # it to admin unless the user brings their own key (then the spend is
+    # theirs).
+    if not user_api_key and not is_admin(message.from_user.id):
+        await safe_send(
+            message,
+            "\U0001f512 <b>Photo OSINT \u043f\u043e\u0442\u0440\u0435\u0431\u0443\u0454 \u043a\u043b\u044e\u0447\u0430 OpenAI.</b>\n\n"
+            "\u041f\u0456\u0434\u043a\u043b\u044e\u0447\u0456\u0442\u044c \u0432\u043b\u0430\u0441\u043d\u0438\u0439 \u0442\u043e\u043a\u0435\u043d \u043a\u043e\u043c\u0430\u043d\u0434\u043e\u044e:\n"
+            "<code>/key sk-\u0432\u0430\u0448_\u043a\u043b\u044e\u0447</code>\n\n"
+            "\u0414\u0435 \u0432\u0437\u044f\u0442\u0438: <a href='https://platform.openai.com/api-keys'>platform.openai.com</a>",
+            disable_web_page_preview=True,
+        )
+        return
 
     effective_key = user_api_key or OPENAI_API_KEY
 
@@ -1611,6 +1648,7 @@ Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
 @router.message(Command("clean"))
 @router.message(Command("flush"))
 @router.message(F.text == "🧹 Очистити старі дані")
+@admin_only
 async def cmd_manual_cleanup(message: types.Message):
     from worker.tasks import cleanup_old_events
     await message.answer("⏳ Запускаю ротацію бази даних та скидання застарілого кешу...")

@@ -53,7 +53,6 @@ def get_events(db: Session = Depends(get_db)):
         DetectedEvent.detected_at,
         DetectedEvent.verification_status,
         DetectedEvent.sources_count,
-        DetectedEvent.sources_list,
         DetectedEvent.is_official,
         DetectedEvent.has_media,
         DetectedEvent.is_fallback_geo,
@@ -97,7 +96,10 @@ def get_events(db: Session = Depends(get_db)):
             "lon": e.lon,
             "verification_status": e.verification_status or "UNVERIFIED_SINGLE_SOURCE",
             "sources_count": e.sources_count or 1,
-            "sources_list": e.sources_list or e.source_channel,
+            # sources_list (the actual monitored Telegram channel names) is
+            # intentionally NOT exposed here — it's the OSINT source list,
+            # not something a public endpoint should hand out. sources_count
+            # already conveys cross-source consensus without naming sources.
             "is_official": e.is_official or False,
             "has_media": e.has_media or False,
             "geocoding_logic": logic
