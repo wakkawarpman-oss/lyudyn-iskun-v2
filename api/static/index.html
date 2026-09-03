@@ -545,10 +545,23 @@
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         // Basemaps
-        const darkBasemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
+        // Esri Dark Gray Canvas — genuinely dark tiles (the old "darkBasemap"
+        // pointed at standard bright OSM tiles despite the name, clashing
+        // with the rest of the tactical dark UI). Esri, not CartoDB, per
+        // this project's tile-layer rule. Canvas base tops out at zoom 16;
+        // past that Leaflet just scales the z16 tiles up rather than
+        // fetching blank ones.
+        const darkBasemap = L.layerGroup([
+            L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri Dark Gray Canvas',
+                maxZoom: 16,
+                maxNativeZoom: 16
+            }),
+            L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 16,
+                maxNativeZoom: 16
+            })
+        ]).addTo(map);
 
         const satBasemap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '&copy; Esri World Imagery',
