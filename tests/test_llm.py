@@ -1,5 +1,4 @@
-import pytest
-from worker.llm_engine import clean_and_validate_json_response, rule_based_fallback_parser
+from worker.llm_engine import rule_based_fallback_parser
 from worker.llm_engine import clean_and_validate_json_response as clean_json_response
 
 def test_clean_json_response():

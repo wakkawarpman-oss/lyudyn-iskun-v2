@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from typing import Literal
 from enum import Enum
 
 class EventTypeEnum(str, Enum):

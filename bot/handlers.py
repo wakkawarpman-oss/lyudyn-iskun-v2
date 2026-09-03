@@ -5,8 +5,7 @@ router = Router()
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-from aiogram.types import WebAppInfo
-from database.models import SessionLocal, DetectedEvent, UserApiKey, BombShelter, encrypt_key, decrypt_key
+from database.models import SessionLocal, DetectedEvent, UserApiKey, encrypt_key, decrypt_key
 from sqlalchemy import func, text, or_
 
 import os
@@ -16,7 +15,6 @@ import json
 import time
 import threading
 import redis
-from bot.broadcaster import broadcaster
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")

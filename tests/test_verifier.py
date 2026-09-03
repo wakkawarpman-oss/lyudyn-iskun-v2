@@ -1,4 +1,3 @@
-import pytest
 from worker.tasks import _get_tier_info
 
 def test_verifier_tier_mapping():

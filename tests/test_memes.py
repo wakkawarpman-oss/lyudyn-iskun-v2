@@ -1,4 +1,3 @@
-import pytest
 
 def mock_meme_gen(topic):
     return f"МЕМ ПРО {topic.upper()}\nЦЕ МЕМ. Не є оперативним зведенням."

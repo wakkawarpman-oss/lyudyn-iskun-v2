@@ -1,4 +1,3 @@
-import os
 import json
 from geoalchemy2.elements import WKTElement
 from database.models import SessionLocal, BombShelter, engine, Base

@@ -1,15 +1,12 @@
 from worker.llm_engine import process_with_llm
-from worker.osint.sentiment import sentiment_analyzer
 import os
 import json
 import logging
-import base64
 import redis
 from celery import shared_task
 from geoalchemy2.elements import WKTElement
 from database.models import SessionLocal, DetectedEvent
 from sqlalchemy import text as sql_text
-import requests
 from geopy.geocoders import Nominatim
 from datetime import datetime, timedelta
 
