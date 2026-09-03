@@ -90,7 +90,7 @@ def get_events(hours: int = 72, db: Session = Depends(get_db)):
             "event_type": e.event_type,
             "location_text": e.location_text,
             "resonance_score": e.resonance_score,
-            "detected_at": e.detected_at.isoformat() if e.detected_at else None,
+            "detected_at": f"{e.detected_at.isoformat()}Z" if e.detected_at else None,
             "lat": e.lat,
             "lon": e.lon,
             "verification_status": e.verification_status or "UNVERIFIED_SINGLE_SOURCE",
@@ -214,7 +214,7 @@ def get_danger_zones(hours: int = 72, db: Session = Depends(get_db)):
             zone_data = geoint_engine.get_tactical_danger_zones(st.lat, st.lon, st.event_type, st.resonance_score)
             zone_data["event_id"] = st.id
             zone_data["location_text"] = st.location_text
-            zone_data["detected_at"] = st.detected_at.isoformat() if st.detected_at else None
+            zone_data["detected_at"] = f"{st.detected_at.isoformat()}Z" if st.detected_at else None
             zones.append(zone_data)
             
     return zones

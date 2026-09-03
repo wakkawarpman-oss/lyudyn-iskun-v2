@@ -570,10 +570,21 @@
         let isPlaying = false;
         let playInterval = null;
 
+        // Robust UTC ISO-8601 Parser (prevents local browser timezone skew)
+        function parseUtcIso(isoStr) {
+            if (!isoStr) return null;
+            let s = String(isoStr).trim();
+            if (!s.endsWith('Z') && !s.includes('+') && !s.includes('-', 10)) {
+                s += 'Z';
+            }
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
         // Time Formatting Helpers (Kyiv Timezone & Relative Time)
         function formatKyivDateTime(isoStr) {
-            if (!isoStr) return { dateStr: '--.--.----', timeStr: '--:--', relStr: '' };
-            const d = new Date(isoStr);
+            const d = parseUtcIso(isoStr);
+            if (!d) return { dateStr: '--.--.----', timeStr: '--:--', relStr: '' };
             // Convert to Europe/Kyiv formatting
             const optionsDate = { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', year: 'numeric' };
             const optionsTime = { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hour12: false };
@@ -792,7 +803,8 @@
                 allRawEvents.forEach(e => {
                     const spec = getEventIconSpec(e.event_type);
                     const dt = formatKyivDateTime(e.detected_at);
-                    const timestampMs = e.detected_at ? new Date(e.detected_at).getTime() : 0;
+                    const parsedD = parseUtcIso(e.detected_at);
+                    const timestampMs = parsedD ? parsedD.getTime() : 0;
 
                     const iconHtml = `
                         <div class="tactical-icon-wrap" style="
@@ -861,7 +873,8 @@
                 // Pre-build cached Blast Danger Zones
                 allRawZones.forEach(z => {
                     const center = [z.center.lat, z.center.lon];
-                    const timestampMs = z.detected_at ? new Date(z.detected_at).getTime() : (Date.now() - 3600000);
+                    const parsedZoneD = parseUtcIso(z.detected_at);
+                    const timestampMs = parsedZoneD ? parsedZoneD.getTime() : (Date.now() - 3600000);
                     const popupContent = popupMap[z.event_id] || `<div style="color:#0f172a; font-family:-apple-system,sans-serif;"><b>📍 ${z.location_text}</b><br>💥 Зона ураження вибуху: ${z.shrapnel_zone_m}м</div>`;
 
                     const group = L.layerGroup();
