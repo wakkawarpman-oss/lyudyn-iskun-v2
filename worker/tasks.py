@@ -156,21 +156,28 @@ def pipeline_extract(self, payload_str):
         "osint_location": osint_location
     }
 
+from worker.canonical_geo import resolve_canonical_toponym
+from worker.scoring import calculate_significance_score, calculate_confidence_score, compute_composite_resonance
+from worker.source_registry import get_source_metadata
+
 @shared_task(name="worker.tasks.pipeline_geocode", bind=True, time_limit=15, autoretry_for=(Exception,), retry_backoff=True, max_retries=2)
 def pipeline_geocode(self, data):
     if data.get("skip"):
         return data
         
     llm_data = data["llm_data"]
-    geom_wkt = data["geom_wkt"]
+    geom_wkt = data.get("geom_wkt")
     
-    location = llm_data.get("location")
-    osm_query = llm_data.get("osm_query") or location
+    raw_location = llm_data.get("location") or "Київ та область"
+    canonical_name, lat, lon = resolve_canonical_toponym(raw_location)
     
-    if not geom_wkt and osm_query:
-        geom_wkt = cached_geocode(osm_query)
-        if not geom_wkt and location:
-            geom_wkt = cached_geocode(f"{location}, Київська область, Україна")
+    # Store normalized canonical name
+    llm_data["location"] = canonical_name
+    
+    if lat is not None and lon is not None:
+        geom_wkt = f"POINT({lon} {lat})"
+    elif not geom_wkt:
+        geom_wkt = cached_geocode(f"{canonical_name}, Київська область, Україна")
             
     data["geom_wkt"] = geom_wkt
     return data
@@ -199,35 +206,21 @@ def pipeline_cluster_and_save(self, data):
         msg_date = datetime.utcnow()
         
     message_id = payload.get("message_id")
-    event_type = llm_data.get("event_type", "unknown")
-    location = llm_data.get("location")
-    is_confirmed = llm_data.get("is_confirmed_incident", False)
+    event_type = llm_data.get("event_type", "general_alert")
+    location = llm_data.get("location") or "Київ та область"
     
-    is_official_src = channel_clean in OFFICIAL_SOURCES
-    text_lower = text.lower()
-    is_panic = any(w in text_lower for w in ['масований прорив', 'все палає', 'все знищено', 'терміново тікайте', 'зрада'])
+    source_meta = get_source_metadata(channel_clean)
+    is_official_src = source_meta["type"] in ["OFFICIAL", "MILITARY"]
+    source_tier = source_meta["tier"]
+    source_weight = source_meta["base_weight"]
     
     final_location_text = f"{location} | 🔍 {osint_location}" if osint_location else location
     final_message_text = llm_data.get("short_summary") or text[:2000]
 
-    base_resonance = 65 if is_confirmed else 35
-    if llm_data.get('casualties') is True or any(w in text_lower for w in ['загибл', 'поранен', 'жертв', 'постраждал']):
-        base_resonance += 25
-    if llm_data.get('damage_level') in ['high', 'critical']:
-        base_resonance += 15
-    if event_type in ['direct_strike', 'explosion']:
-        base_resonance += 15
-    if is_official_src:
-        base_resonance += 10
-
-    views = payload.get("views", 0)
-    forwards = payload.get("forwards", 0)
-    if views > 20000:
-        base_resonance += 10
-    if forwards > 100:
-        base_resonance += 10
-
-    source_tier, source_weight = _get_tier_info(channel)
+    has_media = payload.get("has_media", False)
+    sig_score = calculate_significance_score(event_type, has_media, text)
+    conf_score = calculate_confidence_score([channel], is_official_src, has_media)
+    res_score = compute_composite_resonance(sig_score, conf_score)
 
     db = SessionLocal()
     try:
@@ -237,66 +230,82 @@ def pipeline_cluster_and_save(self, data):
         ).first()
         
         if existing:
-            existing.resonance_score = max(existing.resonance_score, min(base_resonance, 100))
+            existing.significance_score = max(existing.significance_score or 50, sig_score)
+            existing.confidence_score = max(existing.confidence_score or 50, conf_score)
+            existing.resonance_score = compute_composite_resonance(existing.significance_score, existing.confidence_score)
             existing.event_type = event_type
             db.commit()
             return
 
-        threshold_30m = msg_date - timedelta(minutes=30)
-        cluster_match = None
-        if location:
-            query = db.query(DetectedEvent).filter(
-                DetectedEvent.detected_at >= threshold_30m,
-                DetectedEvent.source_channel != channel,
-                DetectedEvent.event_type == event_type
-            )
-            vague_locations = ["київ", "київ та область", "київська область", "kyiv"]
-            if location.lower().strip() in vague_locations:
-                threshold_5m = msg_date - timedelta(minutes=5)
-                query = query.filter(DetectedEvent.detected_at >= threshold_5m)
-                query = query.filter(DetectedEvent.location_text.ilike(f"%{location}%"))
-            else:
-                query = query.filter(DetectedEvent.location_text.ilike(f"%{location}%"))
-                
-            cluster_match = query.order_by(DetectedEvent.detected_at.asc()).first()
+        # Incident Clustering: Look for active incident within 25 minutes
+        threshold_25m = msg_date - timedelta(minutes=25)
+        query = db.query(DetectedEvent).filter(
+            DetectedEvent.detected_at >= threshold_25m,
+            DetectedEvent.location_text == final_location_text
+        )
+        
+        cluster_match = query.order_by(DetectedEvent.detected_at.desc()).first()
 
-        if cluster_match and is_confirmed:
+        if cluster_match:
+            # MERGE into existing incident
             sources_set = set(cluster_match.sources_list.split(',')) if cluster_match.sources_list else {cluster_match.source_channel}
             sources_set.add(channel)
             cluster_match.sources_list = ",".join(filter(None, sources_set))
             cluster_match.sources_count = len(sources_set)
             cluster_match.is_official = cluster_match.is_official or is_official_src
-            cluster_match.source_weight = (cluster_match.source_weight or 0) + source_weight
+            cluster_match.has_media = cluster_match.has_media or has_media
+            cluster_match.last_seen_at = max(cluster_match.last_seen_at or msg_date, msg_date)
             
-            if cluster_match.source_weight >= 1.2 or cluster_match.is_official or cluster_match.has_media:
+            # Upgrade event_type to highest kinetic impact
+            type_hierarchy = {
+                "direct_strike": 5, "casualties": 5, "destruction": 4, "explosion": 3,
+                "fire": 3, "armed_conflict": 3, "air_defense": 2, "radar_track": 1, "general_alert": 0
+            }
+            if type_hierarchy.get(event_type, 0) > type_hierarchy.get(cluster_match.event_type, 0):
+                cluster_match.event_type = event_type
+                cluster_match.message_text = f"{final_message_text} [Оновлено]"
+
+            # Recalculate 2D scores for consolidated incident
+            cluster_match.significance_score = max(cluster_match.significance_score or 50, sig_score)
+            cluster_match.confidence_score = calculate_confidence_score(
+                cluster_match.sources_list,
+                cluster_match.is_official,
+                cluster_match.has_media
+            )
+            cluster_match.resonance_score = compute_composite_resonance(
+                cluster_match.significance_score,
+                cluster_match.confidence_score
+            )
+            if cluster_match.confidence_score >= 85:
                 cluster_match.verification_status = "VERIFIED"
-                cluster_match.resonance_score = min(cluster_match.resonance_score + 15, 100)
-            
+            elif cluster_match.is_official:
+                cluster_match.verification_status = "OFFICIAL"
+
             db.commit()
             return
 
-        if is_official_src or source_tier == "S":
-            verif_status = "OFFICIAL"
-        elif payload.get("has_media") or source_weight >= 1.2:
-            verif_status = "VERIFIED"
-        elif is_panic:
-            verif_status = "POSSIBLE_IPSO"
-            base_resonance = max(base_resonance - 20, 20)
-        else:
-            verif_status = "UNVERIFIED_SINGLE_SOURCE"
+        # NEW Incident
+        import re
+        loc_slug = re.sub(r'[^a-zA-Z0-9а-яА-ЯіїєґІЇЄҐ]', '', location)[:10].upper() or "KYIV"
+        new_incident_id = f"INC-{msg_date.strftime('%Y%m%d%H%M')}-{loc_slug}"
 
         event = DetectedEvent(
+            incident_id=new_incident_id,
             source_channel=channel,
             message_id=message_id,
             message_text=final_message_text,
             event_type=event_type,
             location_text=final_location_text,
             geom=WKTElement(geom_wkt, srid=4326) if geom_wkt else None,
-            resonance_score=min(base_resonance, 100),
+            significance_score=sig_score,
+            confidence_score=conf_score,
+            resonance_score=res_score,
             detected_at=msg_date,
-            has_media=payload.get("has_media", False),
+            first_seen_at=msg_date,
+            last_seen_at=msg_date,
+            has_media=has_media,
             raw_message=payload_str,
-            verification_status=verif_status,
+            verification_status="OFFICIAL" if is_official_src else ("VERIFIED" if conf_score >= 80 else "UNVERIFIED_SINGLE_SOURCE"),
             sources_count=1,
             sources_list=channel,
             is_official=is_official_src,

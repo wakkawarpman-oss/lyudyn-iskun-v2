@@ -32,7 +32,17 @@ class DetectedEvent(Base):
     # PostGIS geometric point for radius searches
     geom = Column(Geometry('POINT', srid=4326), index=True)
     
-    resonance_score = Column(Integer, default=50) # Increased by views/forwards/LLM confidence
+    # Two-Dimensional Scoring (0 - 100)
+    significance_score = Column(Integer, default=50) # Physical severity / destructive impact
+    confidence_score = Column(Integer, default=50)   # Trustworthiness & verification consensus
+    resonance_score = Column(Integer, default=50)    # Composite score for sorting/legacy compatibility
+    
+    # Incident Clustering & Lifecycle Tracking
+    incident_id = Column(String, index=True, nullable=True) # Normalized Incident Identifier (e.g. INC-20260903-BROVARY-01)
+    lifecycle_stage = Column(String, default="DETECTED", index=True) # DETECTED | TRACKING | IMPACT | RESOLVED
+    first_seen_at = Column(DateTime, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    
     has_media = Column(Boolean, default=False)
     raw_message = Column(String) # JSON snapshot of the Telethon message
     
