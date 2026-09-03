@@ -84,6 +84,36 @@ async def cmd_help(message: types.Message):
     )
 
 
+@router.message(F.text == "🎛 Більше функцій...")
+@router.message(Command("more"))
+async def cmd_more_functions(message: types.Message):
+    from bot.keyboards import get_more_keyboard
+    await safe_send(
+        message,
+        "🎛 <b>ДОДАТКОВІ OSINT-МОДУЛІ ТА СЕНСОРИ:</b>\n\n"
+        "• 🔥 <b>Супутник NASA (VIIRS):</b> космічний моніторинг термо-аномалій.\n"
+        "• 🕸️ <b>Мережа ІПСО:</b> аналіз цитувань та сіток ворожих ботів.\n"
+        "• 🎖 <b>Ключові інциденти:</b> резонансні підтверджені події.\n"
+        "• 📊 <b>Аналітика:</b> статистика та зведення за добу.\n"
+        "• 📋 <b>Звіт (12 год):</b> консолідоване оперативне зведення.\n"
+        "• 📡 <b>Статус системи:</b> стан мікросервісів, БД та черг Celery.\n\n"
+        "<i>Оберіть потрібний інструмент нижче:</i>",
+        reply_markup=get_more_keyboard()
+    )
+
+
+@router.message(F.text == "🔙 Головне меню")
+@router.message(Command("menu"))
+async def cmd_back_main_menu(message: types.Message):
+    from bot.keyboards import get_main_keyboard
+    await safe_send(
+        message,
+        "🔙 <b>ГОЛОВНИЙ ОПЕРАТИВНИЙ ЕКРАН</b>\n"
+        "Швидкий доступ до радарів, секторних сповіщень та моніторингу відбою:",
+        reply_markup=get_main_keyboard()
+    )
+
+
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
