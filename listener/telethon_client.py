@@ -38,6 +38,8 @@ async def perform_sync(client, valid_channels):
     print(f"🚀 Performing deep on-demand sync for {len(valid_channels)} channels...")
     for entity in valid_channels:
         try:
+            if isinstance(entity, str):
+                entity = await client.get_entity(entity)
             ch_name = getattr(entity, 'username', None) or str(entity.id)
             recent_msgs = await client.get_messages(entity, limit=10)
             for msg in recent_msgs:
@@ -141,6 +143,8 @@ async def main():
                 valid_entities.append(ent)
             except Exception as e:
                 print(f"⚠️ Error resolving {ch} on Session {idx+1}: {e}")
+        
+        clients_dict[client] = valid_entities
         
         # Register handler specifically for this client's chunk of channels
         @client.on(events.NewMessage(chats=valid_entities))
