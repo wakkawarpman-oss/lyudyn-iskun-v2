@@ -472,6 +472,32 @@ def pipeline_cluster_and_save(self, data):
                     f"existing incident {duplicate_of.incident_id} (id={duplicate_of.id})"
                 )
 
+        # NASA FIRMS Thermal Anomaly Cross-Verification
+        lat = data.get("lat")
+        lon = data.get("lon")
+        if (lat is None or lon is None) and geom_wkt and "POINT" in geom_wkt:
+            try:
+                coords = geom_wkt.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
+                lon = float(coords[0])
+                lat = float(coords[1])
+            except Exception:
+                pass
+
+        if lat and lon and event_type in ['direct_strike', 'explosion', 'fire', 'destruction', 'shelling']:
+            try:
+                from worker.osint.firms_viirs import find_nearby_thermal_anomaly
+                thermal_match = find_nearby_thermal_anomaly(lat, lon, msg_date, max_distance_km=7.0, max_hours_diff=8.0)
+                if thermal_match:
+                    conf_score = min(100, conf_score + 25)
+                    if verification_status not in ["OFFICIAL", "POSSIBLE_IPSO"]:
+                        verification_status = "VERIFIED"
+                    logger.info(
+                        f"NASA FIRMS thermal match for incident {new_incident_id} at ({lat}, {lon}): "
+                        f"FRP {thermal_match.get('frp_mw')}MW, dist {thermal_match.get('distance_km')}km"
+                    )
+            except Exception as e:
+                logger.warning(f"FIRMS cross-verification warning: {e}")
+
         event = DetectedEvent(
             incident_id=new_incident_id,
             source_channel=channel,
@@ -503,7 +529,11 @@ def pipeline_cluster_and_save(self, data):
         db.commit()
         flush_api_caches()
     except Exception as e:
-        db.rollback()
+        if hasattr(db, "rollback"):
+            try:
+                db.rollback()
+            except Exception:
+                pass
         logger.error(f"DB Error: {e}")
         raise
     finally:

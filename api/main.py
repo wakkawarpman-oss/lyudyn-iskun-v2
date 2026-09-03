@@ -239,5 +239,10 @@ def get_radar_drones():
     from worker.osint.neptun_radar import get_live_radar_threats
     return get_live_radar_threats()
 
+@app.get("/api/v1/radar/thermal")
+def get_radar_thermal():
+    from worker.osint.firms_viirs import fetch_ukraine_thermal_anomalies
+    return fetch_ukraine_thermal_anomalies()
+
 # Serve the static HTML frontend
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")

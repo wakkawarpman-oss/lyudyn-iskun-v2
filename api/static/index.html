@@ -475,6 +475,13 @@
                     <span class="slider"></span>
                 </label>
             </label>
+            <label class="layer-item">
+                <span>🔥 Термо-аномалії NASA FIRMS</span>
+                <label class="switch">
+                    <input type="checkbox" id="toggle-thermal" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
         </div>
 
         <div class="section-label">📋 Тактична Легенда</div>
@@ -580,6 +587,7 @@
         const zonesLayer = L.layerGroup().addTo(map);
         const sheltersLayer = L.layerGroup().addTo(map);
         const radarLayer = L.layerGroup().addTo(map);
+        const thermalLayer = L.layerGroup().addTo(map);
         let userMarker = null;
 
         // In-Memory Data Pools for Super-Fast Zero-Lag Timeline Filtering
@@ -666,6 +674,11 @@
         document.getElementById('toggle-radar').addEventListener('change', (e) => {
             if (e.target.checked) map.addLayer(radarLayer);
             else map.removeLayer(radarLayer);
+        });
+
+        document.getElementById('toggle-thermal').addEventListener('change', (e) => {
+            if (e.target.checked) map.addLayer(thermalLayer);
+            else map.removeLayer(thermalLayer);
         });
 
         // GPS Geolocation
@@ -1033,12 +1046,57 @@
             }
         }
 
+        // Live Thermal Anomalies (NASA FIRMS VIIRS Feed)
+        async function loadThermalAnomalies() {
+            try {
+                const res = await fetch('/api/v1/radar/thermal');
+                if (!res.ok) return;
+                const data = await res.json();
+                const anomalies = data.anomalies || [];
+                
+                thermalLayer.clearLayers();
+
+                anomalies.forEach(a => {
+                    if (typeof a.lat !== 'number' || typeof a.lon !== 'number') return;
+                    
+                    const rad = Math.min(14, Math.max(5, Math.round(Math.sqrt(a.frp_mw || 1) * 2.5)));
+                    const marker = L.circleMarker([a.lat, a.lon], {
+                        radius: rad,
+                        fillColor: '#ff4500',
+                        color: '#ffd700',
+                        weight: 1.5,
+                        opacity: 0.9,
+                        fillOpacity: 0.75
+                    });
+
+                    marker.bindPopup(`
+                        <div style="color:#0f172a; font-family:-apple-system,sans-serif; min-width:180px; font-size:12px;">
+                            <div style="font-weight:700; color:#ff4500; font-size:13px; margin-bottom:4px; border-bottom:1px solid #fed7aa; padding-bottom:3px;">
+                                🔥 Термальна аномалія (NASA VIIRS)
+                            </div>
+                            <div>⚡ <b>Потужність (FRP):</b> ${a.frp_mw} МВт</div>
+                            <div>🌡 <b>Температура:</b> ${Math.round(a.brightness_k)} K (${Math.round(a.brightness_k - 273.15)}°C)</div>
+                            <div>🛰 <b>Супутник:</b> ${a.satellite}</div>
+                            <div>🌓 <b>Режим:</b> ${a.daynight === 'N' ? 'Нічний' : 'Денний'} (${a.confidence})</div>
+                            <div style="font-size:10px; color:#64748b; margin-top:5px;">⏱ Час прольоту: ${a.acq_time}</div>
+                        </div>
+                    `);
+
+                    marker.addTo(thermalLayer);
+                });
+            } catch (err) {
+                console.warn('Thermal anomalies load error:', err);
+            }
+        }
+
         // Initialize Map & Data
         loadShelters();
         loadData();
         loadRadarDrones();
+        loadThermalAnomalies();
         setInterval(loadData, 30000);
         setInterval(loadRadarDrones, 15000);
+        setInterval(loadThermalAnomalies, 60000);
 
         // Auto collapse layers panel on mobile
         if (window.innerWidth <= 600) {
