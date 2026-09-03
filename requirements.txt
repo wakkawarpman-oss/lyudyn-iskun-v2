@@ -13,6 +13,7 @@ gpsphoto==2.2.3
 exifread==3.0.0
 opencv-python-headless==4.9.0.80
 numpy==1.26.4
+Pillow==12.3.0
 alembic==1.13.1
 gevent==23.9.1
 pytest==8.0.0
