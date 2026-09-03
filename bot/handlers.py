@@ -835,78 +835,24 @@ def format_factcheck_badge(e: DetectedEvent) -> str:
     return c2_trace
 
 
-BILINGUAL_MAP = [
-    (('нухт', 'харчов', 'пищев', 'пищевых'), 'key_nuht'),
-    (('шевченків', 'шевченков', 'шевченковский', 'шевченківський'), 'key_shevchenko'),
-    (('голосіїв', 'голосеев', 'голосеевский', 'голосіївський'), 'key_golosiiv'),
-    (('поділ', 'подол', 'подольский', 'подільський'), 'key_podil'),
-    (('печерськ', 'печерск', 'печерский', 'печерський'), 'key_pechersk'),
-    (('оболон', 'оболонь', 'оболонский', 'оболонський'), 'key_obolon'),
-    (('солом', 'соломен', 'соломенский', "солом'янський"), 'key_solom'),
-    (('святошин', 'святошинский', 'святошинський'), 'key_svyatosh'),
-    (('деснян', 'деснянский', 'деснянський'), 'key_desnyan'),
-    (('дніпров', 'днепров', 'днепровский', 'дніпровський'), 'key_dniprov'),
-    (('бровар', 'бровары', 'бровари'), 'key_brovary'),
-    (('борисп', 'борисполь', 'бориспольський', 'бориспіль'), 'key_boryspil'),
-    (('ірпін', 'ирпень', 'ирпин'), 'key_irpin'),
-    (('буч', 'буча'), 'key_bucha'),
-    (('васильк', 'васильков'), 'key_vasylk'),
-    (('обух', 'обухов'), 'key_obukh'),
-    (('воскресен', 'воскресенка'), 'key_voskresenka'),
-    (('липки', 'липки'), 'key_lypky'),
-    (('деміївка', 'демеевка'), 'key_demiyivka'),
-    (('березняк', 'березняки'), 'key_bereznyaky'),
-    (('фастів', 'фастов'), 'key_fastiv'),
-    (('вишгород', 'вышгород'), 'key_vyshhorod')
-]
-
-def get_bilingual_cluster_key(text: str) -> str:
-    """Extracts normalized cross-language cluster key for UKR and RUS texts."""
-    if not text:
-        return ""
-    t_lower = text.lower()
-    for variants, key in BILINGUAL_MAP:
-        for v in variants:
-            if v in t_lower:
-                return key
-    return t_lower[:25]
-
-def deduplicate_events(events: list) -> list:
-    """Bilingual Cross-Language Deduplication Engine (UKR + RUS)."""
-    unique_events = []
-    seen_clusters = {}
-    
+def unique_by_incident(events: list) -> list:
+    """Single source of truth: dedup by the worker-assigned incident_id
+    (set in worker/tasks.py's clustering) instead of re-clustering in the
+    bot with separate, looser heuristics. Previously this file ran its own
+    bilingual fuzzy-matching pass (deduplicate_events/BILINGUAL_MAP), which
+    disagreed with what the map API shows (same raw rows, no re-clustering)
+    — e.g. bot said "25 incidents", map showed 334 rows. Both now read the
+    same worker-computed grouping; keeps input order (callers already sort).
+    """
+    seen = set()
+    unique = []
     for e in events:
-        loc_text = e.location_text or ""
-        msg_text = e.message_text or ""
-        full_context = f"{loc_text} {msg_text}"
-        
-        cluster_key = get_bilingual_cluster_key(full_context)
-        
-        if cluster_key in seen_clusters:
-            cluster = seen_clusters[cluster_key]
-            
-            src_set = set(filter(None, (cluster.sources_list or cluster.source_channel or "").split(",")))
-            src_set.add(e.source_channel)
-            if e.sources_list:
-                src_set.update(filter(None, e.sources_list.split(",")))
-            cluster.sources_list = ",".join(src_set)
-            cluster.sources_count = len(src_set)
-            
-            if cluster.sources_count >= 2 or getattr(e, "is_official", False) or getattr(cluster, "is_official", False):
-                cluster.verification_status = "VERIFIED"
-                
-            cluster.resonance_score = max(cluster.resonance_score, e.resonance_score)
-            
-            if ("харчов" in msg_text.lower() or "шевченківський" in msg_text.lower()) or len(msg_text) > len(cluster.message_text or ""):
-                cluster.message_text = e.message_text
-                cluster.location_text = e.location_text or cluster.location_text
-                cluster.detected_at = max(cluster.detected_at, e.detected_at)
-        else:
-            seen_clusters[cluster_key] = e
-            unique_events.append(e)
-            
-    return unique_events
+        key = e.incident_id or f"_row_{e.id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(e)
+    return unique
 
 
 CONFIRMED_INCIDENT_TYPES = ['direct_strike', 'explosion', 'fire', 'destruction', 'casualties', 'armed_conflict', 'shelling']
@@ -932,7 +878,7 @@ async def cmd_report_12h(message: types.Message):
             .all()
         )
 
-        events = deduplicate_events(raw_events)
+        events = unique_by_incident(raw_events)
 
         if not events:
             await message.answer("За останні 12 годин підтверджених фізичних інцидентів у Києві та області не зафіксовано.")
@@ -984,7 +930,7 @@ async def cmd_top_events(message: types.Message):
             .all()
         )
 
-        events = deduplicate_events(raw_events)
+        events = unique_by_incident(raw_events)
 
         if not events:
             await message.answer("Поки що немає даних для ТОПу підтверджених інцидентів по Києву.")
@@ -1034,7 +980,7 @@ async def cmd_resonance(message: types.Message):
             .all()
         )
 
-        events = deduplicate_events(raw_events)
+        events = unique_by_incident(raw_events)
 
         if not events:
             await safe_send(
@@ -1091,7 +1037,7 @@ async def cmd_analytics(message: types.Message):
             .all()
         )
         
-        dedup_events = deduplicate_events(raw_events)
+        dedup_events = unique_by_incident(raw_events)
         
         total_24h = len(dedup_events)
         avg_resonance = round(sum(e.resonance_score or 0 for e in dedup_events) / max(1, total_24h), 1)
