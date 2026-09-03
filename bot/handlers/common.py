@@ -108,15 +108,15 @@ async def cmd_meow(message: types.Message):
     audio_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), chosen_file)
     
     if os.path.exists(audio_path):
-        voice = FSInputFile(audio_path)
+        audio = FSInputFile(audio_path)
         try:
-            await message.answer_voice(
-                voice,
+            await message.answer_audio(
+                audio,
                 caption=f"{category['title']}\n\n{quote}",
                 parse_mode=ParseMode.HTML
             )
             return
         except Exception as e:
-            logger.warning(f"Voice send failed: {e}")
+            logger.warning(f"Audio send failed: {e}")
             
     await safe_send(message, f"{category['title']}\n\n{quote}")
