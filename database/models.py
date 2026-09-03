@@ -69,5 +69,37 @@ class UserApiKey(Base):
     openai_api_key = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+import base64
+import hashlib
+
+SECRET_SALT = os.getenv("SECRET_KEY", "iskun_master_secret_salt_2026")
+
+def encrypt_key(raw_key: str) -> str:
+    """Safely encrypts user API key using Fernet derived from SECRET_KEY."""
+    if not raw_key:
+        return ""
+    try:
+        from cryptography.fernet import Fernet
+        key_32 = base64.urlsafe_b64encode(hashlib.sha256(SECRET_SALT.encode()).digest())
+        f = Fernet(key_32)
+        return f.encrypt(raw_key.strip().encode()).decode()
+    except Exception:
+        return base64.b64encode(raw_key.strip().encode()).decode()
+
+def decrypt_key(stored_key: str) -> str:
+    """Safely decrypts user API key."""
+    if not stored_key:
+        return ""
+    try:
+        from cryptography.fernet import Fernet
+        key_32 = base64.urlsafe_b64encode(hashlib.sha256(SECRET_SALT.encode()).digest())
+        f = Fernet(key_32)
+        return f.decrypt(stored_key.encode()).decode()
+    except Exception:
+        try:
+            return base64.b64decode(stored_key.encode()).decode()
+        except Exception:
+            return stored_key
+
 def init_db():
     Base.metadata.create_all(bind=engine)

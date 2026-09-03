@@ -264,11 +264,29 @@ async def cmd_deep_osint(message: types.Message):
                 redis_client.setex(cache_key, 300, analysis)
             except Exception:
                 pass
-            await safe_send(message, f"🔍 **ГЛИБОКИЙ OSINT ЗВІТ** 🔍\n\n{analysis}")
+            await safe_send(message, f"🔍 <b>ГЛИБОКИЙ OSINT ЗВІТ</b> 🔍\n\n{analysis}")
+        elif resp.status_code == 401:
+            await safe_send(
+                message,
+                "❌ <b>Помилка OpenAI API (401 Unauthorized):</b>\n"
+                "Ваш токен недійсний або був відкликаний.\n\n"
+                "Оновіть ключ командою:\n"
+                "<code>/key sk-новий-токен</code>",
+                disable_web_page_preview=True
+            )
+        elif resp.status_code == 429:
+            await safe_send(
+                message,
+                "❌ <b>Помилка OpenAI API (429 Quota Exceeded):</b>\n"
+                "На вашому акаунті OpenAI вичерпано баланс (Billing Credit).\n\n"
+                "Поповніть баланс на <a href='https://platform.openai.com/settings/organization/billing/overview'>OpenAI Billing</a> або підключіть новий ключ: <code>/key sk-...</code>",
+                disable_web_page_preview=True
+            )
         else:
-            await message.answer(f"❌ Сталася помилка API: {resp.status_code}\n{resp.text[:200]}")
+            await safe_send(message, f"❌ Помилка OpenAI API ({resp.status_code}):\n<code>{html.escape(resp.text[:200])}</code>")
             
     except Exception as e:
+        logger.error(f"Deep OSINT error: {e}")
         await message.answer(f"❌ Помилка: {e}")
     finally:
         db.close()
