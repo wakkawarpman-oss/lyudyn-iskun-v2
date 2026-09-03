@@ -27,7 +27,10 @@ def set_cached(key, val, ttl=60):
         pass
 
 
+from api.cot import router as cot_router
+
 app = FastAPI(title="Людин Іскун V2 Dashboard")
+app.include_router(cot_router)
 
 def get_db():
     db = SessionLocal()
