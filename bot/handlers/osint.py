@@ -462,3 +462,57 @@ async def handle_video(message: types.Message, bot: Bot):
         return
 
     await _run_photo_osint_analysis(message, user_api_key, effective_key, frame_path)
+
+
+@router.message(Command("network"))
+@router.message(Command("graph"))
+@router.message(F.text == "🕸️ Мережа ІПСО")
+@router.message(F.text.ilike("%мережа%"))
+@router.message(F.text.ilike("%граф%"))
+async def cmd_network_graph(message: types.Message):
+    from database.repository import NetworkGraphRepository
+    with NetworkGraphRepository() as net_repo:
+        top_sources = net_repo.get_top_forward_sources(limit=7, hours=48)
+        graph_stats = net_repo.get_forward_graph(min_weight=1, limit=50, hours=48)
+
+    dash_url = get_dashboard_url()
+    graph_url = f"{dash_url}#network"
+
+    if not top_sources:
+        await safe_send(
+            message,
+            "🕸️ <b>АНАЛІЗАТОР СІТОК ІПСО ТА ПЕРЕСИЛАНЬ (Telerecon Core)</b>\n\n"
+            "ℹ️ <i>Наразі недостатньо зафіксованих фактів пересилань (fwd_from) за останні 48 годин для побудови графа.\n"
+            "Дані акумулюються автоматично у режимі реального часу.</i>"
+        )
+        return
+
+    lines = [
+        "🕸️ <b>АНАЛІЗАТОР СІТОК ІПСО ТА ЦИТУВАНЬ (Telerecon Core)</b>",
+        f"📊 <i>Зафіксовано вузлів:</i> <b>{graph_stats['total_nodes']}</b> | <i>Зв'язків:</i> <b>{graph_stats['total_edges']}</b> (за 48 год)\n",
+        "🏆 <b>ГОЛОВНІ ПЕРШОДЖЕРЕЛА (ХТО ЗАПУСКАЄ ІНФОХВИЛЮ):</b>"
+    ]
+
+    for idx, s in enumerate(top_sources, 1):
+        lines.append(
+            f"<b>{idx}.</b> <code>@{s['source_channel']}</code> ➔ цитувань: <b>{s['total_forwards']}</b> "
+            f"(ретранслюють: <b>{s['amplifiers_count']}</b> кан.)"
+        )
+
+    lines.append(
+        f"\n🗺️ <b>Інтерактивний граф мережі:</b>\n"
+        f"👉 <a href='{graph_url}'>Відкрити візуалізатор зв'язків</a>"
+    )
+
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🌐 Відкрити граф на карті", url=graph_url)
+    builder.button(text="🔄 Оновити дані", callback_data="refresh_network_graph")
+    builder.adjust(1)
+
+    await safe_send(message, "\n".join(lines), reply_markup=builder.as_markup(), disable_web_page_preview=True)
+
+
+@router.callback_query(F.data == "refresh_network_graph")
+async def on_refresh_network_graph(callback: types.CallbackQuery):
+    await callback.answer("Оновлюю граф мережі...")
+    await cmd_network_graph(callback.message)

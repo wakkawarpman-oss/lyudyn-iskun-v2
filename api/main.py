@@ -244,5 +244,23 @@ def get_radar_thermal():
     from worker.osint.firms_viirs import fetch_ukraine_thermal_anomalies
     return fetch_ukraine_thermal_anomalies()
 
+@app.get("/api/v1/network/forward-graph")
+def get_network_forward_graph(min_weight: int = 1, limit: int = 100, hours: int = 48, db: Session = Depends(get_db)):
+    from database.repository import NetworkGraphRepository
+    repo = NetworkGraphRepository(db)
+    return repo.get_forward_graph(min_weight=min_weight, limit=limit, hours=hours)
+
+@app.get("/api/v1/network/top-sources")
+def get_network_top_sources(limit: int = 10, hours: int = 48, db: Session = Depends(get_db)):
+    from database.repository import NetworkGraphRepository
+    repo = NetworkGraphRepository(db)
+    return repo.get_top_forward_sources(limit=limit, hours=hours)
+
+@app.get("/api/v1/network/channel-lineage")
+def get_network_channel_lineage(channel: str, db: Session = Depends(get_db)):
+    from database.repository import NetworkGraphRepository
+    repo = NetworkGraphRepository(db)
+    return repo.get_channel_lineage(channel)
+
 # Serve the static HTML frontend
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")

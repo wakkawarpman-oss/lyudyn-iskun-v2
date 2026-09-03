@@ -17,6 +17,19 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 MAX_VIDEO_DURATION_S = 120
 MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
+def extract_forward_source(msg):
+    if not getattr(msg, 'fwd_from', None):
+        return None
+    fwd = msg.fwd_from
+    if getattr(fwd, 'from_name', None):
+        return str(fwd.from_name)
+    if getattr(fwd, 'from_id', None):
+        f_id = getattr(fwd.from_id, 'channel_id', None) or getattr(fwd.from_id, 'user_id', None) or getattr(fwd.from_id, 'chat_id', None)
+        if f_id:
+            return str(f_id)
+    return None
+
+
 async def perform_sync(client, valid_channels):
     """Fetches the latest messages from the last 24 hours from all target channels."""
     threshold_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
@@ -37,7 +50,8 @@ async def perform_sync(client, valid_channels):
                         "views": msg.views or 0,
                         "forwards": msg.forwards or 0,
                         "has_media": bool(msg.media),
-                        "media_path": None
+                        "media_path": None,
+                        "fwd_from": extract_forward_source(msg)
                     }
                     celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
                     backfilled_count += 1
@@ -169,7 +183,8 @@ async def main():
                 "views": msg.views or 0,
                 "forwards": msg.forwards or 0,
                 "has_media": bool(msg.media),
-                "media_path": media_path
+                "media_path": media_path,
+                "fwd_from": extract_forward_source(msg)
             }
             
             celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])

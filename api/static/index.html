@@ -5,6 +5,7 @@
     <title>ОКІНТ-ПРО | Тактичний GEOINT Дашборд</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0e14; color: #fff; overflow: hidden; }
@@ -472,7 +473,75 @@
             .preset-btn {
                 padding: 3px 4px;
                 font-size: 9px;
-            }
+        /* Telerecon Network Modal */
+        .network-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(11, 14, 20, 0.96);
+            backdrop-filter: blur(24px);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            box-sizing: border-box;
+            transition: opacity 0.25s ease;
+        }
+        .network-modal.hidden { display: none !important; }
+        .network-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .network-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #00e5ff;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .network-body {
+            display: flex;
+            flex: 1;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        #network-canvas {
+            flex: 1;
+            background: #080b11;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            position: relative;
+        }
+        .network-details-panel {
+            width: 320px;
+            background: rgba(15, 20, 31, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: #cbd5e1;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .network-stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        @media (max-width: 768px) {
+            .network-body { flex-direction: column; }
+            .network-details-panel { width: 100%; max-height: 180px; }
         }
     </style>
 </head>
@@ -489,12 +558,49 @@
             <span>🛰️ ОКІНТ-ПРО</span>
         </div>
         <div class="action-btns">
+            <button class="hud-btn" id="btn-network" title="Граф зв'язків ІПСО (Telerecon)">
+                <span>🕸️ Мережа ІПСО</span>
+            </button>
             <button class="hud-btn" id="btn-gps" title="Знайти мою геопозицію">
                 <span>🎯 Де я?</span>
             </button>
             <button class="hud-btn" id="btn-layers">
                 <span>⚙️ Шари</span>
             </button>
+        </div>
+    </div>
+
+    <!-- Telerecon Network Modal -->
+    <div id="network-modal" class="network-modal hidden">
+        <div class="network-header">
+            <div class="network-title">
+                <span>🕸️ Граф пересилань та виявлення сіток ІПСО (Telerecon Core)</span>
+            </div>
+            <button class="close-btn" id="btn-close-network" style="font-size:22px; cursor:pointer;">✕</button>
+        </div>
+        <div class="network-body">
+            <div id="network-canvas"></div>
+            <div class="network-details-panel">
+                <div style="font-weight:700; color:#00e5ff; border-bottom:1px solid rgba(0,229,255,0.2); padding-bottom:6px;">
+                    📊 Метрики Мережі
+                </div>
+                <div class="network-stat-row">
+                    <span>Вузлів (каналів):</span>
+                    <b id="net-stat-nodes">0</b>
+                </div>
+                <div class="network-stat-row">
+                    <span>Зв'язків (репостів):</span>
+                    <b id="net-stat-edges">0</b>
+                </div>
+                <div style="margin-top:8px; font-weight:700; color:#f1f5f9;">
+                    🎯 Вибраний канал:
+                </div>
+                <div id="net-selected-channel" style="color:#38bdf8; font-family:monospace; font-size:13px;">
+                    Клікніть на вузол графа
+                </div>
+                <div id="net-lineage-details" style="font-size:11px; color:#94a3b8; display:flex; flex-direction:column; gap:6px;">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1252,6 +1358,126 @@
                 });
             } catch (err) {
                 console.warn('Thermal anomalies load error:', err);
+            }
+        }
+
+        // ─── Telerecon Forward Graph (Network Modal) ───
+        const btnNetwork = document.getElementById('btn-network');
+        const btnCloseNetwork = document.getElementById('btn-close-network');
+        const networkModal = document.getElementById('network-modal');
+        let visNetworkInstance = null;
+
+        function openNetworkModal() {
+            networkModal.classList.remove('hidden');
+            loadNetworkGraph();
+        }
+
+        function closeNetworkModal() {
+            networkModal.classList.add('hidden');
+            if (window.location.hash === '#network') {
+                history.replaceState(null, null, ' ');
+            }
+        }
+
+        if (btnNetwork) btnNetwork.addEventListener('click', openNetworkModal);
+        if (btnCloseNetwork) btnCloseNetwork.addEventListener('click', closeNetworkModal);
+
+        if (window.location.hash === '#network') {
+            openNetworkModal();
+        }
+
+        async function loadNetworkGraph() {
+            const container = document.getElementById('network-canvas');
+            if (!container) return;
+
+            try {
+                const res = await fetch('/api/v1/network/forward-graph?hours=48&limit=80');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('net-stat-nodes').textContent = data.total_nodes || 0;
+                document.getElementById('net-stat-edges').textContent = data.total_edges || 0;
+
+                if (!data.nodes || data.nodes.length === 0) {
+                    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:14px;">ℹ️ Немає зафіксованих пересилань за останні 48 годин</div>';
+                    return;
+                }
+
+                const officialSet = new Set(['kpszsu', 'dsns_telegram', 'va_kyiv', 'kyivcityofficial', 'mvs_ua']);
+
+                const visNodes = new vis.DataSet(data.nodes.map(n => {
+                    const isOfficial = officialSet.has(n.id);
+                    const isTopOrigin = n.out_degree > n.in_degree;
+                    const color = isOfficial ? { background: '#00e5ff', border: '#ffffff' } :
+                                  (isTopOrigin ? { background: '#f59e0b', border: '#fbbf24' } :
+                                                 { background: '#8b5cf6', border: '#a78bfa' });
+                    return {
+                        id: n.id,
+                        label: n.label,
+                        shape: 'dot',
+                        size: Math.min(28, Math.max(12, 10 + (n.total_weight || 1) * 2)),
+                        color: color,
+                        font: { color: '#ffffff', size: 11, face: 'system-ui' }
+                    };
+                }));
+
+                const visEdges = new vis.DataSet(data.edges.map(e => ({
+                    from: e.from,
+                    to: e.to,
+                    arrows: 'to',
+                    width: Math.min(6, Math.max(1, e.weight)),
+                    color: { color: 'rgba(0, 229, 255, 0.4)', highlight: '#ff0055' },
+                    smooth: { type: 'curvedCW', roundness: 0.15 }
+                })));
+
+                const options = {
+                    physics: {
+                        stabilization: true,
+                        solver: 'forceAtlas2Based',
+                        forceAtlas2Based: {
+                            gravitationalConstant: -35,
+                            centralGravity: 0.015,
+                            springLength: 90,
+                            springConstant: 0.08
+                        }
+                    },
+                    interaction: { hover: true, tooltipDelay: 200 }
+                };
+
+                if (visNetworkInstance) visNetworkInstance.destroy();
+                visNetworkInstance = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+                visNetworkInstance.on('click', async (params) => {
+                    if (params.nodes && params.nodes.length > 0) {
+                        const nodeId = params.nodes[0];
+                        document.getElementById('net-selected-channel').textContent = '@' + nodeId;
+                        
+                        try {
+                            const lRes = await fetch(`/api/v1/network/channel-lineage?channel=${nodeId}`);
+                            if (lRes.ok) {
+                                const lData = await lRes.json();
+                                let html = '';
+                                if (lData.sources && lData.sources.length > 0) {
+                                    html += '<div style="color:#38bdf8; font-weight:600; margin-top:6px;">⬅️ Звідки бере:</div>';
+                                    lData.sources.slice(0, 5).forEach(s => {
+                                        html += `<div>• @${s.source} (<b>${s.count}</b>)</div>`;
+                                    });
+                                }
+                                if (lData.amplifiers && lData.amplifiers.length > 0) {
+                                    html += '<div style="color:#f59e0b; font-weight:600; margin-top:6px;">➡️ Хто ретранслює:</div>';
+                                    lData.amplifiers.slice(0, 5).forEach(a => {
+                                        html += `<div>• @${a.target} (<b>${a.count}</b>)</div>`;
+                                    });
+                                }
+                                document.getElementById('net-lineage-details').innerHTML = html || '<i>Немає прямих зв\'язків</i>';
+                            }
+                        } catch (e) {
+                            console.warn('Lineage fetch error:', e);
+                        }
+                    }
+                });
+            } catch (err) {
+                console.warn('Network graph load error:', err);
             }
         }
 

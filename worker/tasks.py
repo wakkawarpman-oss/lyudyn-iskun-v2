@@ -140,6 +140,17 @@ def pipeline_extract(self, payload_str):
     if not text and not media_path:
         return {"skip": True, "reason": "empty"}
 
+    # Record message forward relationship (Telerecon Forward Graph)
+    fwd_from = payload.get("fwd_from")
+    target_channel = payload.get("channel", "")
+    if fwd_from and target_channel:
+        try:
+            from database.repository import NetworkGraphRepository
+            with NetworkGraphRepository() as net_repo:
+                net_repo.record_forward_edge(fwd_from, target_channel, sample_text=text[:300] if text else None)
+        except Exception as e:
+            logger.warning(f"Telerecon forward edge recording warning: {e}")
+
     # Cheap early exit BEFORE the Groq LLM call: RSS re-fetches its 1-hour
     # window every 5 minutes and /sync re-fetches the last 5 messages per
     # channel unconditionally, so the same message routinely arrives here

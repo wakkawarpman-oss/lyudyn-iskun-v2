@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean, Float
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean, Float, Text, UniqueConstraint
 from sqlalchemy.orm import declarative_base, sessionmaker
 from geoalchemy2 import Geometry
 from datetime import datetime
@@ -91,6 +91,22 @@ class UserApiKey(Base):
     username = Column(String, nullable=True)
     openai_api_key = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ChannelForwardEdge(Base):
+    __tablename__ = "channel_forward_edges"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_channel = Column(String(128), nullable=False, index=True)
+    target_channel = Column(String(128), nullable=False, index=True)
+    forward_count = Column(Integer, default=1, nullable=False)
+    first_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow, index=True)
+    sample_post_text = Column(Text, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('source_channel', 'target_channel', name='uq_source_target_edge'),
+    )
 
 import base64
 import hashlib

@@ -13,7 +13,7 @@ TEST_GROUPS = [
     ("B", "Кластеризація та геокодування", "tests/test_clustering.py tests/test_geo_consensus.py tests/test_geo_precision_pipeline.py tests/test_poi_matcher.py"),
     ("C", "Сенсори та радар (Neptun / FIRMS / COT)", "tests/test_neptun_radar.py tests/test_firms_verifier.py tests/test_cot.py"),
     ("D", "Безпека та шифрування", "tests/test_security.py tests/test_reencrypt_all_keys.py"),
-    ("E", "Інтеграція та UI", "tests/test_ui_formatter.py tests/test_alert_monitor.py tests/test_e2e.py"),
+    ("E", "Інтеграція та UI", "tests/test_ui_formatter.py tests/test_alert_monitor.py tests/test_e2e.py tests/test_forward_graph.py"),
 ]
 
 def run():
