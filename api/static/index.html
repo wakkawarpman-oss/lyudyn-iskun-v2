@@ -932,10 +932,6 @@
                 <span class="btn-label-long">🕸️ Мережа</span>
                 <span class="btn-label-short">🕸️</span>
             </button>
-            <button class="hud-btn" id="btn-gps" title="Знайти мою геопозицію">
-                <span class="btn-label-long">🎯 Де я?</span>
-                <span class="btn-label-short">🎯</span>
-            </button>
             <button class="hud-btn" id="btn-layers" title="Налаштування шарів карти">
                 <span class="btn-label-long">⚙️ Шари</span>
                 <span class="btn-label-short">⚙️</span>
@@ -945,7 +941,6 @@
 
     <!-- Mobile Floating Tactical Dock -->
     <div class="mobile-tactical-dock">
-        <button class="mobile-dock-btn" id="m-btn-gps">🎯 Де я?</button>
         <button class="mobile-dock-btn" id="m-btn-vidbiy" style="border-color:#10b981; color:#34d399;">🟢 Відбій</button>
         <button class="mobile-dock-btn" id="m-btn-live">⚡ Live</button>
         <button class="mobile-dock-btn" id="m-btn-layers">⚙️ Шари</button>
@@ -1491,9 +1486,6 @@
         }
 
         // ─── Mobile Floating Dock Handlers ───
-        document.getElementById('m-btn-gps')?.addEventListener('click', () => {
-            document.getElementById('btn-gps')?.click();
-        });
         document.getElementById('m-btn-vidbiy')?.addEventListener('click', () => {
             toggleVidbiyMonitor();
             const mBtn = document.getElementById('m-btn-vidbiy');
@@ -1566,7 +1558,7 @@
         }
 
         // GPS Geolocation
-        document.getElementById('btn-gps').addEventListener('click', () => {
+        document.getElementById('btn-gps')?.addEventListener('click', () => {
             if (!navigator.geolocation) {
                 alert('Геолокація не підтримується вашим браузером.');
                 return;
