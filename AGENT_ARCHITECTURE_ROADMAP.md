@@ -31,39 +31,54 @@ lyudyn-iskun-v2/
 │   └── static/
 │       └── index.html                # Leaflet.js interactive OpenStreetMap dashboard with shelter layers & blast radii
 │
+├── api/cot.py                        # Cursor-on-Target (CoT) XML + ATAK DataPackage ZIP export, token-gated
+├── services/analytics_service.py     # Report formatting (analytics/top events) over database/repository.py
+├── database/repository.py            # EventRepository — query layer used by services/
+│
 ├── bot/                              # 🤖 AIOGRAM 3 TELEGRAM BOT INTERFACE
 │   ├── main.py                       # Bot entrypoint, dispatcher & long-polling loop
-│   ├── handlers.py                   # Master unified command & callback handlers (22 commands/buttons)
+│   ├── handlers/                     # Modular command & callback handlers, split by domain:
+│   │   ├── __init__.py               #   aggregates sub-routers in declaration-order
+│   │   ├── admin.py                  #   /clean, /sync, /delkey, key management (admin-gated)
+│   │   ├── alerts.py                 #   incoming alert formatting & delivery
+│   │   ├── analytics.py              #   /analytics, /top
+│   │   ├── common.py                 #   /start, shared keyboard/menu handlers
+│   │   ├── osint.py                  #   Photo OSINT (EXIF/GeoSpy/Vision), /key
+│   │   ├── radar.py                  #   /report, /resonance
+│   │   ├── shelters.py               #   bomb shelter / metro station lookup
+│   │   └── utils.py                  #   shared helpers: safe_send, is_admin, admin_only, redis_client
 │   ├── keyboards.py                  # Reply & inline keyboard layouts
 │   ├── map_generator.py              # Static OSM map PNG renderer using Pillow Lanczos & staticmap
 │   ├── memes_db.py                   # Black humor & Dasha meme database (psychological decompression)
 │   └── threat_report.py              # Strategic threat assessment generator & TTX reference card
 │
 ├── database/                         # 🗄️ POSTGIS DATABASE & PERSISTENCE
-│   ├── models.py                     # SQLAlchemy models: DetectedEvent, UserApiKey, BombShelter, RawMessage
-│   └── seed_shelters.py              # Kyiv bomb shelters & metro stations seeder (1,197 locations)
+│   └── models.py                     # SQLAlchemy models: DetectedEvent, UserApiKey, BombShelter
 │
 ├── listener/                         # 📡 TELETHON TELEGRAM INGESTION
-│   ├── telethon_client.py            # Async Telethon listener across 20+ monitored channels
-│   └── channels.py                   # Channel whitelist (pure Kyiv channels vs All-Ukraine channels)
+│   └── telethon_client.py            # Async Telethon listener across 20+ monitored channels (channel
+│                                      # whitelist is inline in worker/tasks.py, not a separate file)
 │
 ├── worker/                           # ⚙️ CELERY AI PROCESSING PIPELINE
 │   ├── celery_app.py                 # Celery app config, queue routing & Celery Beat schedules
 │   ├── tasks.py                      # Main message processing task, deduplication, 24h retention pruning
 │   ├── llm_engine.py                 # Groq LLM extraction (openai/gpt-oss-120b) + Fallback regex + Kyiv filter
+│   ├── canonical_geo.py              # Toponym → canonical name/coords resolver, is_fallback_geo detection
+│   ├── geo_extractors/               # Regex address parser + tactical POI matcher (60+ landmarks)
 │   ├── schemas.py                    # Pydantic schemas for event extraction validation
 │   ├── watchdog.py                   # Liveness monitor, health checker & tunnel sync
 │   └── osint/                        # 🔍 SPECIALIZED OSINT ANALYSIS MODULES
 │       ├── ai_geolocation.py         # GeoSpy AI visual landscape recognition
 │       ├── exif_extractor.py         # EXIF metadata, GPS coordinates & camera extractor
 │       ├── geoint_engine.py          # Solar azimuth, shadow chrono-location & blast danger radii
-│       ├── rss_intel.py              # RSS OSINT feed parser
-│       └── sentiment.py              # Groq-powered psychological tension/panic scorer (openai/gpt-oss-20b)
+│       ├── rss_intel.py              # RSS OSINT feed parser (used in worker/tasks.py: fetch_rss_news_task)
+│       └── sentiment.py              # Groq-powered psychological tension/panic scorer (openai/gpt-oss-20b) —
+│                                      # NOT YET wired into the pipeline, see roadmap below
 │
-├── tests/                            # 🧪 AUTOMATED TESTS & BENCHMARKS
-│   ├── test_all.py                   # Local component test suite
-│   ├── test_groq_benchmark.py        # Groq LLM latency & rate-limit benchmark
-│   └── golden_standard.jsonl         # 30-item ground truth test dataset for Regex & LLM parsers
+├── alembic/                          # Schema migrations (script_location — see alembic.ini)
+│
+├── tests/                            # 🧪 AUTOMATED TESTS
+│   └── (see tests/ directory directly — grows per feature, no fixed manifest here)
 │
 └── AGENT_ARCHITECTURE_ROADMAP.md     # 📖 THIS MASTER GUIDE
 ```
@@ -99,7 +114,7 @@ graph TD
 
 ### 3. C2 Synthesis & Verification Engine
 * **Confidence Weights:** Tier 1 Official (1.0), Tier 2 Verified OSINT (0.7), Tier 3 Situational (0.5), Tier 4 Unverified (0.3).
-* **Clustering Window:** 15.0 minutes time delta + 10km PostGIS spatial radius (`ST_DWithin`).
+* **Clustering:** real-coordinate events cluster via PostGIS `ST_DWithin` (~8-9km, 30-minute window); events without a confirmed geocode fall back to exact `location_text` match (25-minute window). A `pg_advisory_xact_lock` on the location key serializes concurrent workers to prevent duplicate-incident races.
 * **Resonance Scoring (0–100):** Direct strike (95–100), Explosion (80–90), Fire (65–75), Air alert (35–50).
 
 ### 4. Database & Retention Policy (`worker/tasks.py`)
@@ -138,21 +153,28 @@ gantt
     OSM & Dynamic Tunnel Sync      :done, 2026-09, 2026-09
     24h DB Retention & Pruning     :done, 2026-09, 2026-09
     Dead Code Purge (20 scripts)   :done, 2026-09, 2026-09
+    CoTTAK / TAK Server Integration :done, 2026-09, 2026-09
     section Upcoming Upgrades
-    CoTTAK / TAK Server Integration :active, 2026-10, 2026-11
     Edge MLX Inference for Mac      :2026-11, 2026-12
     Multi-Region Drone Triangulation:2026-12, 2027-01
 ```
 
-### 🎯 Priority 1: CoTTAK / ATAK Integration
-* Implement Cursor-on-Target (CoT) XML serialization for PostGIS events so military personnel can import live threat feeds into ATAK / WinTAK.
+### ✅ Done: CoTTAK / ATAK Integration
+* Cursor-on-Target (CoT) XML + DataPackage ZIP export implemented — `api/cot.py`, token-gated (`TACTICAL_API_TOKEN`, fail-closed).
+
+### 🎯 Priority 1: Close known OSINT gaps (found by code audit, not yet scheduled elsewhere)
+* `worker/osint/sentiment.py` exists but is never called from the pipeline — wire it into `worker/tasks.py: pipeline_extract` or remove it.
+* No video handling anywhere: `listener/telethon_client.py` only downloads `msg.photo`; a `F.video` bot handler doesn't exist either. Channel videos (strike footage, drone POV) are currently invisible to OSINT.
+* No perceptual-hash / "seen this image before" check — recycled or archival photos passed off as fresh incidents aren't caught.
+* No cross-reference against live external sources (search/news) for high-resonance claims — the system trusts only its own 20 monitored channels.
 
 ### 🎯 Priority 2: Edge MLX Inference on Apple Silicon
 * Enable local quantized LLM inference (`MLX` / `llama.cpp` on M-series chips) for sovereign offline deployments.
 
 ### 🎯 Priority 3: Kalman Filter Drone Flight Path Prediction
-* Use `worker/osint/kalman_tracker.py` to project Shahed-136 flight corridors and calculate estimated time of arrival (ETA) per Kyiv city district.
+* Use `worker/osint/kalman_tracker.py` (not yet created) to project Shahed-136 flight corridors and calculate estimated time of arrival (ETA) per Kyiv city district.
 
 ---
 
-*Verified & Signed: DeepMind Advanced Agentic Coding Assistant (Antigravity)*
+*Last synced against the actual codebase: 2026-09-03 (Claude Code).*
+*Original version verified & signed: DeepMind Advanced Agentic Coding Assistant (Antigravity).*
