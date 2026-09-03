@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func
