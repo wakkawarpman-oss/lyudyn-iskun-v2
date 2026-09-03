@@ -156,6 +156,44 @@ SOURCE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "scope": "Kyiv Alerts",
         "latency_tier": "FAST"
     },
+
+    # ── National media RSS feeds (worker/osint/rss_intel.py) ──
+    # These were falling through to the generic USER_GENERATED/Tier C/0.40
+    # default (same as an anonymous aggregator channel) — misclassifying
+    # editorial national media as unverified. Cross-check value: when an RSS
+    # article corroborates a Telegram-sourced incident, they cluster
+    # together (same location/time window) and this weight is what actually
+    # moves sources_count/confidence_score, which is what flips the
+    # "🟢 Підтверджено" badge in bot/ui_formatter.py — no separate live
+    # search/API call needed, this reuses the pipeline that already exists.
+    "rss_ukrinform": {
+        "title": "Укрінформ", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_pravda": {
+        "title": "Українська правда", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_censor": {
+        "title": "Цензор.НЕТ", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_rbc_ua": {
+        "title": "РБК-Україна", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_interfax": {
+        "title": "Інтерфакс-Україна", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_suspilne": {
+        "title": "Суспільне", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
+    "rss_nv": {
+        "title": "НВ", "type": "MEDIA_OSINT", "tier": "A",
+        "base_weight": 0.70, "scope": "Ukraine", "latency_tier": "SLOW"
+    },
 }
 
 def get_source_metadata(channel_name: str) -> Dict[str, Any]:
