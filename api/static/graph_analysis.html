@@ -180,8 +180,14 @@
       { id: 'postgis_db', label: 'PostgreSQL 15 / PostGIS 3.3', domain: 'devops', color: '#a855f7', size: 17, desc: 'Просторова реляційна база даних з індексами GiST для мікросекундних гео-запитів.', inputs: 'Події, трейли БпЛА, реєстри POI', outputs: 'ST_DWithin, ST_Distance обчислення', opsec: 'Зашифрований том даних', tech: 'database/models.py' },
       { id: 'redis_cache', label: 'Redis 7 In-Memory Cache', domain: 'devops', color: '#a855f7', size: 15, desc: 'Кешування живих радарних цілей, геокодування та черга задач Celery.', inputs: 'Радарні мітки, геокеш', outputs: 'TTL 30-120с надшвидка віддача клієнтам', opsec: 'Захищений локальний сокет', tech: 'worker/celery_app.py' },
       { id: 'semgrep_audit', label: 'Semgrep & Ruff Security', domain: 'devops', color: '#a855f7', size: 15, desc: 'Статичний аналіз безпеки вихідного коду (SAST), пошук витоків токенів та SQL/XSS інʼєкцій.', inputs: 'Вихідний код Python/JS', outputs: '0 вразливостей, бездоганний linting', opsec: 'Повний контроль безпеки', tech: 'ruff / semgrep scan' },
-      { id: 'pytest_suite', label: 'Pytest Verification Suite', domain: 'devops', color: '#a855f7', size: 16, desc: 'Автоматизований тестовий сьют (149/149 тестів пройдено) для захисту від регресій.', inputs: 'Модульні та інтеграційні тести', outputs: 'Гарантія безпомилковості розрахунків', opsec: 'CI/CD верифікація', tech: 'tests/' },
-      { id: 'openwebui', label: 'OpenWebUI Agent Hub', domain: 'devops', color: '#a855f7', size: 14, desc: 'Шлюз інтеграції штучного інтелекту для швидких тактичних запитів через LLM.', inputs: 'Запити оператора', outputs: 'Аналітичні зведення та інсайти', opsec: 'Ізольований порт 3000', tech: 'api/routes/openwebui_tools.py' }
+      { id: 'pytest_suite', label: 'Pytest Verification Suite', domain: 'devops', color: '#a855f7', size: 16, desc: 'Автоматизований тестовий сьют (164/164 тести пройдено) для захисту від регресій.', inputs: 'Модульні та інтеграційні тести', outputs: 'Гарантія безпомилковості розрахунків', opsec: 'CI/CD верифікація', tech: 'tests/' },
+      { id: 'openwebui', label: 'OpenWebUI Agent Hub', domain: 'devops', color: '#a855f7', size: 14, desc: 'Шлюз інтеграції штучного інтелекту для швидких тактичних запитів через LLM.', inputs: 'Запити оператора', outputs: 'Аналітичні зведення та інсайти', opsec: 'Ізольований порт 3000', tech: 'api/routes/openwebui_tools.py' },
+      { id: 'wez_engine', label: 'WEZ Air Defense Envelopes', domain: 'pipeline', color: '#10b981', size: 16, desc: 'Розрахунок радарних зон та зон ураження ППО (Тор-М2, Панцир-С1, С-400).', inputs: 'ТТХ комплексів ППО РФ', outputs: 'Концентричні GeoJSON полігони вогню', opsec: 'Математична модель радіусів ураження', tech: 'worker/osint/wez_envelopes.py' },
+      { id: 'lob_engine', label: 'LOB Triangulation & CEP', domain: 'pipeline', color: '#10b981', size: 16, desc: 'Пряма геодезична засічка WGS-84, триангуляція азимутів та розрахунок еліпса помилки (CEP).', inputs: 'Азимути постів спостереження', outputs: 'Координати цілі та радіус невизначеності', opsec: 'Геодезичні алгоритми Great-Circle', tech: 'worker/osint/lob_triangulation.py' },
+      { id: 'cctv_nodes', label: 'CCTV TOT Optical Recon', domain: 'sensor', color: '#38bdf8', size: 16, desc: '315 вузлів відеоспостереження ТОТ (Донецьк, Севастополь, Харків, Енергодар).', inputs: 'RTSP/ONVIF відеопотоки', outputs: 'Візуальні підтвердження та метадані', opsec: 'Пасивний моніторинг камер', tech: 'worker/osint/cctv_registry.py' },
+      { id: 'noaa_sun', label: 'NOAA Solar Chronolocation', domain: 'pipeline', color: '#10b981', size: 15, desc: 'Астрономічний розрахунок положення сонця та проєктування векторів тіней.', inputs: 'Координати, час UTC, кути тіней', outputs: 'Верифікований часовий інтервал події', opsec: 'Астрономічні формули NOAA', tech: 'worker/osint/geoint_engine.py' },
+      { id: 'cot_atak', label: 'ATAK CoT & MIL-STD-2525C', domain: 'devops', color: '#a855f7', size: 16, desc: 'Генерація Cursor-on-Target XML 2.0 та DataPackage (.zip) для ATAK / WinTAK.', inputs: 'Події з бази PostGIS', outputs: 'Стандартизовані тактичні пакети', opsec: 'Токен-авторизація з HMAC захистом', tech: 'api/cot.py' },
+      { id: 'sync_mesh', label: 'Redis Pub/Sub Sync Bus', domain: 'devops', color: '#a855f7', size: 15, desc: 'Двостороння шина синхронізації між Telegram-ботом, лісенером та веб-мапою.', inputs: 'POST /api/v1/sync або /sync у боті', outputs: 'Миттєва актуалізація 20+ Telegram-джерел', opsec: 'Внутрішньосерверна шина Redis', tech: 'api/main.py & listener' }
     ];
 
     const EDGES = [
@@ -239,7 +245,18 @@
       { source: 'pytest_suite', target: 'triangulation', label: '9 Geometry Tests' },
       { source: 'pytest_suite', target: 'threat_cone', label: 'Threat Cone Tests' },
       { source: 'semgrep_audit', target: 'docker_mesh', label: 'SAST Audit PASS' },
-      { source: 'openwebui', target: 'ui_formatter', label: 'REST API Query' }
+      { source: 'openwebui', target: 'ui_formatter', label: 'REST API Query' },
+
+      // C4ISR TACTICAL & VERIFICATION EDGES
+      { source: 'wez_engine', target: 'ui_formatter', label: 'WEZ Polygons' },
+      { source: 'lob_engine', target: 'ui_formatter', label: 'Target CEP' },
+      { source: 'cctv_nodes', target: 'ui_formatter', label: 'Optical Feeds' },
+      { source: 'noaa_sun', target: 'ui_formatter', label: 'Shadow Azimuth' },
+      { source: 'postgis_db', target: 'cot_atak', label: 'Export CoT XML' },
+      { source: 'sync_mesh', target: 'telethon', label: 'sync_now channel' },
+      { source: 'sync_mesh', target: 'ui_formatter', label: 'Live UI reload' },
+      { source: 'pytest_suite', target: 'wez_engine', label: 'WEZ Envelopes Tests' },
+      { source: 'pytest_suite', target: 'lob_engine', label: 'Geodesic LOB Tests' }
     ];
 
     // --- CANVAS GRAPH RENDERING LOGIC ---

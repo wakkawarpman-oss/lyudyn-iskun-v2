@@ -49,8 +49,13 @@ flowchart TD
 2. **PostGIS Spatial Clustering (A.4)**: Геопросторове об'єднання повідомлень однієї хвилі в межах $\varepsilon = 0.08^\circ$ (~8.8 км) у 30-хвилинному вікні з текстовим фоллбеком.
 3. **Multi-Source Weighted Consensus (A.5)**: Багаторівнева система довіри до джерел (Офіційні / Моніторингові / Медіа) та розрахунок резонансу.
 4. **Time-Window Rate & Spike Detection (A.2)**: Детекція масованих атак за динамікою появи подій у вікнах 5хв / 15хв / 60хв.
-5. **Cursor-on-Target (CoT 2.0) & ATAK/WinTAK DataPackages**: Експорт тактичних шарів інцидентів у MIL-STD форматі без узагальнених фоллбек-помилок.
-6. **Zero-Lag Interactive Timeline HUD**: Веб-карта з інтерактивним бігунком часу (1г – 72г), пресетами, таймлапсом та точним київським часом.
+5. **Cursor-on-Target (CoT 2.0) & ATAK/WinTAK DataPackages**: Генерація та експорт тактичних пакетів у форматі MIL-STD-2525C (`/api/cot/zip`, `/api/cot`) з повною підтримкою WinTAK/ATAK.
+6. **WEZ Air Defense & Radar Envelopes**: Розрахунок зон ураження (WEZ) та радарного покриття для комплексів Тор-М2, Панцир-С1, Бук-М3, С-400 (`/api/v1/threats/wez-envelopes`).
+7. **Geodesic LOB Triangulation & CEP**: Геодезична пряма засічка WGS-84, триангуляція азимутів спостереження та розрахунок кругового ймовірного відхилення (CEP) епіцентру цілей (`/api/v1/recon/triangulate-lob`).
+8. **CCTV TOT Optical Reconnaissance**: База 315+ вузлів оптичного спостереження ТОТ (Донецьк, Севастополь, Харків, Енергодар) з розрахунком Time-on-Target (`/api/v1/recon/cctv-cameras`).
+9. **NOAA Solar Chronolocation**: Астрономічна верифікація часу та напрямку зйомки за кутом сонця та проєкцією векторів тіней.
+10. **Bidirectional Bot-Map Synchronization**: Двостороння шина Redis Pub/Sub (`POST /api/v1/sync`, кнопка `🔄 СИНХР` на мапі та `/sync` у боті) для миттєвої актуалізації даних.
+11. **Deep-Linking & Tactical HUD**: Прямі посилання на шари карти (`?layer=wez`, `?layer=lob`, `?layer=cctv`, `?layer=ew`), інтерактивний таймлайн (1г – 72г), офлайн MBTiles fallback.
 
 ---
 

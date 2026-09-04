@@ -65,7 +65,7 @@ async def main():
 
         try:
             await bot.set_my_short_description(
-                short_description="🛡️ Тактичний OSINT Києва: живий радар БпЛА, супутник NASA, граф ІПСО та ШІ 24/7."
+                short_description="🛡️ Тактичний C4ISR & OSINT арсенал: жива мапа, куполи ППО, LOB-пеленги, CCTV ТОТ, радар та ШІ 24/7."
             )
         except Exception as e_sdesc:
             logger.warning(f"Could not update short description: {e_sdesc}")
@@ -75,19 +75,43 @@ async def main():
                 description=(
                     "🛡️ ОКІНТ-ПРО — C4ISR & OSINT Платформа 24/7\n\n"
                     "«ЗБИРАЄМО • АНАЛІЗУЄМО • ПЕРЕМАГАЄМО»\n\n"
-                    "🛠 МУЛЬТИДОМЕННИЙ СТЕК:\n"
-                    "• 🛸 Neptun Live / Радар — трекінг БпЛА, курс, підліт до Києва\n"
-                    "• ✈️ ADS-B (OpenSky) — фіксація літаків у зоні інцидентів\n"
-                    "• ⚓ AIS (MarineTraffic) — морські конвої та блокади\n"
-                    "• 🛰️ Sentinel-2 / NASA FIRMS — зміни рельєфу та термоточки\n"
-                    "• 📻 WebSDR/KiwiSDR — SIGINT кореляція радіоефіру\n"
-                    "• 🗺️ NOTAMs — моніторинг закриття неба\n"
-                    "• 🟢 Відбій (/vidbiy) — статус магазинів/транспорту"
+                    "🛠 ТАКТИЧНИЙ АРСЕНАЛ ТА ШАРИ:\n"
+                    "• 🗺️ Тактична веб-мапа C4ISR (/map) — повна геоінформаційна картина\n"
+                    "• 🛡️ Куполи ППО WEZ (/layers) — зони вогню Тор-М2, Панцир-С1, С-400\n"
+                    "• 📐 LOB-пеленгація (/layers) — геодезична засічка та еліпс помилки CEP\n"
+                    "• 📹 Відеорозвідка CCTV ТОТ — 315+ вузлів оптичного спостереження\n"
+                    "• 🛸 Neptun Live / Радар (/radar) — трекінг цілей, курс, підліт до міст\n"
+                    "• 🎯 OpenAthena Raycast (/raycast) — розрахунок координат цілей з дрона\n"
+                    "• 📡 Sentinel-1 RFI (/ew) — супутниковий детектор РЕБ та радіозавад\n"
+                    "• ☀️ NOAA Chronolocation — хронолокація сонячних тіней на кадрах\n"
+                    "• 📦 ATAK DataPackage — експорт Cursor-on-Target XML 2.0 (MIL-STD-2525C)\n"
+                    "• 🔄 Синхронізація (/sync) — миттєве оновлення з 20+ Telegram-джерел\n"
+                    "• 🟢 Відбій (/vidbiy) — статус відновлення транспорту та бізнесу"
                 )
             )
             logger.info("Bot description updated successfully.")
         except Exception as e_desc:
             logger.warning(f"Could not update bot description: {e_desc}")
+
+        try:
+            from aiogram.types import BotCommand
+            await bot.set_my_commands([
+                BotCommand(command="start", description="Головний оперативний екран"),
+                BotCommand(command="map", description="Тактична веб-мапа C4ISR"),
+                BotCommand(command="layers", description="Тактичні шари (WEZ, LOB, CCTV, РЕБ)"),
+                BotCommand(command="sync", description="Примусова актуалізація джерел"),
+                BotCommand(command="radar", description="Радар Контур / повітряні цілі"),
+                BotCommand(command="raycast", description="Калькулятор координат БпЛА OpenAthena"),
+                BotCommand(command="ew", description="Супутниковий моніторинг РЕБ"),
+                BotCommand(command="vidbiy", description="Моніторинг відбою тривоги"),
+                BotCommand(command="district", description="Секторні сповіщення за районами"),
+                BotCommand(command="top", description="Ключові інциденти за 24 год"),
+                BotCommand(command="resonance", description="Резонансні події за 1 год"),
+                BotCommand(command="status", description="Статус мікросервісів та черг"),
+            ])
+            logger.info("Bot commands registered successfully.")
+        except Exception as e_cmd:
+            logger.warning(f"Could not set bot commands: {e_cmd}")
             
         await dp.start_polling(bot)
     except Exception as e:
