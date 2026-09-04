@@ -120,23 +120,43 @@ def compute_lob_triangulation(bearings: List[Dict[str, Any]]) -> Dict[str, Any]:
             "message": "At least 2 LOB bearings required for triangulation."
         }
 
+    normalized_bearings = []
+    for b in bearings:
+        b_lat = b.get("lat") if b.get("lat") is not None else b.get("observer_lat")
+        b_lon = b.get("lon") if b.get("lon") is not None else b.get("observer_lon")
+        b_az = b.get("azimuth") if b.get("azimuth") is not None else b.get("bearing_deg")
+        if b_lat is None or b_lon is None or b_az is None:
+            continue
+        normalized_bearings.append({
+            "lat": float(b_lat),
+            "lon": float(b_lon),
+            "azimuth": float(b_az),
+            "observer": b.get("observer") or b.get("station_id") or "Пост спостереження"
+        })
+
+    if len(normalized_bearings) < 2:
+        return {
+            "status": "insufficient_data",
+            "message": "At least 2 valid LOB bearings required for triangulation."
+        }
+
     intersections = []
     rays = []
 
-    for b in bearings:
+    for b in normalized_bearings:
         # Generate 15 km ray vector for UI rendering
         end_pt = forward_geodesic(b["lat"], b["lon"], b["azimuth"], 15000.0)
         rays.append({
             "start": [b["lat"], b["lon"]],
             "end": [end_pt["lat"], end_pt["lon"]],
             "azimuth": b["azimuth"],
-            "observer": b.get("observer", "Пост спостереження")
+            "observer": b["observer"]
         })
 
     # Pairwise intersections
-    for i in range(len(bearings)):
-        for j in range(i + 1, len(bearings)):
-            b1, b2 = bearings[i], bearings[j]
+    for i in range(len(normalized_bearings)):
+        for j in range(i + 1, len(normalized_bearings)):
+            b1, b2 = normalized_bearings[i], normalized_bearings[j]
             pt = intersect_two_bearings(
                 b1["lat"], b1["lon"], b1["azimuth"],
                 b2["lat"], b2["lon"], b2["azimuth"]

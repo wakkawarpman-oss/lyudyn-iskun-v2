@@ -67,6 +67,20 @@ def test_lob_triangulation_convergence():
     assert len(res["rays"]) == 2
 
 
+def test_lob_triangulation_alternate_keys():
+    """Verify LOB triangulation supports station_id, observer_lat/lon and bearing_deg."""
+    bearings = [
+        {"station_id": "P-1", "observer_lat": 50.40, "observer_lon": 30.50, "bearing_deg": 45.0, "sigma_deg": 1.0},
+        {"station_id": "P-2", "observer_lat": 50.40, "observer_lon": 30.70, "bearing_deg": 315.0, "sigma_deg": 1.0}
+    ]
+    res = compute_lob_triangulation(bearings)
+    assert res["status"] == "success"
+    assert "target" in res
+    assert "lat" in res["target"]
+    assert "lon" in res["target"]
+    assert len(res["rays"]) == 2
+
+
 def test_lob_triangulation_diverging():
     """Verify diverging bearings are detected and handled gracefully."""
     diverging = [
