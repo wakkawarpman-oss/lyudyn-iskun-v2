@@ -1,8 +1,6 @@
-import pytest
 from worker.osint.threat_dispatcher import (
     generate_substation_alerts,
-    get_active_dispatch_summary,
-    _ALERT_CACHE
+    get_active_dispatch_summary
 )
 
 

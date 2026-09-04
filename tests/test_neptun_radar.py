@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 import json
 from worker.osint.neptun_radar import (

@@ -1,4 +1,3 @@
-import pytest
 from worker.osint.similar_channels import (
     classify_channel_affiliation,
     discover_similar_channels_sync

@@ -1,4 +1,3 @@
-import pytest
 from worker.osint.network_recon import (
     get_tot_telecom_status,
     parse_crt_sh_certificates,

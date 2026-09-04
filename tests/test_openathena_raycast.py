@@ -1,4 +1,3 @@
-import pytest
 from worker.osint.drone_raycast import calculate_raycast_target, parse_drone_xmp_metadata
 
 

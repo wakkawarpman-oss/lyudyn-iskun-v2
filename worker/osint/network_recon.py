@@ -4,7 +4,7 @@ Passive Internet Measurement, BGP Routing Analysis, and Attack Surface Reconnais
 Focuses on Temporarily Occupied Territories (TOT) telecom hijacking, transit tracking, and certificate transparency.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 # Verified Autonomous System Numbers (ASNs) operating in TOT and Russian transit backbones
 TOT_TELECOM_REGISTRY: List[Dict[str, Any]] = [

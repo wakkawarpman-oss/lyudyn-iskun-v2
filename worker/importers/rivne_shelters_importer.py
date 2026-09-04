@@ -5,7 +5,7 @@ Populates the PostGIS 'bomb_shelters' table.
 import os
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import docx
 
 logger = logging.getLogger(__name__)

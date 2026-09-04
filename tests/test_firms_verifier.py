@@ -1,13 +1,10 @@
-import pytest
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone, timedelta
-import json
+from datetime import datetime, timezone
 from worker.osint.firms_viirs import (
     haversine_distance_km,
     parse_firms_time,
     fetch_ukraine_thermal_anomalies,
-    find_nearby_thermal_anomaly,
-    UKRAINE_BBOX
+    find_nearby_thermal_anomaly
 )
 
 def test_haversine_distance_km():

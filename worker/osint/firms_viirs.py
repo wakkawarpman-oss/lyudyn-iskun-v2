@@ -11,8 +11,8 @@ import json
 import logging
 import math
 import urllib.request
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Optional, Tuple
+from datetime import datetime, timezone
+from typing import List, Dict, Optional
 import redis
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ from worker.osint.launch_triangulation import (
     project_forward_substation_threats,
     KNOWN_ENEMY_FACILITIES
 )
-from worker.osint.apt_matcher import APT_SIGNATURE_DB, analyze_threat_actors
+from worker.osint.apt_matcher import analyze_threat_actors
 
 
 def test_haversine_accuracy():

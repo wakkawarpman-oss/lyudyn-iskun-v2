@@ -1,4 +1,3 @@
-import pytest
 from worker.geo_extractors.poi_matcher import (
     find_nearby_critical_infrastructure,
     calculate_haversine_distance_m,

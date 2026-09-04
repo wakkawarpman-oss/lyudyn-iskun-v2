@@ -7,7 +7,7 @@ Based on the OpenAthena terrain-raycasting methodology (Theta Informatics).
 import math
 import re
 from dataclasses import dataclass
-from typing import Optional, Tuple, Dict, Any
+from typing import Dict, Any
 
 
 @dataclass

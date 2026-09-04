@@ -6,7 +6,6 @@ import requests
 from datetime import datetime, timedelta
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
-from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import func
 

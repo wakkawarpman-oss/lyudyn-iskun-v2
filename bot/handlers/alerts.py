@@ -15,7 +15,7 @@ from bot.alert_monitor import (
     register_vidbiy_subscriber,
     unregister_vidbiy_subscriber
 )
-from bot.handlers.utils import safe_send, admin_only, logger
+from bot.handlers.utils import safe_send, logger
 from database.models import SessionLocal, DetectedEvent
 
 router = Router()

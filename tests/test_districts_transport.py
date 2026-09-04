@@ -1,4 +1,3 @@
-import pytest
 from bot.handlers.districts import KYIV_DISTRICTS, build_districts_keyboard, resolve_target_districts
 
 def test_kyiv_districts_coverage():

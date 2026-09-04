@@ -1,5 +1,8 @@
-from typing import Optional, List, Dict
+from typing import Optional
+import logging
 from fastapi import FastAPI, Depends
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session

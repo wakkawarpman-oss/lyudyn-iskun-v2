@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from worker.osint.ai_geolocation import AIGeolocation
 
 

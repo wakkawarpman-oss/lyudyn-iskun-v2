@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Set, Dict, List
 from aiogram import Router, types, F

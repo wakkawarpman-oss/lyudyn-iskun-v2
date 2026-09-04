@@ -3,11 +3,9 @@ Sentinel-1 CSAR 5 GHz Radio Frequency Interference (RFI) Tracker (SIGINT / EW / 
 Detects and maps active military radar emissions (S-300/400 search radars, Buk, Nebo-M)
 and electronic warfare (EW) jamming complexes (Krasukha-4, Zhitel, Pole-21) in the C-band (5.405 GHz).
 """
-import os
-import json
 import math
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from datetime import datetime
+from typing import List, Dict, Any
 
 # Baseline active military emitter positions observed via Sentinel-1 CSAR 5 GHz RFI
 # (Coordinates along operational axes and air-defense rings)

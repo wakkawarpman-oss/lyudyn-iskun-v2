@@ -5,7 +5,7 @@ Synthesized from AlabugaLeaks, CTGNN telecom intercepts, and 924th Drone Center 
 """
 
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # Verified Ground Truth Enemy Launch Sites & Production/C2 Facilities
 KNOWN_ENEMY_FACILITIES: List[Dict] = [

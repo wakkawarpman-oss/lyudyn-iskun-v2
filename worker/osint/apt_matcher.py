@@ -5,7 +5,7 @@ Focuses on threat actors active in Ukraine (Gamaredon, Sandworm, APT28/Fancy Bea
 """
 
 import re
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Threat actor profiles mapped from ATT&CK & Threat Intelligence Wiki
 APT_SIGNATURE_DB = {

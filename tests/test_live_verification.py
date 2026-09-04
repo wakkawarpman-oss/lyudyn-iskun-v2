@@ -1,4 +1,3 @@
-import pytest
 from worker.geo_extractors.address_extractor import AddressExtractor
 from worker.verification.live_target_verifier import LiveTargetVerifier
 

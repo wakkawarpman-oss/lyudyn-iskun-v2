@@ -1,4 +1,3 @@
-import pytest
 from worker.sensors.sentinel_rfi import get_live_ew_interference, find_nearby_ew_activity
 
 
