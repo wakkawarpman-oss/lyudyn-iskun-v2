@@ -208,7 +208,7 @@ def _call_openai_vision(text: str, media_path: str, sys_prompt: str) -> requests
     }
     return requests.post(OPENAI_URL, headers=headers, json=data, timeout=20)
 
-def _call_groq_text(text: str, sys_prompt: str, model: str = "openai/gpt-oss-120b") -> requests.Response:
+def _call_groq_text(text: str, sys_prompt: str, model: str = "qwen/qwen3.8-27b") -> requests.Response:
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
     data = {
         "model": model,
@@ -241,13 +241,17 @@ def _route_text_llm(text: str, sys_prompt: str) -> dict:
     if not text:
         return {}
     
-    resp = _call_groq_text(text, sys_prompt)
+    resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.8-27b")
     if resp.status_code in (429, 503, 500) and OPENAI_API_KEY:
         logger.warning(f"Groq API returned {resp.status_code}. Switching to OpenAI fallback...")
         resp = _call_openai_text(text, sys_prompt)
     elif resp.status_code != 200:
-        logger.warning(f"Groq API error. Switching to Mixtral fallback...")
-        resp = _call_groq_text(text, sys_prompt, model="mixtral-8x7b-32768")
+        logger.warning(f"Groq API error {resp.status_code}. Switching to Qwen 3.6 fallback...")
+        resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.6-27b")
+        if resp.status_code != 200:
+            logger.warning(f"Groq API error {resp.status_code}. Switching to Compound Mini fallback...")
+            resp = _call_groq_text(text, sys_prompt, model="groq/compound-mini")
+
         
     if resp.status_code != 200:
         return rule_based_fallback_parser(text)
