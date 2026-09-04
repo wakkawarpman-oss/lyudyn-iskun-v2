@@ -88,9 +88,10 @@ services:
     - 3000:8080
     environment:
     - WEBUI_AUTH=False
+    - WEBUI_SECRET_KEY=iskun_c4isr_openwebui_key_2026
     - OPENAI_API_BASE_URL=https://api.groq.com/openai/v1
     - OPENAI_API_KEY=${GROQ_API_KEY}
-    - DEFAULT_MODELS=qwen/qwen3.8-27b;qwen/qwen3.6-27b;groq/compound-mini
+    - DEFAULT_MODELS=qwen/qwen3.8-27b
     - ENABLE_OLLAMA_API=False
     volumes:
     - open_webui_data:/app/backend/data
