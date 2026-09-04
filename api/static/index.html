@@ -2189,6 +2189,8 @@
             }
         }
 
+        const droneMarkerCache = new Map();
+
         async function fetchRadarDrones() {
             try {
                 const obParam = currentOblast === 'all' ? '' : `?oblast=${currentOblast}`;
@@ -2203,38 +2205,64 @@
 
                 updateThreatBanner();
 
-                radarLayer.clearLayers();
+                const currentIds = new Set();
                 drones.forEach(d => {
                     if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
+                    const dId = String(d.id || `${d.lat.toFixed(4)}_${d.lng.toFixed(4)}`);
+                    currentIds.add(dId);
                     const heading = Math.round(d.heading || 0);
 
-                    const icon = L.divIcon({
-                        className: '',
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16],
-                        html: `
-                            <div class="m-drone-container">
-                                <div class="m-drone-ping"></div>
-                                ${showHeadings ? `
-                                <div class="m-drone-arrow" style="transform: rotate(${heading}deg);">
-                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="#ff0055">
-                                        <path d="M12 2L4 21l8-4 8 4L12 2z"/>
-                                    </svg>
-                                </div>` : ''}
-                                <div class="m-drone-dot"></div>
-                                <div class="m-drone-tag">🔴 ${d.place || 'БпЛА'} ${heading ? `${heading}°` : ''}</div>
-                            </div>
-                        `
-                    });
+                    const iconHtml = `
+                        <div class="m-drone-container">
+                            <div class="m-drone-ping"></div>
+                            ${showHeadings ? `
+                            <div class="m-drone-arrow" style="transform: rotate(${heading}deg);">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="#ff0055">
+                                    <path d="M12 2L4 21l8-4 8 4L12 2z"/>
+                                </svg>
+                            </div>` : ''}
+                            <div class="m-drone-dot"></div>
+                            <div class="m-drone-tag">🔴 ${d.place || 'БпЛА'} ${heading ? `${heading}°` : ''}</div>
+                        </div>
+                    `;
 
-                    const m = L.marker([d.lat, d.lng], { icon: icon });
-                    m.on('click', () => openDroneSheet(d));
-                    m.addTo(radarLayer);
+                    if (droneMarkerCache.has(dId)) {
+                        const existingMarker = droneMarkerCache.get(dId);
+                        existingMarker.setLatLng([d.lat, d.lng]);
+                        existingMarker.setIcon(L.divIcon({
+                            className: '',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16],
+                            html: iconHtml
+                        }));
+                        existingMarker.off('click');
+                        existingMarker.on('click', () => openDroneSheet(d));
+                    } else {
+                        const icon = L.divIcon({
+                            className: '',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16],
+                            html: iconHtml
+                        });
+                        const m = L.marker([d.lat, d.lng], { icon: icon });
+                        m.on('click', () => openDroneSheet(d));
+                        m.addTo(radarLayer);
+                        droneMarkerCache.set(dId, m);
+                    }
                 });
+
+                // Remove departed markers without full-layer clear
+                for (const [id, m] of droneMarkerCache.entries()) {
+                    if (!currentIds.has(id)) {
+                        radarLayer.removeLayer(m);
+                        droneMarkerCache.delete(id);
+                    }
+                }
             } catch(e) {
                 console.warn('Radar error:', e);
             }
         }
+
 
         // Tap Threat Banner -> Fly to nearest drone in active oblast
         document.getElementById('threat-banner')?.addEventListener('click', () => {

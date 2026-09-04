@@ -138,7 +138,7 @@ async def cmd_deep_osint(message: types.Message):
                     "Authorization": f"Bearer {groq_api_key}"
                 }
                 groq_data = {
-                    "model": "llama-3.3-70b-versatile",
+                    "model": "qwen/qwen3.8-27b",
                     "messages": [
                         {"role": "system", "content": sys_prompt},
                         {"role": "user", "content": user_prompt}
