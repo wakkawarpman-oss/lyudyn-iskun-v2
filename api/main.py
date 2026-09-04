@@ -171,9 +171,19 @@ def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depe
         else:
             logic = "🗺️ Текстова прив'язка топоніма (OSINT)"
 
+        chan = (e.source_channel or "").strip()
+        if chan in ("1181169156", "-1001181169156"):
+            chan = "kievreal1"
+        elif chan in ("2053889953", "-1002053889953"):
+            chan = "operatyvnyi_monitor"
+        
+        is_num = chan.replace("-", "").isdigit()
+        src_link = f"https://t.me/{chan.lstrip('@')}/{e.message_id}" if (chan and not is_num and e.message_id) else ""
+
         result.append({
             "id": e.id,
-            "source_channel": e.source_channel,
+            "source_channel": chan,
+            "source_link": src_link,
             "message_id": e.message_id,
             "event_type": e.event_type,
             "location_text": e.location_text,
@@ -249,6 +259,7 @@ def get_stats(db: Session = Depends(get_db)):
     return res
 
 @app.get("/api/shelters")
+@app.get("/api/v1/shelters")
 def get_map_shelters(db: Session = Depends(get_db)):
     from database.models import BombShelter
     shelters = db.query(
@@ -262,7 +273,7 @@ def get_map_shelters(db: Session = Depends(get_db)):
         BombShelter.longitude
     ).all()
     
-    return [
+    result = [
         {
             "id": s.id,
             "name": s.name,
@@ -275,6 +286,30 @@ def get_map_shelters(db: Session = Depends(get_db)):
         }
         for s in shelters if s.latitude and s.longitude
     ]
+
+    # Include verified Rivne civil protection shelters from GeoJSON
+    rivne_path = os.path.join(os.path.dirname(__file__), "static", "data", "rivne_shelters.geojson")
+    if os.path.exists(rivne_path):
+        try:
+            with open(rivne_path, "r", encoding="utf-8") as rf:
+                rdata = json.load(rf)
+                for feat in rdata.get("features", []):
+                    c = feat["geometry"]["coordinates"]
+                    p = feat["properties"]
+                    result.append({
+                        "id": 10000 + p["id"],
+                        "name": p["name"],
+                        "address": p["address"],
+                        "district": "Рівне",
+                        "type": "radiation_shelter",
+                        "capacity": p["capacity"],
+                        "lat": float(c[1]),
+                        "lon": float(c[0])
+                    })
+        except Exception as e:
+            logger.warning(f"Error loading rivne_shelters.geojson: {e}")
+
+    return {"shelters": result, "count": len(result)}
 
 @app.get("/api/geoint/zones")
 def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session = Depends(get_db)):
@@ -343,7 +378,49 @@ def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session 
 @app.get("/api/v1/radar/drones")
 def get_radar_drones(oblast: Optional[str] = None):
     from worker.osint.neptun_radar import get_live_radar_threats
-    return get_live_radar_threats(oblast=oblast)
+    from worker.osint.launch_triangulation import estimate_launch_origin, project_forward_substation_threats
+    from worker.geo_extractors.poi_matcher import POI_DATABASE
+
+    threats_data = get_live_radar_threats(oblast=oblast)
+    drones = threats_data.get("drones", [])
+
+    substations = [
+        {"name": name, "lat": data["lat"], "lon": data["lon"], "voltage": data.get("voltage", "110-750 kV")}
+        for name, data in POI_DATABASE.items()
+        if data.get("category") in ("substation", "energy", "fuel_depot", "defense_industry")
+    ]
+
+    for d in drones:
+        lat = d.get("lat")
+        lng = d.get("lng")
+        heading = d.get("heading")
+        speed = d.get("speed_kmh") or 185.0
+
+        if lat is not None and lng is not None and heading is not None and heading > 0:
+            d["estimated_launch"] = estimate_launch_origin(lat, lng, heading, speed)
+            d["projected_targets"] = project_forward_substation_threats(
+                lat, lng, heading, speed, substations, max_cone_deg=35.0, max_distance_km=75.0
+            )
+        else:
+            d["estimated_launch"] = None
+            d["projected_targets"] = []
+
+    return threats_data
+
+@app.get("/api/v1/threats/enemy-facilities")
+def get_enemy_facilities():
+    from worker.osint.launch_triangulation import KNOWN_ENEMY_FACILITIES
+    return {"facilities": KNOWN_ENEMY_FACILITIES, "count": len(KNOWN_ENEMY_FACILITIES)}
+
+@app.get("/api/v1/threats/active-alerts")
+def get_active_substation_threats():
+    from worker.osint.threat_dispatcher import get_active_dispatch_summary
+    return get_active_dispatch_summary()
+
+@app.get("/api/v1/recon/tot-telecom")
+def get_tot_telecom():
+    from worker.osint.network_recon import get_tot_telecom_status
+    return get_tot_telecom_status()
 
 @app.get("/api/v1/radar/thermal")
 def get_radar_thermal():
@@ -491,6 +568,10 @@ def api_drone_raycast(req: DroneRaycastRequest):
         "slant_range_m": res.slant_range_m,
         "confidence": res.confidence
     }
+
+# OpenWebUI & Agent Tools
+from api.routes.openwebui_tools import router as openwebui_tools_router
+app.include_router(openwebui_tools_router)
 
 # Serve the static HTML frontend with explicit no-cache headers to prevent stale mobile webview caches
 from fastapi.responses import FileResponse

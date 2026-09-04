@@ -4,7 +4,10 @@ import logging
 import math
 import os
 import urllib.request
-import redis
+try:
+    import redis
+except ImportError:
+    redis = None
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -86,9 +89,10 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
     raw_json = None
     r = None
     try:
-        r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
-        if not force_refresh:
-            raw_json = r.get(CACHE_KEY)
+        if redis:
+            r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+            if not force_refresh:
+                raw_json = r.get(CACHE_KEY)
     except Exception as e:
         logger.warning(f"Redis cache check failed in neptun_radar: {e}")
 
@@ -166,6 +170,13 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
                 if isinstance(p, dict) and "lat" in p and "lng" in p:
                     trail.append([p["lat"], p["lng"]])
 
+        heading_val = float(m.get("course_bearing") or 0)
+        if heading_val == 0 and len(trail) >= 2:
+            from worker.osint.launch_triangulation import calculate_bearing
+            heading_val = round(calculate_bearing(trail[-2][0], trail[-2][1], trail[-1][0], trail[-1][1]), 1)
+
+        speed_val = float(m.get("speed_kmh") or m.get("computed_speed_kmh") or (185.0 if category == "drone" else 0))
+
         drone_obj = {
             "id": str(m.get("id") or m.get("track_id") or f"{lat:.4f}_{lng:.4f}"),
             "label": label,
@@ -174,8 +185,8 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "threat_type": m.get("threat_type") or category,
             "lat": float(lat),
             "lng": float(lng),
-            "heading": float(m.get("course_bearing") or 0),
-            "speed_kmh": float(m.get("speed_kmh") or m.get("computed_speed_kmh") or 0),
+            "heading": heading_val,
+            "speed_kmh": speed_val,
             "confidence": int(m.get("confidence_0_100") or 0),
             "place": m.get("place") or "",
             "region": m.get("region") or m.get("oblast") or "",

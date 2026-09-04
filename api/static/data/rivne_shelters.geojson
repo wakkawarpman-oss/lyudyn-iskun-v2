@@ -1,0 +1,3945 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2557,
+          50.6085
+        ]
+      },
+      "properties": {
+        "id": 1,
+        "reg_number": "64005",
+        "name": "ПРУ №64005 (Готова)",
+        "address": "м. Рівне, вул. В’ячеслава Чорновола, 43",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "Національний університет водного господарства та природокористування",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2418,
+          50.6201
+        ]
+      },
+      "properties": {
+        "id": 2,
+        "reg_number": "64010",
+        "name": "ПРУ №64010 (Обмежено готова)",
+        "address": "м. Рівне, вул. Базарна, 8",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2466,
+          50.621
+        ]
+      },
+      "properties": {
+        "id": 3,
+        "reg_number": "64011",
+        "name": "ПРУ №64011 (Готова)",
+        "address": "м. Рівне, вул. Сагайдачного, 4",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2496,
+          50.6173
+        ]
+      },
+      "properties": {
+        "id": 4,
+        "reg_number": "64014",
+        "name": "ПРУ №64014 (Готова)",
+        "address": "м. Рівне, вул. Соборна, 57",
+        "capacity": 140,
+        "readiness": "Готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2476,
+          50.6239
+        ]
+      },
+      "properties": {
+        "id": 5,
+        "reg_number": "64016",
+        "name": "ПРУ №64016 (Обмежено готова)",
+        "address": "м. Рівне, вул. Пересопницька, 93",
+        "capacity": 140,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2528,
+          50.6267
+        ]
+      },
+      "properties": {
+        "id": 6,
+        "reg_number": "64017",
+        "name": "ПРУ №64017 (Обмежено готова)",
+        "address": "м. Рівне, вул. Видумка, 26",
+        "capacity": 120,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2505,
+          50.6182
+        ]
+      },
+      "properties": {
+        "id": 7,
+        "reg_number": "64020",
+        "name": "ПРУ №64020 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 135",
+        "capacity": 130,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2432,
+          50.6123
+        ]
+      },
+      "properties": {
+        "id": 8,
+        "reg_number": "64021",
+        "name": "ПРУ №64021 (Не готова)",
+        "address": "м. Рівне, вул. Калнишевського, 29",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Медколедж",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2511,
+          50.6188
+        ]
+      },
+      "properties": {
+        "id": 9,
+        "reg_number": "64022",
+        "name": "ПРУ №64022 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 61",
+        "capacity": 80,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2731,
+          50.6163
+        ]
+      },
+      "properties": {
+        "id": 10,
+        "reg_number": "64026",
+        "name": "ПРУ №64026 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 15",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2517,
+          50.6194
+        ]
+      },
+      "properties": {
+        "id": 11,
+        "reg_number": "64028",
+        "name": "ПРУ №64028 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 5",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський кооперативний економіко-правовий коледж / споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.252,
+          50.6197
+        ]
+      },
+      "properties": {
+        "id": 12,
+        "reg_number": "64029",
+        "name": "ПРУ №64029 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 1",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ЗАТ \"Рівнебудтандем\"/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2492,
+          50.6263
+        ]
+      },
+      "properties": {
+        "id": 13,
+        "reg_number": "64038",
+        "name": "ПРУ №64038 (Обмежено готова)",
+        "address": "м. Рівне, вул. Литовська, 53",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Коледж НУВГП",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2544,
+          50.6291
+        ]
+      },
+      "properties": {
+        "id": 14,
+        "reg_number": "64046",
+        "name": "ПРУ №64046 (Не готова)",
+        "address": "м. Рівне, вул. Ніла Хасевича, 1",
+        "capacity": 90,
+        "readiness": "Не готова",
+        "custodian": "Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2504,
+          50.6233
+        ]
+      },
+      "properties": {
+        "id": 15,
+        "reg_number": "64062",
+        "name": "ПРУ №64062 (Не готова)",
+        "address": "м. Рівне, вул. Симона Петлюри, 35",
+        "capacity": 70,
+        "readiness": "Не готова",
+        "custodian": "РОДА",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2253,
+          50.6159
+        ]
+      },
+      "properties": {
+        "id": 16,
+        "reg_number": "66778",
+        "name": "ПРУ №66778 (Готова)",
+        "address": "м. Рівне, вул. Дубенська, 35",
+        "capacity": 400,
+        "readiness": "Готова",
+        "custodian": "Аграрний коледж",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2752,
+          50.6184
+        ]
+      },
+      "properties": {
+        "id": 17,
+        "reg_number": "66780",
+        "name": "ПРУ №66780 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 78д",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнефармація»/ споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2575,
+          50.6336
+        ]
+      },
+      "properties": {
+        "id": 18,
+        "reg_number": "66875",
+        "name": "ПРУ №66875 (Готова)",
+        "address": "м. Рівне, вул. Князя Володимира, 71",
+        "capacity": 300,
+        "readiness": "Готова",
+        "custodian": "ПрАТ «Рівнеобленерго»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2604,
+          50.6231
+        ]
+      },
+      "properties": {
+        "id": 19,
+        "reg_number": "66876",
+        "name": "ПРУ №66876 (Обмежено готова)",
+        "address": "м. Рівне, вул. Гурія Бухала, 3",
+        "capacity": 350,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2456,
+          50.6259
+        ]
+      },
+      "properties": {
+        "id": 20,
+        "reg_number": "66878",
+        "name": "ПРУ №66878 (Обмежено готова)",
+        "address": "м. Рівне, вул. Драганчука, 9",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2758,
+          50.6162
+        ]
+      },
+      "properties": {
+        "id": 21,
+        "reg_number": "66879",
+        "name": "ПРУ №66879 (Обмежено готова)",
+        "address": "м. Рівне, вул. Відінська, 40а",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Галицьке»/Управління житлово-комунального господарства",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2091,
+          50.6147
+        ]
+      },
+      "properties": {
+        "id": 22,
+        "reg_number": "66880",
+        "name": "ПРУ №66880 (Обмежено готова)",
+        "address": "м. Рівне, вул. Макарова, 48",
+        "capacity": 2000,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2612,
+          50.6143
+        ]
+      },
+      "properties": {
+        "id": 23,
+        "reg_number": "66890",
+        "name": "ПРУ №66890 (Обмежено готова)",
+        "address": "м. Рівне, вул. Коновальця, 17",
+        "capacity": 2500,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2464,
+          50.6171
+        ]
+      },
+      "properties": {
+        "id": 24,
+        "reg_number": "66891",
+        "name": "ПРУ №66891 (Готова)",
+        "address": "м. Рівне, вул. Павлюченко, 24",
+        "capacity": 2000,
+        "readiness": "Готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2499,
+          50.6176
+        ]
+      },
+      "properties": {
+        "id": 25,
+        "reg_number": "66897",
+        "name": "ПРУ №66897 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 12а",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2223,
+          50.6129
+        ]
+      },
+      "properties": {
+        "id": 26,
+        "reg_number": "66898",
+        "name": "ПРУ №66898 (Обмежено готова)",
+        "address": "м. Рівне, вул. Дубенська, 46Б",
+        "capacity": 350,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.242,
+          50.6255
+        ]
+      },
+      "properties": {
+        "id": 27,
+        "reg_number": "66901",
+        "name": "ПРУ №66901 (Обмежено готова)",
+        "address": "м. Рівне, вул. Курчатова, 3",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Товариство сприяння оборони України",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2472,
+          50.6283
+        ]
+      },
+      "properties": {
+        "id": 28,
+        "reg_number": "66902",
+        "name": "ПРУ №66902 (Обмежено готова)",
+        "address": "м. Рівне, вул. Островського, 13а",
+        "capacity": 640,
+        "readiness": "Обмежено готова",
+        "custodian": "Музична школа №2 РМР",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2524,
+          50.6111
+        ]
+      },
+      "properties": {
+        "id": 29,
+        "reg_number": "66903",
+        "name": "ПРУ №66903 (Не готова)",
+        "address": "м. Рівне, вул. Волинської Дивізії, 13",
+        "capacity": 720,
+        "readiness": "Не готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2235,
+          50.6141
+        ]
+      },
+      "properties": {
+        "id": 30,
+        "reg_number": "66904",
+        "name": "ПРУ №66904 (Готова)",
+        "address": "м. Рівне, вул. Дубенська, 133",
+        "capacity": 2015,
+        "readiness": "Готова",
+        "custodian": "Управління освіти міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2428,
+          50.6167
+        ]
+      },
+      "properties": {
+        "id": 31,
+        "reg_number": "66905",
+        "name": "ПРУ №66905 (Обмежено готова)",
+        "address": "м. Рівне, вул. Коперніка, 14",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ОСББ «Газда» Шостак О.М",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.248,
+          50.6195
+        ]
+      },
+      "properties": {
+        "id": 32,
+        "reg_number": "66912",
+        "name": "ПРУ №66912 (Обмежено готова)",
+        "address": "м. Рівне, вул. Замкова, 31",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "«Рівненський регіональний центр стандартизації, метрології та сертифікації»/ Фонд держмайна",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2532,
+          50.6223
+        ]
+      },
+      "properties": {
+        "id": 33,
+        "reg_number": "66914",
+        "name": "ПРУ №66914 (Готова)",
+        "address": "м. Рівне, вул. Дорошенка, 55а",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "КП «Міськсвітло»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2743,
+          50.6175
+        ]
+      },
+      "properties": {
+        "id": 34,
+        "reg_number": "66915",
+        "name": "ПРУ №66915 (Готова)",
+        "address": "м. Рівне, вул. Київська, 12",
+        "capacity": 150,
+        "readiness": "Готова",
+        "custodian": "Укрпошта",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.213,
+          50.6186
+        ]
+      },
+      "properties": {
+        "id": 35,
+        "reg_number": "66916",
+        "name": "ПРУ №66916 (Обмежено готова)",
+        "address": "м. Рівне, вул. Макарова, 42",
+        "capacity": 600,
+        "readiness": "Обмежено готова",
+        "custodian": "Фонд держмайна, утримувач АЗОТ",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2488,
+          50.6107
+        ]
+      },
+      "properties": {
+        "id": 36,
+        "reg_number": "66917",
+        "name": "ПРУ №66917 (Обмежено готова)",
+        "address": "м. Рівне, вул. Князя Острозького, 14",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "АЗОТ / споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.254,
+          50.6135
+        ]
+      },
+      "properties": {
+        "id": 37,
+        "reg_number": "66918",
+        "name": "ПРУ №66918 (Обмежено готова)",
+        "address": "м. Рівне, пр.-т Князя Романа, 8",
+        "capacity": 1000,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2592,
+          50.6163
+        ]
+      },
+      "properties": {
+        "id": 38,
+        "reg_number": "66919",
+        "name": "ПРУ №66919 (Обмежено готова)",
+        "address": "м. Рівне, вул.16 липня, 38",
+        "capacity": 450,
+        "readiness": "Обмежено готова",
+        "custodian": "«Діпромісто»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2444,
+          50.6191
+        ]
+      },
+      "properties": {
+        "id": 39,
+        "reg_number": "66920",
+        "name": "ПРУ №66920 (Готова)",
+        "address": "м. Рівне, вул. Будівельників, 7",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "ТОВ «Рівнеагроспецмонтаж» /споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2496,
+          50.6219
+        ]
+      },
+      "properties": {
+        "id": 40,
+        "reg_number": "66921",
+        "name": "ПРУ №66921 (готова)",
+        "address": "м. Рівне, вул. Фабрична, 4",
+        "capacity": 200,
+        "readiness": "готова",
+        "custodian": "ПрАТ «Рівненська фабрика нетканих матеріалів» (гуртожиток)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2548,
+          50.6247
+        ]
+      },
+      "properties": {
+        "id": 41,
+        "reg_number": "66922",
+        "name": "ПРУ №66922 (Обмежено готова)",
+        "address": "м. Рівне, вул. Ковалевської, 17",
+        "capacity": 1300,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління освіти",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.26,
+          50.6275
+        ]
+      },
+      "properties": {
+        "id": 42,
+        "reg_number": "66924",
+        "name": "ПРУ №66924 (Готова)",
+        "address": "м. Рівне, вул. Небесної Сотні, 24",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "Квартирно-експлуатаційний відділ м. Рівне Міністерства Оборони України /Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2452,
+          50.6103
+        ]
+      },
+      "properties": {
+        "id": 43,
+        "reg_number": "66925",
+        "name": "ПРУ №66925 (Готова)",
+        "address": "м. Рівне, вул. Євгена Коновальця, 19",
+        "capacity": 1800,
+        "readiness": "Готова",
+        "custodian": "Управління освіти",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2504,
+          50.6131
+        ]
+      },
+      "properties": {
+        "id": 44,
+        "reg_number": "66927",
+        "name": "ПРУ №66927 (Обмежено готова)",
+        "address": "м. Рівне, вул. Княгині Ольги, 13",
+        "capacity": 250,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2556,
+          50.6159
+        ]
+      },
+      "properties": {
+        "id": 45,
+        "reg_number": "66928",
+        "name": "ПРУ №66928 (Обмежено готова)",
+        "address": "м. Рівне, вул. Костромська, 25",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "ПрАТ «Реноме»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2539,
+          50.63
+        ]
+      },
+      "properties": {
+        "id": 46,
+        "reg_number": "66929",
+        "name": "ПРУ №66929 (Готова)",
+        "address": "м. Рівне, вул. Князя Володимира, 112а",
+        "capacity": 150,
+        "readiness": "Готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.246,
+          50.6215
+        ]
+      },
+      "properties": {
+        "id": 47,
+        "reg_number": "66930",
+        "name": "ПРУ №66930 (Готова)",
+        "address": "м. Рівне, вул. Костромська, 25А",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "«Львівтрангаз» ПрАт «Укртрансгаз»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2512,
+          50.6243
+        ]
+      },
+      "properties": {
+        "id": 48,
+        "reg_number": "67752",
+        "name": "ПРУ №67752 (Готова)",
+        "address": "м. Рівне, вул. Біла, 16",
+        "capacity": 500,
+        "readiness": "Готова",
+        "custodian": "РЗВА",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2511,
+          50.6188
+        ]
+      },
+      "properties": {
+        "id": 49,
+        "reg_number": "67752",
+        "name": "ПРУ №67752 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 442г (444а)",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Товариство з обмеженою відповідальністю «АЙЛОНГ ЕВОЛЮШН»/ ОПТІМА 770",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2785,
+          50.6189
+        ]
+      },
+      "properties": {
+        "id": 50,
+        "reg_number": "67753",
+        "name": "ПРУ №67753 (Готова)",
+        "address": "м. Рівне, вул. Відінська, 35",
+        "capacity": 1000,
+        "readiness": "Готова",
+        "custodian": "Автотранспортний технікум",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2788,
+          50.6192
+        ]
+      },
+      "properties": {
+        "id": 51,
+        "reg_number": "67754",
+        "name": "ПРУ №67754 (Не готова)",
+        "address": "м. Рівне, вул. Відінська 5",
+        "capacity": 220,
+        "readiness": "Не готова",
+        "custodian": "Управління превентивної діяльності ГУ НП в Рівненський області",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.252,
+          50.6155
+        ]
+      },
+      "properties": {
+        "id": 52,
+        "reg_number": "67755",
+        "name": "ПРУ №67755 (Не готова)",
+        "address": "с. Велика Омеляна, вул. Авіаторів, 1а",
+        "capacity": 300,
+        "readiness": "Не готова",
+        "custodian": "Аеропорт Рівне",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2572,
+          50.6183
+        ]
+      },
+      "properties": {
+        "id": 53,
+        "reg_number": "67760",
+        "name": "ПРУ №67760 (Обмежено готова)",
+        "address": "м. Рівне, вул. Хасевича, 1",
+        "capacity": 80,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Сонячне»/\nУправління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2574,
+          50.6164
+        ]
+      },
+      "properties": {
+        "id": 54,
+        "reg_number": "67761",
+        "name": "ПРУ №67761 (Обмежено готова)",
+        "address": "м. Рівне, вул. Степана Бандери, 69",
+        "capacity": 250,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Галицьке» /Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2746,
+          50.6178
+        ]
+      },
+      "properties": {
+        "id": 55,
+        "reg_number": "67762",
+        "name": "ПРУ №67762 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 77",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради\n(Кафе, ТОВ «Марічка»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2528,
+          50.6267
+        ]
+      },
+      "properties": {
+        "id": 56,
+        "reg_number": "67766",
+        "name": "ПРУ №67766 (Обмежено готова)",
+        "address": "м. Рівне, вул. Млинівська, 22а",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Підприємство споживчої кооперації «Рівненський заготівельно-виробничо-збутовий комбінат» / споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.258,
+          50.6295
+        ]
+      },
+      "properties": {
+        "id": 57,
+        "reg_number": "67770",
+        "name": "ПРУ №67770 (Не готова)",
+        "address": "м. Рівне, вул. Мірющенка, 25а",
+        "capacity": 30,
+        "readiness": "Не готова",
+        "custodian": "КП «Аптека Ліки» РОР",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2432,
+          50.6123
+        ]
+      },
+      "properties": {
+        "id": 58,
+        "reg_number": "67771",
+        "name": "ПРУ №67771 (Обмежено готова)",
+        "address": "м. Рівне, вул. Тувинських Добровольців, 8",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2484,
+          50.6151
+        ]
+      },
+      "properties": {
+        "id": 59,
+        "reg_number": "67772",
+        "name": "ПРУ №67772 (Обмежено готова)",
+        "address": "м. Рівне, м-н Незалежності, 3",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2536,
+          50.6179
+        ]
+      },
+      "properties": {
+        "id": 60,
+        "reg_number": "67774",
+        "name": "ПРУ №67774 (Обмежено готова)",
+        "address": "м. Рівне, вул. Поштова, 11",
+        "capacity": 40,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська обласна стоматологічна поліклініка",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2487,
+          50.6164
+        ]
+      },
+      "properties": {
+        "id": 61,
+        "reg_number": "67775",
+        "name": "ПРУ №67775 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 187",
+        "capacity": 30,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/КП «Аптека Ліки»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2091,
+          50.6147
+        ]
+      },
+      "properties": {
+        "id": 62,
+        "reg_number": "67776",
+        "name": "ПРУ №67776 (Обмежено готова)",
+        "address": "м. Рівне, вул. Макарова, 3",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2493,
+          50.617
+        ]
+      },
+      "properties": {
+        "id": 63,
+        "reg_number": "67777",
+        "name": "ПРУ №67777 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 404б",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальної власності Рівненського міськвиконкому/",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2544,
+          50.6291
+        ]
+      },
+      "properties": {
+        "id": 64,
+        "reg_number": "67778",
+        "name": "ПРУ №67778 (Обмежено готова)",
+        "address": "м. Рівне, вул. Директорії, 5",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнефармація»/ споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2499,
+          50.6176
+        ]
+      },
+      "properties": {
+        "id": 65,
+        "reg_number": "67779",
+        "name": "ПРУ №67779 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 15",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/ споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2743,
+          50.6127
+        ]
+      },
+      "properties": {
+        "id": 66,
+        "reg_number": "67781",
+        "name": "ПРУ №67781 (Не готова)",
+        "address": "м. Рівне, вул. Данила Галицького, 31",
+        "capacity": 350,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (об'єднання співвласників гуртожитку «Голуб»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.25,
+          50.6175
+        ]
+      },
+      "properties": {
+        "id": 67,
+        "reg_number": "67783",
+        "name": "ПРУ №67783 (Обмежено готова)",
+        "address": "м. Рівне, вул. Гетьмана Мазепи, 19",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська торгово-промислова палата",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2779,
+          50.6183
+        ]
+      },
+      "properties": {
+        "id": 68,
+        "reg_number": "67786",
+        "name": "ПРУ №67786 (Обмежено готова)",
+        "address": "м. Рівне, вул. Відінська, 2",
+        "capacity": 350,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради (ФОП Махновський)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2604,
+          50.6231
+        ]
+      },
+      "properties": {
+        "id": 69,
+        "reg_number": "67787",
+        "name": "ПРУ №67787 (Обмежено готова)",
+        "address": "м. Рівне, вул. Хмільна, 40",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ПрАТ «Римал»\n/ споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2456,
+          50.6259
+        ]
+      },
+      "properties": {
+        "id": 70,
+        "reg_number": "67788",
+        "name": "ПРУ №67788 (Не готова)",
+        "address": "м. Рівне, вул. Словацького, 1",
+        "capacity": 140,
+        "readiness": "Не готова",
+        "custodian": "Обласне комунальне підприємство з МТЗ і соціального захисту РОДА",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2554,
+          50.6315
+        ]
+      },
+      "properties": {
+        "id": 71,
+        "reg_number": "67789",
+        "name": "ПРУ №67789 (Не готова)",
+        "address": "м. Рівне, вул. Князя Володимира, 17",
+        "capacity": 60,
+        "readiness": "Не готова",
+        "custodian": "КЗ «Рівненський обласний центр психічного здоров’я населення»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.259,
+          50.6118
+        ]
+      },
+      "properties": {
+        "id": 72,
+        "reg_number": "67790",
+        "name": "ПРУ №67790 (Не готова)",
+        "address": "м. Рівне, вул. Чорновола, 79",
+        "capacity": 310,
+        "readiness": "Не готова",
+        "custodian": "КЗ «Рівненський обласний спеціалізований диспансер радіаційного захисту населення»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2612,
+          50.6143
+        ]
+      },
+      "properties": {
+        "id": 73,
+        "reg_number": "67791",
+        "name": "ПРУ №67791 (Обмежено готова)",
+        "address": "м. Рівне, вул. Котляревського, 3",
+        "capacity": 80,
+        "readiness": "Обмежено готова",
+        "custodian": "Державна установа «Рівненський обласний лабораторний центр Міністерства охорони здоров’я України»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2464,
+          50.6171
+        ]
+      },
+      "properties": {
+        "id": 74,
+        "reg_number": "67793",
+        "name": "ПРУ №67793 (Обмежено готова)",
+        "address": "м. Рівне, бул. Богдана Хмельницького, 3",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ТОВ «Рівнеформація»/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2516,
+          50.6199
+        ]
+      },
+      "properties": {
+        "id": 75,
+        "reg_number": "67797",
+        "name": "ПРУ №67797 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соломії Крушельницької, 62а",
+        "capacity": 600,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Галицьке»/Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2568,
+          50.6227
+        ]
+      },
+      "properties": {
+        "id": 76,
+        "reg_number": "67798",
+        "name": "ПРУ №67798 (Не готова)",
+        "address": "м. Рівне, пл. Театральна, 1",
+        "capacity": 800,
+        "readiness": "Не готова",
+        "custodian": "КЗ «Рівненський обласний академічний український музично-драматичний театр» РОР",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2583,
+          50.6173
+        ]
+      },
+      "properties": {
+        "id": 77,
+        "reg_number": "67801",
+        "name": "ПРУ №67801 (Обмежено готова)",
+        "address": "м. Рівне, вул. Степана Бандери, 67б",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Галицьке»/Управління комунальною власністю Рівненської міської ради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2538,
+          50.6215
+        ]
+      },
+      "properties": {
+        "id": 78,
+        "reg_number": "67802",
+        "name": "ПРУ №67802 (Готова)",
+        "address": "м. Рівне, вул. Соборна, 17",
+        "capacity": 150,
+        "readiness": "Готова",
+        "custodian": "Відкрите акціонерне товариство «Рівненський ЦУМ»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2524,
+          50.6111
+        ]
+      },
+      "properties": {
+        "id": 79,
+        "reg_number": "67803",
+        "name": "ПРУ №67803 (Обмежено готова)",
+        "address": "м. Рівне, п-т Князя Романа, 13",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради\n(ФОП Баталова Л.А.)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2576,
+          50.6139
+        ]
+      },
+      "properties": {
+        "id": 80,
+        "reg_number": "67804",
+        "name": "ПРУ №67804 (Не готова)",
+        "address": "м. Рівне, Проспект Миру, 10",
+        "capacity": 25,
+        "readiness": "Не готова",
+        "custodian": "Товариство обмеженою відповідальністю «Проспект Рівне» / Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2557,
+          50.6085
+        ]
+      },
+      "properties": {
+        "id": 81,
+        "reg_number": "67805",
+        "name": "ПРУ №67805 (Обмежено готова)",
+        "address": "м. Рівне, вул. Чорновола, 1",
+        "capacity": 120,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська філія приватне акціонерне товариство «Укртелеком»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.256,
+          50.6088
+        ]
+      },
+      "properties": {
+        "id": 82,
+        "reg_number": "67807",
+        "name": "ПРУ №67807 (Обмежено готова)",
+        "address": "м. Рівне, вул. Чорновола, 13",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська обласна спілка споживчих товариств/споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2532,
+          50.6223
+        ]
+      },
+      "properties": {
+        "id": 83,
+        "reg_number": "67808",
+        "name": "ПРУ №67808 (Не готова)",
+        "address": "м. Рівне, вул. Курчатова, 2/1",
+        "capacity": 400,
+        "readiness": "Не готова",
+        "custodian": "Управління комунальною власністю Рівненської міської ради (ТзОВ «Відін»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2584,
+          50.6251
+        ]
+      },
+      "properties": {
+        "id": 84,
+        "reg_number": "67809",
+        "name": "ПРУ №67809 (Обмежено готова)",
+        "address": "м. Рівне, вул. Замкова, 29",
+        "capacity": 120,
+        "readiness": "Обмежено готова",
+        "custodian": "Міський відділ лабораторних досліджень ДУ «Рівненський обласний лабораторний центр Держсанепідслужби України» / Управління комунальною власністю Рівненської міської ради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2477,
+          50.6205
+        ]
+      },
+      "properties": {
+        "id": 85,
+        "reg_number": "67810",
+        "name": "ПРУ №67810 (Не готова)",
+        "address": "м. Рівне, вул. Пластова, 5 (Остафова)",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Заклад дошкільної освіти (ясла-садок) № 8 Рівненської міської ради/ Управління освіти рівнеради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2477,
+          50.6206
+        ]
+      },
+      "properties": {
+        "id": 86,
+        "reg_number": "67812",
+        "name": "ПРУ №67812 (Не готова)",
+        "address": "м. Рівне, вул. Симона Петлюри, 17",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Рівненський будинок вчених",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.254,
+          50.6135
+        ]
+      },
+      "properties": {
+        "id": 87,
+        "reg_number": "67813",
+        "name": "ПРУ №67813 (Готова)",
+        "address": "м. Рівне, вул. Остафова, 29а",
+        "capacity": 830,
+        "readiness": "Готова",
+        "custodian": "Рівненський державний гуманітарний університет",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2483,
+          50.6212
+        ]
+      },
+      "properties": {
+        "id": 88,
+        "reg_number": "67814",
+        "name": "ПРУ №67814 (Не готова)",
+        "address": "м. Рівне, вул. Симона Петлюри, 35",
+        "capacity": 200,
+        "readiness": "Не готова",
+        "custodian": "Управління міжнародного співробітництва та європейської інтеграції РОДА",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2511,
+          50.6188
+        ]
+      },
+      "properties": {
+        "id": 89,
+        "reg_number": "67815",
+        "name": "ПРУ №67815 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 438",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Сонячне»/ Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2431,
+          50.6239
+        ]
+      },
+      "properties": {
+        "id": 90,
+        "reg_number": "67817",
+        "name": "ПРУ №67817 (Обмежено готова)",
+        "address": "м. Рівне, вул. Набережна, 22",
+        "capacity": 200,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Сонячне»/ Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2694,
+          50.6291
+        ]
+      },
+      "properties": {
+        "id": 91,
+        "reg_number": "67818",
+        "name": "ПРУ №67818 (Не готова)",
+        "address": "м. Рівне, вул. Гагаріна, 14",
+        "capacity": 400,
+        "readiness": "Не готова",
+        "custodian": "ЖКП «Покровське» /Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.26,
+          50.6275
+        ]
+      },
+      "properties": {
+        "id": 92,
+        "reg_number": "67819",
+        "name": "ПРУ №67819 (Не готова)",
+        "address": "м. Рівне, вул. Біла, 105а",
+        "capacity": 400,
+        "readiness": "Не готова",
+        "custodian": "ЖКП «Сонячне» /Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2514,
+          50.6219
+        ]
+      },
+      "properties": {
+        "id": 93,
+        "reg_number": "67820",
+        "name": "ПРУ №67820 (Обмежено готова)",
+        "address": "м. Рівне, вул. Міцкевича, 40",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Покровське» (ОСББ «Міцкевича-40») /Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2504,
+          50.6131
+        ]
+      },
+      "properties": {
+        "id": 94,
+        "reg_number": "67822",
+        "name": "ПРУ №67822 (Обмежено готова)",
+        "address": "м. Рівне, вул. Князя Романа, 1",
+        "capacity": 540,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради (ФОП Михалишин І.М.) / ЖКП «Промислове»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2556,
+          50.6159
+        ]
+      },
+      "properties": {
+        "id": 95,
+        "reg_number": "67823",
+        "name": "ПРУ №67823 (Обмежено готова)",
+        "address": "м. Рівне, вул. Мазепи, 20",
+        "capacity": 120,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Покровське»/Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2608,
+          50.6187
+        ]
+      },
+      "properties": {
+        "id": 96,
+        "reg_number": "67824",
+        "name": "ПРУ №67824 (Обмежено готова)",
+        "address": "м. Рівне, вул. Князя Романа, 12",
+        "capacity": 450,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради\n(ТзОВ «Гастроном Україна»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.246,
+          50.6215
+        ]
+      },
+      "properties": {
+        "id": 97,
+        "reg_number": "67826",
+        "name": "ПРУ №67826 (Обмежено готова)",
+        "address": "м. Рівне, пр-к Робітничий, 4",
+        "capacity": 800,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Сонячне» /Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2512,
+          50.6243
+        ]
+      },
+      "properties": {
+        "id": 98,
+        "reg_number": "67828",
+        "name": "ПРУ №67828 (Обмежено готова)",
+        "address": "м. Рівне, вул. Фабрична, 7",
+        "capacity": 1300,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська ДЮСШ № 4/Управління у справах дітей",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2718,
+          50.6315
+        ]
+      },
+      "properties": {
+        "id": 99,
+        "reg_number": "67829",
+        "name": "ПРУ №67829 (Не готова)",
+        "address": "м. Рівне, вул. Гагаріна, 29",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "ОСББ «Наш спільний дім»\n/ споруда відсутня",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2416,
+          50.6099
+        ]
+      },
+      "properties": {
+        "id": 100,
+        "reg_number": "67830",
+        "name": "ПРУ №67830 (Не готова)",
+        "address": "м. Рівне, вул. Небесної Сотні, 66",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "ВП «Рівнехліб» хлібозавод №1 ВАТ «Концерн Хлібпром» / Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2535,
+          50.6125
+        ]
+      },
+      "properties": {
+        "id": 101,
+        "reg_number": "67831",
+        "name": "ПРУ №67831 (Обмежено готова)",
+        "address": "м. Рівне, вул. Степана Бандери, 58",
+        "capacity": 200,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління поліції охорони ГУ НП в Рівненській області",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.252,
+          50.6155
+        ]
+      },
+      "properties": {
+        "id": 102,
+        "reg_number": "67837",
+        "name": "ПРУ №67837 (Не готова)",
+        "address": "м. Рівне, вул. Курчатова, 6",
+        "capacity": 700,
+        "readiness": "Не готова",
+        "custodian": "КЗ «Рівненський обласний ендокринологічний центр»\n/ Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2094,
+          50.615
+        ]
+      },
+      "properties": {
+        "id": 103,
+        "reg_number": "67839",
+        "name": "ПРУ №67839 (Обмежено готова)",
+        "address": "м. Рівне, вул. Макарова, 40а",
+        "capacity": 215,
+        "readiness": "Обмежено готова",
+        "custodian": "Заклад дошкільної освіти № 39 РМР / Управління освіти",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2424,
+          50.6211
+        ]
+      },
+      "properties": {
+        "id": 104,
+        "reg_number": "67840",
+        "name": "ПРУ №67840 ()",
+        "address": "м. Рівне, вул. Корольова, 4а",
+        "capacity": 215,
+        "readiness": "",
+        "custodian": "Заклад дошкільної освіти № 33 РМР/ Управління освіти",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2569,
+          50.6097
+        ]
+      },
+      "properties": {
+        "id": 105,
+        "reg_number": "64001",
+        "name": "ПРУ №64001 (Обмежено готова)",
+        "address": "м. Рівне, вул. Чорновола, 89а",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненське обласне виробниче комунальне підприємство водопровідно-каналізаційного господарства «Рівнеобдводоканал»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2502,
+          50.6179
+        ]
+      },
+      "properties": {
+        "id": 106,
+        "reg_number": "64002",
+        "name": "ПРУ №64002 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 56",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Поштамт 1, Рівненська дирекція «Укрпошта»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.258,
+          50.6295
+        ]
+      },
+      "properties": {
+        "id": 107,
+        "reg_number": "64003",
+        "name": "ПРУ №64003 (Не готова)",
+        "address": "м. Рівне, вул. Курчатова, 60",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПП «Білдінг-плюс»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2725,
+          50.6157
+        ]
+      },
+      "properties": {
+        "id": 108,
+        "reg_number": "64004",
+        "name": "ПРУ №64004 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 92в",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Галицьке» /Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2511,
+          50.6188
+        ]
+      },
+      "properties": {
+        "id": 109,
+        "reg_number": "64006",
+        "name": "ПРУ №64006 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 185",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ЖКП «Західне» / Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2514,
+          50.6191
+        ]
+      },
+      "properties": {
+        "id": 110,
+        "reg_number": "64007",
+        "name": "ПРУ №64007 (Готова)",
+        "address": "м. Рівне, вул. Соборна, 11",
+        "capacity": 200,
+        "readiness": "Готова",
+        "custodian": "Національний університет водного господарства та природокористуваня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2758,
+          50.6142
+        ]
+      },
+      "properties": {
+        "id": 111,
+        "reg_number": "64008",
+        "name": "ПРУ №64008 (Обмежено готова)",
+        "address": "м. Рівне, вул. Данила Галицького, 23",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "КП«Рівнеелектроавтотранс» Рівненської міської ради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2495,
+          50.6224
+        ]
+      },
+      "properties": {
+        "id": 112,
+        "reg_number": "64009",
+        "name": "ПРУ №64009 (Обмежено готова)",
+        "address": "м. Рівне,вул. Симона Петлюри,10",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління Національного банку України в Рівненській області",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2523,
+          50.62
+        ]
+      },
+      "properties": {
+        "id": 113,
+        "reg_number": "64013",
+        "name": "ПРУ №64013 (Не готова)",
+        "address": "м. Рівне,вул. Соборна,3",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2526,
+          50.6203
+        ]
+      },
+      "properties": {
+        "id": 114,
+        "reg_number": "64019",
+        "name": "ПРУ №64019 (Не готова)",
+        "address": "м. Рівне,вул. Соборна,190",
+        "capacity": 120,
+        "readiness": "Не готова",
+        "custodian": "ЖКП «Західне» / Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2577,
+          50.6167
+        ]
+      },
+      "properties": {
+        "id": 115,
+        "reg_number": "64025",
+        "name": "ПРУ №64025 (Готова)",
+        "address": "м. Рівне, вул. Степана Бандери,12",
+        "capacity": 140,
+        "readiness": "Готова",
+        "custodian": "Рівненський державний гуманітарний університет",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2448,
+          50.6147
+        ]
+      },
+      "properties": {
+        "id": 116,
+        "reg_number": "64027",
+        "name": "ПРУ №64027 (Обмежено готова)",
+        "address": "м. Рівне, вул. Полуботка, 37",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "ГУ ДСНС України у Рівненській області",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.25,
+          50.6175
+        ]
+      },
+      "properties": {
+        "id": 117,
+        "reg_number": "64030",
+        "name": "ПРУ №64030 (Не готова)",
+        "address": "м. Рівне, вул. Фабрична,12",
+        "capacity": 1000,
+        "readiness": "Не готова",
+        "custodian": "ПрАТ «Рівнельон» /Червонюк О. К.",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2552,
+          50.6203
+        ]
+      },
+      "properties": {
+        "id": 118,
+        "reg_number": "64031",
+        "name": "ПРУ №64031 (Не готова)",
+        "address": "м. Рівне, вул. Фабрична,12",
+        "capacity": 1000,
+        "readiness": "Не готова",
+        "custodian": "ПрАТ«Рівнельон» /Червонюк О. К.",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2604,
+          50.6231
+        ]
+      },
+      "properties": {
+        "id": 119,
+        "reg_number": "64032",
+        "name": "ПРУ №64032 (Не готова)",
+        "address": "м. Рівне, вул. Фабрична, 12",
+        "capacity": 1000,
+        "readiness": "Не готова",
+        "custodian": "ПрАТ «Рівнельон» /Червонюк О. К.",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2456,
+          50.6259
+        ]
+      },
+      "properties": {
+        "id": 120,
+        "reg_number": "64033",
+        "name": "ПРУ №64033 (Обмежено готова)",
+        "address": "м. Рівне,вул. Фабрична, 2",
+        "capacity": 450,
+        "readiness": "Обмежено готова",
+        "custodian": "Фонд державного майна України (ПрАТ «Рівненська фабрика нетканих матеріалів»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2508,
+          50.6287
+        ]
+      },
+      "properties": {
+        "id": 121,
+        "reg_number": "64039",
+        "name": "ПРУ №64039 (Не готова)",
+        "address": "м. Рівне, вул. Млинівська, 2",
+        "capacity": 1200,
+        "readiness": "Не готова",
+        "custodian": "Рівненській професійний ліцей",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.256,
+          50.6115
+        ]
+      },
+      "properties": {
+        "id": 122,
+        "reg_number": "64040",
+        "name": "ПРУ №64040 (Не готова)",
+        "address": "м. Рівне-17",
+        "capacity": 675,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПрАТ «Рівнеазот»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2612,
+          50.6143
+        ]
+      },
+      "properties": {
+        "id": 123,
+        "reg_number": "64041",
+        "name": "ПРУ №64041 (Не готова)",
+        "address": "м. Рівне-17",
+        "capacity": 675,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПрАТ «Рівнеазот»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2464,
+          50.6171
+        ]
+      },
+      "properties": {
+        "id": 124,
+        "reg_number": "64043",
+        "name": "ПРУ №64043 (Готова)",
+        "address": "м. Рівне, вул.16 Липня, 17",
+        "capacity": 250,
+        "readiness": "Готова",
+        "custodian": "Виробничо-структурний підрозділ «Рівненська дирекція залізничних перевезень» ПрАТ «Українська залізниця»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2516,
+          50.6199
+        ]
+      },
+      "properties": {
+        "id": 125,
+        "reg_number": "64044",
+        "name": "ПРУ №64044 (Не готова)",
+        "address": "м. Рівне, вул. Будівельників, 1",
+        "capacity": 300,
+        "readiness": "Не готова",
+        "custodian": "Фізична особа підприємець Черняк В.П.",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2568,
+          50.6227
+        ]
+      },
+      "properties": {
+        "id": 126,
+        "reg_number": "64054",
+        "name": "ПРУ №64054 (Обмежено готова)",
+        "address": "м. Рівне, пр. Робітничий, 5",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.242,
+          50.6255
+        ]
+      },
+      "properties": {
+        "id": 127,
+        "reg_number": "64055",
+        "name": "ПРУ №64055 (Не готова)",
+        "address": "м. Рівне-17",
+        "capacity": 600,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПрАТ «Рівнеазот»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2472,
+          50.6283
+        ]
+      },
+      "properties": {
+        "id": 128,
+        "reg_number": "64056",
+        "name": "ПРУ №64056 (Не готова)",
+        "address": "м. Рівне, вул. Івана Вишневського,4а (Білякова)",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПрАТ«Рівнегаз»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2548,
+          50.6309
+        ]
+      },
+      "properties": {
+        "id": 129,
+        "reg_number": "64057",
+        "name": "ПРУ №64057 (Не готова)",
+        "address": "м. Рівне,вул. Князя Володимира, 112",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ТДІ «Рівнехолод»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2576,
+          50.6139
+        ]
+      },
+      "properties": {
+        "id": 130,
+        "reg_number": "64061",
+        "name": "ПРУ №64061 (Не готова)",
+        "address": "м. Рівне, вул. Пересопницька,58",
+        "capacity": 148,
+        "readiness": "Не готова",
+        "custodian": "ЖКП «Покровське»/Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2428,
+          50.6167
+        ]
+      },
+      "properties": {
+        "id": 131,
+        "reg_number": "64064",
+        "name": "ПРУ №64064 (Не готова)",
+        "address": "м. Рівне, вул. Григорія Сковороди, 23",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "ПрАТ«Рівнезалізобетон» / Фонд державного майна України",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.248,
+          50.6195
+        ]
+      },
+      "properties": {
+        "id": 132,
+        "reg_number": "64065",
+        "name": "ПРУ №64065 (Обмежено готова)",
+        "address": "Рівненський р-н, с. Городок",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "ПрАТ«Рівнезалізобетон» / споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.27,
+          50.6297
+        ]
+      },
+      "properties": {
+        "id": 133,
+        "reg_number": "64066",
+        "name": "ПРУ №64066 (Не готова)",
+        "address": "м. Рівне, вул. Гагаріна,16",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(ТзОВ «Рівнеспецбудінвест»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2584,
+          50.6251
+        ]
+      },
+      "properties": {
+        "id": 134,
+        "reg_number": "64067",
+        "name": "ПРУ №64067 (Не готова)",
+        "address": "м. Рівне, вул. Вінницька, 60",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фізична особа підприємець Петрочук В.В. / Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2436,
+          50.6279
+        ]
+      },
+      "properties": {
+        "id": 135,
+        "reg_number": "64068",
+        "name": "ПРУ №64068 (Не готова)",
+        "address": "м. Рівне, вул. Курчатова,18",
+        "capacity": 200,
+        "readiness": "Не готова",
+        "custodian": "АТВТ «Ремонтно-транспортне підприємство»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2569,
+          50.633
+        ]
+      },
+      "properties": {
+        "id": 136,
+        "reg_number": "64070",
+        "name": "ПРУ №64070 (Не готова)",
+        "address": "м. Рівне,вул. Князя Володимира, 82(89)а",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "ТзОВ «Торговий дім «Мегаполіс»» / Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.254,
+          50.6135
+        ]
+      },
+      "properties": {
+        "id": 137,
+        "reg_number": "64071",
+        "name": "ПРУ №64071 (Не готова)",
+        "address": "м. Рівне, вул. Драгоманова, 9",
+        "capacity": 160,
+        "readiness": "Не готова",
+        "custodian": "Рівненське пологове відділення поліклініки №2/Управління комунальною власністю міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2592,
+          50.6163
+        ]
+      },
+      "properties": {
+        "id": 138,
+        "reg_number": "64072",
+        "name": "ПРУ №64072 (Обмежено готова)",
+        "address": "м. Рівне, вул. 24 серпня, 2",
+        "capacity": 120,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський НВК №2 «Школа-ліцей» РМР / Управління освіти",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2718,
+          50.6315
+        ]
+      },
+      "properties": {
+        "id": 139,
+        "reg_number": "64074",
+        "name": "ПРУ №64074 (Обмежено готова)",
+        "address": "м. Рівне, вул. Гагаріна, 39",
+        "capacity": 1633,
+        "readiness": "Обмежено готова",
+        "custodian": "ПрАТ «Рівненський завод «Газотрон»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2496,
+          50.6219
+        ]
+      },
+      "properties": {
+        "id": 140,
+        "reg_number": "64076",
+        "name": "ПРУ №64076 (Обмежено готова)",
+        "address": "м. Рівне, вул. Петра Могили, 28",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський інститут слов’янознавства Київського славістичного університету",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2548,
+          50.6247
+        ]
+      },
+      "properties": {
+        "id": 141,
+        "reg_number": "64080",
+        "name": "ПРУ №64080 (Обмежено готова)",
+        "address": "м. Рівне, вул. Біла, 35",
+        "capacity": 200,
+        "readiness": "Обмежено готова",
+        "custodian": "Фонд державного майна України (ПрАТ «РІВНЕ-БОРОШНО»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.249,
+          50.6167
+        ]
+      },
+      "properties": {
+        "id": 142,
+        "reg_number": "64081",
+        "name": "ПРУ №64081 (Не готова)",
+        "address": "м. Рівне, вул. Соборна, 404а",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "ПрАТ«Рембуд»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2493,
+          50.617
+        ]
+      },
+      "properties": {
+        "id": 143,
+        "reg_number": "64082",
+        "name": "ПРУ №64082 (Не готова)",
+        "address": "м. Рівне, вул. Соборна, 420",
+        "capacity": 600,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ФОП Бакун В.З.)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2685,
+          50.623
+        ]
+      },
+      "properties": {
+        "id": 144,
+        "reg_number": "64083",
+        "name": "ПРУ №64083 (Не готова)",
+        "address": "м. Рівне, вул. Грушевського, 11",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "КНП міська дитяча лікарня РМР/ Управління охорони здоров'я",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2556,
+          50.6159
+        ]
+      },
+      "properties": {
+        "id": 145,
+        "reg_number": "64086",
+        "name": "ПРУ №64086 (Не готова)",
+        "address": "м. Рівне, вул. Млинівська, 20",
+        "capacity": 300,
+        "readiness": "Не готова",
+        "custodian": "КП «Гуртово-роздрібне об'єднання «Обласної спілки споживчих товариств» / Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2608,
+          50.6187
+        ]
+      },
+      "properties": {
+        "id": 146,
+        "reg_number": "64087",
+        "name": "ПРУ №64087 (Готова)",
+        "address": "м. Рівне, вул. Кавказька, 15",
+        "capacity": 300,
+        "readiness": "Готова",
+        "custodian": "ЖКП «Покровське» (ФОП Ткачук Я.І.) / Управління комунальною власністю міськради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.246,
+          50.6215
+        ]
+      },
+      "properties": {
+        "id": 147,
+        "reg_number": "64088",
+        "name": "ПРУ №64088 (Обмежено готова)",
+        "address": "м. Рівне, вул. Млинівська, 1",
+        "capacity": 240,
+        "readiness": "Обмежено готова",
+        "custodian": "Товариство обмеженою відповідальністю «Союз-Технологія»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2512,
+          50.6243
+        ]
+      },
+      "properties": {
+        "id": 148,
+        "reg_number": "64089",
+        "name": "ПРУ №64089 (Готова)",
+        "address": "м. Рівне, вул. Котляревського, 20а",
+        "capacity": 150,
+        "readiness": "Готова",
+        "custodian": "ПрАТ Національна суспільна телерадіокомпанія України",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2564,
+          50.6271
+        ]
+      },
+      "properties": {
+        "id": 149,
+        "reg_number": "64092",
+        "name": "ПРУ №64092 (Не готова)",
+        "address": "м. Рівне-17",
+        "capacity": 700,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПрАТ«Рівнеазот»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2416,
+          50.6099
+        ]
+      },
+      "properties": {
+        "id": 150,
+        "reg_number": "64094",
+        "name": "ПРУ №64094 (Не готова)",
+        "address": "м. Рівне, вул. Старицького, 21а",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(ФОП Петеля Л.В.)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2468,
+          50.6127
+        ]
+      },
+      "properties": {
+        "id": 151,
+        "reg_number": "64095",
+        "name": "ПРУ №64095 (Не готова)",
+        "address": "м. Рівне, вул. Дворецька, 120б",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Відкрите акціонерне товариство «Рівненській завод будматеріалів» / Фонд державного майна України",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.252,
+          50.6155
+        ]
+      },
+      "properties": {
+        "id": 152,
+        "reg_number": "64096",
+        "name": "ПРУ №64096 (Обмежено готова)",
+        "address": "м Рівне, вул. Павлюченка, 35",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський цех протезно-ортопедичних виробів",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.274,
+          50.6172
+        ]
+      },
+      "properties": {
+        "id": 153,
+        "reg_number": "65004",
+        "name": "ПРУ №65004 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 108(а)",
+        "capacity": 200,
+        "readiness": "Обмежено готова",
+        "custodian": "ПрАТ«Рівневодавтотранс»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2715,
+          50.626
+        ]
+      },
+      "properties": {
+        "id": 154,
+        "reg_number": "65005",
+        "name": "ПРУ №65005 (Обмежено готова)",
+        "address": "м. Рівне, вул. Грушевського, 2а",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Товариство обмеженою відповідальністю «Біотал-Сервіс» / споруда відсутня",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2476,
+          50.6239
+        ]
+      },
+      "properties": {
+        "id": 155,
+        "reg_number": "65006",
+        "name": "ПРУ №65006 (Не готова)",
+        "address": "м. Рівне, вул. Чернишова, 7",
+        "capacity": 200,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ПП «Піросмані») / ВАТ «Рівненський авторемзавод»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2528,
+          50.6267
+        ]
+      },
+      "properties": {
+        "id": 156,
+        "reg_number": "65008",
+        "name": "ПРУ №65008 (Обмежено готова)",
+        "address": "м. Рівне, вул. Боярка,40",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "Фонд державного майна України (ПрАТ «Рівнеліфт»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.258,
+          50.6295
+        ]
+      },
+      "properties": {
+        "id": 157,
+        "reg_number": "65012",
+        "name": "ПРУ №65012 (Не готова)",
+        "address": "Рівненський р-н, с. Велика Омеляна, вул. Авіаторів,5а",
+        "capacity": 600,
+        "readiness": "Не готова",
+        "custodian": "Обласне Комунальне підприємство Міжнародний аеропорт «Рівне»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2432,
+          50.6123
+        ]
+      },
+      "properties": {
+        "id": 158,
+        "reg_number": "65013",
+        "name": "ПРУ №65013 (Не готова)",
+        "address": "м. Рівне, вул. Чернишова, 9 / вул. Тувинських Добровольців,19",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ТзОВ «Украса»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2541,
+          50.6218
+        ]
+      },
+      "properties": {
+        "id": 159,
+        "reg_number": "65022",
+        "name": "ПРУ №65022 (Не готова)",
+        "address": "м. Рівне, вул. Соборна, 444а",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(ПП «Торгово-виробнича фірма «Чари»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2536,
+          50.6179
+        ]
+      },
+      "properties": {
+        "id": 160,
+        "reg_number": "65023",
+        "name": "ПРУ №65023 (Не готова)",
+        "address": "м. Рівне, вул. Млинівська,18",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\nТОВ «Інженерно будівельна компанія Регіон»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2478,
+          50.6183
+        ]
+      },
+      "properties": {
+        "id": 161,
+        "reg_number": "65024",
+        "name": "ПРУ №65024 (Обмежено готова)",
+        "address": "м. Рівне, вул. Міцкевича, 2",
+        "capacity": 450,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська філія ПАТ «Укртелеком» ЦТП",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.244,
+          50.6235
+        ]
+      },
+      "properties": {
+        "id": 162,
+        "reg_number": "65025",
+        "name": "ПРУ №65025 (Обмежено готова)",
+        "address": "м. Рівне,вул. Литовська, 55",
+        "capacity": 360,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський економіко-технічний коледж НУВГП",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2492,
+          50.6263
+        ]
+      },
+      "properties": {
+        "id": 163,
+        "reg_number": "65030",
+        "name": "ПРУ №65030 (Не готова)",
+        "address": "м. Рівне, вул. Тувінських Добровольців, 19",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України (ТзОВ «Украса»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2737,
+          50.6121
+        ]
+      },
+      "properties": {
+        "id": 164,
+        "reg_number": "65031",
+        "name": "ПРУ №65031 (Обмежено готова)",
+        "address": "м. Рівне, вул. Данила Галицького, 25",
+        "capacity": 4000,
+        "readiness": "Обмежено готова",
+        "custodian": "Фонд державного майна України\n(ПАТ «Рівненській радіотехнічний завод»)",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2596,
+          50.6119
+        ]
+      },
+      "properties": {
+        "id": 165,
+        "reg_number": "65033",
+        "name": "ПРУ №65033 (Не готова)",
+        "address": "м. Рівне,вул. Небесної Сотні,10",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Виробночо-структурний підрозділ «Рівненське Управління будівельно-монтажних робіт і цивільних споруд» Регіональної філії «Львівська залізниця» ПАТ «Укрзалізниця»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2403,
+          50.6212
+        ]
+      },
+      "properties": {
+        "id": 166,
+        "reg_number": "65034",
+        "name": "ПРУ №65034 (Не готова)",
+        "address": "м. Рівне, вул. Шевченка, 3",
+        "capacity": 450,
+        "readiness": "Не готова",
+        "custodian": "Мале приватне підприємство «Моріон» (Будівля нежитлових приміщень) / Управління комунальної власності міськради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2106,
+          50.6162
+        ]
+      },
+      "properties": {
+        "id": 167,
+        "reg_number": "65035",
+        "name": "ПРУ №65035 (Не готова)",
+        "address": "м. Рівне, вул. Макарова, 3",
+        "capacity": 400,
+        "readiness": "Не готова",
+        "custodian": "КНП «Центр первинної медико-санітарної допомоги «Ювілейний»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2552,
+          50.6203
+        ]
+      },
+      "properties": {
+        "id": 168,
+        "reg_number": "65036",
+        "name": "ПРУ №65036 (Не готова)",
+        "address": "м. Рівне, вул. Дворецька, 89",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "ПП фірма «Фарматон»/ Фонд держмайна",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2604,
+          50.6231
+        ]
+      },
+      "properties": {
+        "id": 169,
+        "reg_number": "65037",
+        "name": "ПРУ №65037 (Не готова)",
+        "address": "м. Рівне, вул. Котляревського, 13",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2584,
+          50.6112
+        ]
+      },
+      "properties": {
+        "id": 170,
+        "reg_number": "65038",
+        "name": "ПРУ №65038 (Обмежено готова)",
+        "address": "м. Рівне, вул. Чорновола, 76а",
+        "capacity": 600,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський державний гуманітарний університет",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2508,
+          50.6287
+        ]
+      },
+      "properties": {
+        "id": 171,
+        "reg_number": "65042",
+        "name": "ПРУ №65042 (Не готова)",
+        "address": "м. Рівне-17",
+        "capacity": 450,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(Приватне акціонерне товариство «Рівнеазот»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.256,
+          50.6115
+        ]
+      },
+      "properties": {
+        "id": 172,
+        "reg_number": "65043",
+        "name": "ПРУ №65043 (Обмежено готова)",
+        "address": "м. Рівне, вул. Яворницького, 34",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Відділення Державного казначейства м. Рівне",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.274,
+          50.6172
+        ]
+      },
+      "properties": {
+        "id": 173,
+        "reg_number": "65044",
+        "name": "ПРУ №65044 (Не готова)",
+        "address": "м. Рівне, вул. Київська, 10",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України Громадська організаціїя «Нептун»/ ВАТ «Рівненська друкарня»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2563,
+          50.6324
+        ]
+      },
+      "properties": {
+        "id": 174,
+        "reg_number": "65045",
+        "name": "ПРУ №65045 (Не готова)",
+        "address": "м. Рівне,вул. Князя Володимира, 112а",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(ПрАТ «Рівнеголовпостач»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2516,
+          50.6199
+        ]
+      },
+      "properties": {
+        "id": 175,
+        "reg_number": "65046",
+        "name": "ПРУ №65046 (Не готова)",
+        "address": "м. Рівне, вул. Біла, 53",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "КП «Облспецпостач» РОР/ Управління праці ОДА",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2568,
+          50.6227
+        ]
+      },
+      "properties": {
+        "id": 176,
+        "reg_number": "65047",
+        "name": "ПРУ №65047 (Готова)",
+        "address": "м. Рівне, вул. Пушкіна, 4",
+        "capacity": 450,
+        "readiness": "Готова",
+        "custodian": "Рівненський відділ поліції ГУ НП в Рівненській області",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.242,
+          50.6255
+        ]
+      },
+      "properties": {
+        "id": 177,
+        "reg_number": "65048",
+        "name": "ПРУ №65048 (Обмежено готова)",
+        "address": "м. Рівне, вул. Тувинських Добровольців,17",
+        "capacity": 150,
+        "readiness": "Обмежено готова",
+        "custodian": "Закрите акціонерне товариство «Рівненській завод продтоварів»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2472,
+          50.6283
+        ]
+      },
+      "properties": {
+        "id": 178,
+        "reg_number": "65049",
+        "name": "ПРУ №65049 (Готова)",
+        "address": "м. Рівне, вул. Ніла Хасевича, 39(1)",
+        "capacity": 50,
+        "readiness": "Готова",
+        "custodian": "Виробночо-структурний підрозділ «Рівненське Управління будівельно-монтажних робіт і цивільних споруд» Регіональної філії «Львівська залізниця» ПАТ «Укрзалізниця»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2524,
+          50.6111
+        ]
+      },
+      "properties": {
+        "id": 179,
+        "reg_number": "65050",
+        "name": "ПРУ №65050 (Не готова)",
+        "address": "м. Рівне-21 (с. Городок)",
+        "capacity": 1200,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(ВАТ «Рівненській завод тракторних агрегатів»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2576,
+          50.6139
+        ]
+      },
+      "properties": {
+        "id": 180,
+        "reg_number": "65051",
+        "name": "ПРУ №65051 (Обмежено готова)",
+        "address": "м. Рівне, вул. Грабник, 2",
+        "capacity": 350,
+        "readiness": "Обмежено готова",
+        "custodian": "Управління з питань НС та ЦЗН РОДА",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2088,
+          50.6144
+        ]
+      },
+      "properties": {
+        "id": 181,
+        "reg_number": "65054",
+        "name": "ПРУ №65054 (Не готова)",
+        "address": "м. Рівне, вул. Макарова, 16",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "ТОВ «Нешкідливі технології і продукти ГРІН-ОУЛ»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2707,
+          50.6139
+        ]
+      },
+      "properties": {
+        "id": 182,
+        "reg_number": "65055",
+        "name": "ПРУ №65055 (Обмежено готова)",
+        "address": "м. Рівне, вул. Київська, 78г",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "КЗ «Рівненська обласна клінічна лікарня»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2532,
+          50.6223
+        ]
+      },
+      "properties": {
+        "id": 183,
+        "reg_number": "65056",
+        "name": "ПРУ №65056 (Готова)",
+        "address": "м. Рівне,вул. Млинівська,11",
+        "capacity": 100,
+        "readiness": "Готова",
+        "custodian": "Філія «Магістральні нафтопроводи «Дружба» акціонерного товариства «Укртранснафта» Національної акціонерної компанії «Нафтогаз України»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2584,
+          50.6251
+        ]
+      },
+      "properties": {
+        "id": 184,
+        "reg_number": "65057",
+        "name": "ПРУ №65057 (Не готова)",
+        "address": "м. Рівне, вул. Вербова, 20",
+        "capacity": 300,
+        "readiness": "Не готова",
+        "custodian": "ЖКП \"Західне\"/Управління комунальною власністю Рівненської міської ради",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2436,
+          50.6279
+        ]
+      },
+      "properties": {
+        "id": 185,
+        "reg_number": "65058",
+        "name": "ПРУ №65058 (Не готова)",
+        "address": "м. Рівне, вул. Дорошенка, 80б (84)",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Виробночо-структурний підрозділ «Рівненське Управління будівельно-монтажних робіт і цивільних споруд» Регіональної філії «Львівська залізниця» ПАТ «Укрзалізниця»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2502,
+          50.6179
+        ]
+      },
+      "properties": {
+        "id": 186,
+        "reg_number": "65059",
+        "name": "ПРУ №65059 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна,195",
+        "capacity": 100,
+        "readiness": "Обмежено готова",
+        "custodian": "Комунальне підприємство «Управління майновим комплексом» Рівненської районної ради",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2505,
+          50.6182
+        ]
+      },
+      "properties": {
+        "id": 187,
+        "reg_number": "65060",
+        "name": "ПРУ №65060 (Обмежено готова)",
+        "address": "м. Рівне, вул. Соборна, 364",
+        "capacity": 250,
+        "readiness": "Обмежено готова",
+        "custodian": "Дочірнє підприємство «Рівненський автомобільний ремонтний завод»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2592,
+          50.6163
+        ]
+      },
+      "properties": {
+        "id": 188,
+        "reg_number": "65063",
+        "name": "ПРУ №65063 (Не готова)",
+        "address": "м. Рівне, вул. Млинівська, 29",
+        "capacity": 150,
+        "readiness": "Не готова",
+        "custodian": "Рівненське навчально-виробниче підприємство Українського товариства глухих «УТОГ»",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2444,
+          50.6191
+        ]
+      },
+      "properties": {
+        "id": 189,
+        "reg_number": "65064",
+        "name": "ПРУ №65064 (Обмежено готова)",
+        "address": "м. Рівне, вул. Орлова,37",
+        "capacity": 50,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська філія ПАТ «Укртелеком» ЦТП",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2115,
+          50.6171
+        ]
+      },
+      "properties": {
+        "id": 190,
+        "reg_number": "65065",
+        "name": "ПРУ №65065 (Обмежено готова)",
+        "address": "м. Рівне,вул. Макарова,12",
+        "capacity": 60,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненська регіональна державна лабораторія ветеринарної медицини",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2548,
+          50.6247
+        ]
+      },
+      "properties": {
+        "id": 191,
+        "reg_number": "65067",
+        "name": "ПРУ №65067 (Не готова)",
+        "address": "м. Рівне, вул. Медична, 7",
+        "capacity": 400,
+        "readiness": "Не готова",
+        "custodian": "Рівненській міській пологовий будинок №2",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.26,
+          50.6275
+        ]
+      },
+      "properties": {
+        "id": 192,
+        "reg_number": "65068",
+        "name": "ПРУ №65068 (Обмежено готова)",
+        "address": "м. Рівне, вул. Дворецька,106",
+        "capacity": 300,
+        "readiness": "Обмежено готова",
+        "custodian": "Рівненський МВ ГУ НП в Рівненській області",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2124,
+          50.618
+        ]
+      },
+      "properties": {
+        "id": 193,
+        "reg_number": "65073",
+        "name": "ПРУ №65073 (Готова)",
+        "address": "м. Рівне, вул. Макарова, 14",
+        "capacity": 150,
+        "readiness": "Готова",
+        "custodian": "ПрАТ «Поліссяхліб»",
+        "is_operational": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2504,
+          50.6131
+        ]
+      },
+      "properties": {
+        "id": 194,
+        "reg_number": "65074",
+        "name": "ПРУ №65074 (Не готова)",
+        "address": "м. Ріне-21 (с. Городок)",
+        "capacity": 1200,
+        "readiness": "Не готова",
+        "custodian": "Фонд державного майна України\n(Відкрите акціонерне товариство «Рівненській завод тракторних агрегатів»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2556,
+          50.6159
+        ]
+      },
+      "properties": {
+        "id": 195,
+        "reg_number": "65076",
+        "name": "ПРУ №65076 (Не готова)",
+        "address": "м. Рівне, вул. Небесної Сотні, 64",
+        "capacity": 40,
+        "readiness": "Не готова",
+        "custodian": "Квартирно-експлуатаційний відділ м. Рівне\nМіністерства Оборони України",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.2532,
+          50.6209
+        ]
+      },
+      "properties": {
+        "id": 196,
+        "reg_number": "67800",
+        "name": "ПРУ №67800 (Не готова)",
+        "address": "м. Рівне,вул. Соборна,15",
+        "capacity": 100,
+        "readiness": "Не готова",
+        "custodian": "Управління комунальною власністю міськради\n(ОСББ «Соборна 15»)",
+        "is_operational": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          26.251,
+          50.6239
+        ]
+      },
+      "properties": {
+        "id": 197,
+        "reg_number": "67801",
+        "name": "ПРУ №67801 ()",
+        "address": "м. Рівне,вул. Симона Петлюри,14а",
+        "capacity": 100,
+        "readiness": "",
+        "custodian": "ЖКП «Галицьке» / споруда відсутня",
+        "is_operational": true
+      }
+    }
+  ]
+}

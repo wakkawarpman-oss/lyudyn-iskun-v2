@@ -56,6 +56,17 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 MAX_VIDEO_DURATION_S = 120
 MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
+ID_TO_CANONICAL_HANDLE = {
+    "1181169156": "kievreal1",
+    "-1001181169156": "kievreal1",
+    "2053889953": "operatyvnyi_monitor",
+    "-1002053889953": "operatyvnyi_monitor",
+}
+
+def resolve_channel_name(raw_name: str) -> str:
+    cleaned = str(raw_name).strip().lstrip("@")
+    return ID_TO_CANONICAL_HANDLE.get(cleaned, raw_name)
+
 def extract_forward_source(msg):
     if not getattr(msg, 'fwd_from', None):
         return None
@@ -79,7 +90,8 @@ async def perform_sync(client, valid_channels):
         try:
             if isinstance(entity, str):
                 entity = await client.get_entity(entity)
-            ch_name = getattr(entity, 'username', None) or str(entity.id)
+            ch_raw = getattr(entity, 'username', None) or str(entity.id)
+            ch_name = resolve_channel_name(ch_raw)
             recent_msgs = await client.get_messages(entity, limit=10)
             for msg in recent_msgs:
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
@@ -210,9 +222,10 @@ async def main():
                     print(f"Failed to download video: {e}")
 
             ch_raw = event.chat.username or str(event.chat_id)
-            ch_clean = str(ch_raw).lstrip("@").lower()
+            ch_name = resolve_channel_name(ch_raw)
+            ch_clean = str(ch_name).lstrip("@").lower()
             payload = {
-                "channel": ch_raw,
+                "channel": ch_name,
                 "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
                 "message_id": msg.id,
                 "text": msg.text or "",
