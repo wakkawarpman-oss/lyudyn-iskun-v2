@@ -584,4 +584,6 @@ async def serve_index():
     response.headers["Expires"] = "0"
     return response
 
+app.mount("/static", StaticFiles(directory="api/static"), name="static_dir")
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")
+
