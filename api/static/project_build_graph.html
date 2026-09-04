@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Інтерактивний Граф Збірки Проєкту C4ISR (OKINT-PRO)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="bg-[#080c14] text-[#e2e8f0] h-screen w-screen flex flex-col antialiased">
+  
+  <!-- Header Bar -->
+  <header class="h-14 border-b border-[#1e293b] bg-[#0f172a]/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 gap-2">
+    <div class="flex items-center space-x-2.5 flex-shrink-0">
+      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-black text-sm">
+        🏗️
+      </div>
+      <div>
+        <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide uppercase">C4ISR / OKINT-PRO — Граф Збірки</h1>
+        <p class="text-[9px] sm:text-[10px] text-[#94a3b8] hidden sm:block">Топологія 8 контейнерів, 5 потоків та аналітичних ядер</p>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Switcher -->
+    <div class="flex items-center space-x-1.5 flex-shrink-0">
+      <a href="/" onclick="if (window.parent && window.parent !== window) { window.parent.postMessage({action:'closeGraph'}, '*'); return false; }" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/90 text-cyan-400 hover:border-cyan-500 flex items-center gap-1 font-semibold text-xs transition-colors" title="Повернутися до живої карти">🗺️ <span class="hidden sm:inline">Карта</span></a>
+      <a href="/graph_analysis.html" class="px-2.5 py-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 flex items-center gap-1 font-semibold text-xs transition-colors" title="Відкрити OSINT & C4ISR системний граф">📡 <span class="hidden sm:inline">OSINT</span></a>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center space-x-1.5 text-xs overflow-x-auto py-1 max-w-[48vw] lg:max-w-none scrollbar-none">
+      <button onclick="filterType('all')" id="btn-all" class="filter-btn active px-2.5 py-1 rounded-lg border border-emerald-500/50 bg-emerald-500/20 text-emerald-300 font-semibold whitespace-nowrap">Всі (28)</button>
+      <button onclick="filterType('container')" id="btn-container" class="filter-btn px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🐳 Контейнери (8)</button>
+      <button onclick="filterType('sensor')" id="btn-sensor" class="filter-btn px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">📡 Сенсори (5)</button>
+      <button onclick="filterType('engine')" id="btn-engine" class="filter-btn px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🧠 Алгоритми (6)</button>
+      <button onclick="filterType('storage')" id="btn-storage" class="filter-btn px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🗄️ Бази (3)</button>
+      <button onclick="filterType('client')" id="btn-client" class="filter-btn px-2 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🎯 C2 (6)</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="relative w-36 sm:w-48 flex-shrink-0">
+      <input type="text" id="nodeSearch" placeholder="Пошук модуля..." 
+        oninput="handleSearch(this.value)"
+        class="w-full bg-[#1e293b]/70 border border-[#334155] text-xs rounded-lg px-2.5 py-1 text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400" />
+      <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
+    </div>
+  </header>
+
+  <!-- Canvas Area -->
+  <div class="relative flex-1 bg-[#060911] overflow-hidden">
+    <canvas id="graphCanvas" style="touch-action: none;" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+    <!-- Floating HUD Controls -->
+    <div class="absolute bottom-4 left-4 flex space-x-2 bg-[#0f172a]/90 backdrop-blur border border-[#1e293b] p-1.5 rounded-xl shadow-lg z-10">
+      <button onclick="resetView()" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300">🎯 Центрувати</button>
+      <button onclick="togglePhysics()" id="btnPhysics" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-emerald-400">⏸️ Фізика: Увімк</button>
+      <button onclick="zoomBy(1.2)" class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300">➕</button>
+      <button onclick="zoomBy(0.8)" class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300">➖</button>
+    </div>
+
+    <!-- Live Status Pill -->
+    <div class="absolute top-4 left-4 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-1.5 rounded-full flex items-center space-x-2 shadow-lg z-10">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="font-bold">ЗБІРКА V2: 8/8 КОНТЕЙНЕРІВ LIVE</span>
+      <span class="text-emerald-500 text-[10px]">• iskun-server</span>
+    </div>
+
+    <!-- Inspector Drawer (Right Panel) -->
+    <div id="inspector" class="absolute top-0 right-0 w-96 h-full bg-[#0d1424]/95 border-l border-[#1e293b] shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col z-30">
+      <div class="p-4 border-b border-[#1e293b] flex items-center justify-between bg-[#0b101d]">
+        <div class="flex items-center space-x-2">
+          <span id="insp-icon" class="text-xl">📦</span>
+          <div>
+            <h2 id="insp-title" class="text-sm font-bold text-white">Назва Модуля</h2>
+            <span id="insp-badge" class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">КОНТЕЙНЕР</span>
+          </div>
+        </div>
+        <button onclick="closeInspector()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Призначення та роль</label>
+          <p id="insp-desc" class="mt-1 text-slate-200 leading-relaxed bg-[#141d33] p-2.5 rounded-lg border border-slate-800"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-[#141d33] p-2 rounded-lg border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Технологія / Стек</span>
+            <span id="insp-tech" class="font-mono text-emerald-400 font-bold text-xs mt-0.5 block">FastAPI</span>
+          </div>
+          <div class="bg-[#141d33] p-2 rounded-lg border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">SLA / Порт</span>
+            <span id="insp-sla" class="font-mono text-cyan-400 font-bold text-xs mt-0.5 block">80:80</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Вхідні зв'язки (Залежить від)</label>
+          <div id="insp-inputs" class="mt-1.5 flex flex-wrap gap-1"></div>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Вихідні зв'язки (Живить / Видає)</label>
+          <div id="insp-outputs" class="mt-1.5 flex flex-wrap gap-1"></div>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ключові метрики та стан</label>
+          <div id="insp-metrics" class="mt-1.5 space-y-1 bg-[#141d33] p-2.5 rounded-lg border border-slate-800 font-mono text-[11px]"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. DATA DEFINITION: Project Build Graph
+    const graphData = {
+      nodes: [
+        // ─── 1. CONTAINERS (8) ───
+        { id: 'c_web_api', label: 'web_api', group: 'container', color: '#10b981', icon: '⚡', tech: 'FastAPI / Uvicorn', sla: 'Port 80 (<45ms)', desc: 'Основний асинхронний REST API сервер. Маршрутизує запити мапи, CoT XML, радарні вектори та інтелектуальні досьє.', metrics: ['Status: Up (healthy)', 'RPS: ~240 req/s', 'Memory: 118 MB'] },
+        { id: 'c_bot_ui', label: 'bot_ui', group: 'container', color: '#10b981', icon: '🤖', tech: 'Aiogram 3 / Telethon', sla: 'Polling (<800ms)', desc: 'Telegram C2 бот (@fwGle3508d997814_bot, ОКІНТ-ПРО). Забезпечує інтерактивний зв\'язок мобільних груп, /radar, /status та адмін-алерти.', metrics: ['Status: Up (polling)', 'Admin ID: 8941733191', 'Avg update: 713ms'] },
+        { id: 'c_ai_worker', label: 'ai_worker', group: 'container', color: '#10b981', icon: '⚙️', tech: 'Celery / Groq Llama-3', sla: 'Queue (<500ms)', desc: 'Розподілений конвеєр штучного інтелекту. Виконує геокодування, витяг сутностей (NER), DBSCAN-кластеризацію та прорахунок загроз.', metrics: ['Tasks/min: ~140', 'Concurrency: 4 workers', 'Sub-second geocode'] },
+        { id: 'c_listener', label: 'listener', group: 'container', color: '#10b981', icon: '📡', tech: 'Telethon 1.36', sla: 'Real-time (<1.2s)', desc: 'Мультиканальний OSINT-слухач. Агрегує 30+ регіональних та офіційних каналів (ПС ЗСУ, ОВА, ДСНС, монітори) у Redis-чергу.', metrics: ['Synced: 579 msgs/push', 'Channels: 30+ active', 'Pool: Multi-session'] },
+        { id: 'c_db', label: 'db (PostGIS)', group: 'container', color: '#06b6d4', icon: '🗄️', tech: 'PostGIS 15-3.3', sla: 'Port 5432 (<10ms)', desc: 'Просторова реляційна СУБД. Зберігає 511+ верифікованих подій, реєстр укриттів ЦЗ, просторові GiST індекси та історію треків.', metrics: ['Events: 511 in DB', 'Spatial Index: SP-GiST', 'Uptime: >18 hours'] },
+        { id: 'c_redis', label: 'redis', group: 'container', color: '#ef4444', icon: '⚡', tech: 'Redis 7 Alpine', sla: 'Port 6379 (<2ms)', desc: 'In-memory брокер повідомлень для Celery та шар гарячого кешування живих радарних цілей з TTL 30-60 секунд.', metrics: ['Memory max: 256MB LRU', 'Queue: broadcast_queue', 'Latency: 0.8ms'] },
+        { id: 'c_open_webui', label: 'open_webui', group: 'container', color: '#8b5cf6', icon: '🧠', tech: 'OpenWebUI Main', sla: 'Port 3000 (<120ms)', desc: 'Штабний AI Cockpit для глибокого агентурного аналізу, запуску MCP-інструментів та інтерактивного діалогу з аналітичною моделлю.', metrics: ['Status: Up (healthy)', 'Port: 3000:8080', 'Model: Groq / Local'] },
+        { id: 'c_cloudflared', label: 'cloudflared', group: 'container', color: '#f59e0b', icon: '🛡️', tech: 'Cloudflare Tunnel', sla: 'Zero-Trust (<30ms)', desc: 'Захищений тунель без відкритих вхідних портів, що забезпечує безпечний OPSEC-контакт із зовнішнім світом.', metrics: ['Status: Connected', 'Egress: Encrypted', 'No direct IP exposure'] },
+
+        // ─── 2. SENSOR FEEDS (5) ───
+        { id: 's_radar', label: 'Neptun Radar Stream', group: 'sensor', color: '#38bdf8', icon: '🛸', tech: 'Kinematic Telemetry', sla: '185 km/h live', desc: 'Потік векторних даних про рух ворожих БпЛА Shahed-136, ракет та авіації у реальному часі.', metrics: ['Active tracks: 21', 'Speed baseline: 185 km/h', 'Heading: 0-360°'] },
+        { id: 's_telegram', label: 'TG Channel Ingestion', group: 'sensor', color: '#38bdf8', icon: '💬', tech: '30+ Channels Pool', sla: 'Live Push', desc: 'Служба моніторингу каналів ПС ЗСУ, ДСНС, КМВА та місцевих спостерігачів.', metrics: ['Updates: Continuous', 'Filter: Kyiv/All Ukraine', 'Deduplication: Active'] },
+        { id: 's_firms', label: 'NASA VIIRS FIRMS', group: 'sensor', color: '#f97316', icon: '🔥', tech: 'Suomi-NPP 375m', sla: 'Satellite passes', desc: 'Супутникові термальні аномалії високої роздільної здатності для крос-валідації місць ударів та пожеж.', metrics: ['Anomalies: 1,123', 'Filter: T21 >= 325K', 'FRP: Megawatts'] },
+        { id: 's_sentinel', label: 'Sentinel-1 SAR C-band', group: 'sensor', color: '#a855f7', icon: '🛰️', tech: 'Radar Interferometry', sla: 'Synthetic Aperture', desc: 'Детекція випромінювання потужних засобів РЕБ та радарних станцій супроводу ворога.', metrics: ['Strobes: 6 active', 'Freq: 5.405 GHz', 'Intensity: High/Crit'] },
+        { id: 's_bgp', label: 'BGP / ТОТ Telecom', group: 'sensor', color: '#6366f1', icon: '🌐', tech: 'BGP Routing / DNS', sla: 'Periodic scan', desc: 'Моніторинг автономних систем окупаційного зв\'язку на ТОТ (AS201776, AS48287) для аналізу ворожого управління.', metrics: ['Tracked ASNs: 5', 'Upstreams: Rostelecom', 'Status: Active'] },
+
+        // ─── 3. ANALYTICAL ENGINES (6) ───
+        { id: 'e_triangulation', label: 'Reverse Triangulation', group: 'engine', color: '#ec4899', icon: '📐', tech: 'Vector Trigonometry', sla: '<80 ms', desc: 'Алгоритм обчислення стартового сектору БпЛА (Навля, Курськ, Чауда, Єйськ) за формулою θ_rev = θ - 180°.', metrics: ['Accuracy: ±15°', 'Launch sites: 10', 'Confidence: 90%'] },
+        { id: 'e_threat_cone', label: 'Threat Cone Projection', group: 'engine', color: '#ec4899', icon: '⚡', tech: 'Kinematic Cone Raycast', sla: '<100 ms', desc: 'Проекція 20-хвилинного коридору руху на об\'єкти критичної енергетичної інфраструктури (110-750 кВ).', metrics: ['POIs covered: 38', 'ETA calc: Exact minutes', 'Status: IMMEDIATE/WARN'] },
+        { id: 'e_dbscan', label: 'DBSCAN Spatial Cluster', group: 'engine', color: '#ec4899', icon: '📍', tech: 'PostGIS ST_ClusterDBSCAN', sla: '<150 ms', desc: 'Просторова кластеризація повідомлень про вибухи та прильоти (ε = 0.015° ~ 1.5 км).', metrics: ['Precision: ±100m - 2km', 'Fatal ring: 50m', 'Damage ring: 180m'] },
+        { id: 'e_dossiers', label: 'Strategic Dossiers', group: 'engine', color: '#ec4899', icon: '🏢', tech: 'Military DB Registry', sla: '<5 ms', desc: 'Реєстр ворожих баз, в/ч 20924 (Коломна), ОЕЗ «Алабуга», в/ч 92154 «Сенеж», 448-ї ракетної бригади.', metrics: ['Profiles: 10 strategic', 'Threat level: Critical', 'Sectors: Mapped'] },
+        { id: 'e_raycast', label: 'OpenAthena Raycast', group: 'engine', color: '#ec4899', icon: '🎯', tech: 'Photogrammetry + DEM', sla: '<250 ms', desc: 'Геолокація за фотографіями очевидців з урахуванням кута нахилу камери та рельєфу SRTM.', metrics: ['DEM: 30m resolution', 'Tolerance: ±50m', 'Status: Active'] },
+        { id: 'e_shelters_idx', label: 'Shelters SP-GiST', group: 'engine', color: '#ec4899', icon: '🛡️', tech: 'PostGIS SPGIST Index', sla: '<2 ms', desc: 'Миттєвий пошук найближчих підземних укриттів та станцій метро для населення у радіусі 500-1500м.', metrics: ['Entries: 2,400+', 'Query time: 1.2ms', 'Type: Underground'] },
+
+        // ─── 4. STORAGE (3) ───
+        { id: 'm_events', label: 'Events & Tracks Store', group: 'storage', color: '#06b6d4', icon: '📋', tech: 'PostGIS events table', sla: 'Persistent', desc: 'Таблиця верифікованих інцидентів з просторовою геометрією (Geometry Point 4326).', metrics: ['Rows: 511', 'History: 72 hours', 'Status: Indexed'] },
+        { id: 'm_hot_cache', label: 'Live Hot Cache', group: 'storage', color: '#ef4444', icon: '🔥', tech: 'Redis In-Memory KeyStore', sla: 'TTL 30-60s', desc: 'Швидкий кеш живих координат 21 БпЛА для видачі на фронтенд без навантаження на БД.', metrics: ['Keys: drones, alert_status', 'Hit rate: 98.4%', 'Latency: Sub-ms'] },
+        { id: 'm_poi_db', label: 'Critical POI Registry', group: 'storage', color: '#06b6d4', icon: '🗺️', tech: 'GeoJSON / Spatial Table', sla: 'Read-only Cold', desc: 'База координат електропідстанцій 110-750 кВ, ТЕЦ-5, ТЕЦ-6, Київської ГЕС та заводів.', metrics: ['Features: 154', 'Oblasts: All Ukraine', 'Categories: Energy/Def'] },
+
+        // ─── 5. C2 CLIENTS & DELIVERY (6) ───
+        { id: 'cl_web_map', label: 'Tactical Web Map UI', group: 'client', color: '#eab308', icon: '💻', tech: 'Leaflet Dark / Tailwind', sla: 'Browser HTTP 200', desc: 'Повнофункціональний оперативний інтерфейс ситуаційної карти оборони (http://136.113.156.17/).', metrics: ['FPS: 60', 'Layers: 12 togglable', 'Responsive: Mobile/Desktop'] },
+        { id: 'cl_telegram_bot', label: 'Telegram Bot Interface', group: 'client', color: '#eab308', icon: '📱', tech: 'Aiogram UI / Keyboards', sla: 'Push alerts', desc: 'Мобільне робоче місце бійця ППО та оператора: картки загроз, інтерактивні кнопки, екстрені алерти.', metrics: ['Bot: @fwGle3508d997814_bot', 'Status: Polling Active', 'Response: <1s'] },
+        { id: 'cl_atak_cot', label: 'ATAK CoT Stream', group: 'client', color: '#eab308', icon: '🛰️', tech: 'XML Cursor-on-Target', sla: 'Token Auth', desc: 'Потік стандартних військових CoT-повідомлень для планшетів системи ситуаційної обізнаності ATAK.', metrics: ['Endpoint: /api/cot', 'Format: XML 2.0', 'Token: Protected'] },
+        { id: 'cl_atak_zip', label: 'ATAK DataPackage (.zip)', group: 'client', color: '#eab308', icon: '📦', tech: 'ATAK Mission Package', sla: 'On-demand', desc: 'Архів з просторовими шарами, маніфестом та об\'єктами для швидкого імпорту в додаток ATAK/CivTAK.', metrics: ['Endpoint: /api/cot/zip', 'Size: 4.9 KB', 'Status: Verified'] },
+        { id: 'cl_open_webui', label: 'AI Cockpit Interface', group: 'client', color: '#eab308', icon: '🧠', tech: 'WebUI :3000', sla: 'Port 3000', desc: 'Графічний інтерфейс для діалогу зі штабним ШІ-асистентом та виклику інструментів оркестрації.', metrics: ['Port: 3000', 'Status: Healthy', 'Access: Web UI'] },
+        { id: 'cl_admin_alert', label: 'Admin Health Channel', group: 'client', color: '#eab308', icon: '🚨', tech: 'Direct Bot Dispatch', sla: 'Instant', desc: 'Прямий канал екстрених службових повідомлень адміністратору системи (ID 8941733191).', metrics: ['Target: Sadie Rivera', 'Protocol: Encrypted Push', 'Error rate: 0%'] }
+      ],
+      edges: [
+        // Sensor to Container
+        { from: 's_radar', to: 'c_web_api', label: 'Live Telemetry' },
+        { from: 's_telegram', to: 'c_listener', label: 'Raw Messages' },
+        { from: 's_firms', to: 'c_web_api', label: 'VIIRS Points' },
+        { from: 's_sentinel', to: 'c_web_api', label: 'SAR RFI Vectors' },
+        { from: 's_bgp', to: 'c_web_api', label: 'AS Lineage' },
+
+        // Listener to Queue
+        { from: 'c_listener', to: 'c_redis', label: 'Push Queue' },
+
+        // Queue to Worker
+        { from: 'c_redis', to: 'c_ai_worker', label: 'Celery Tasks' },
+
+        // Worker to Engines
+        { from: 'c_ai_worker', to: 'e_dbscan', label: 'Cluster Msg' },
+        { from: 'c_ai_worker', to: 'e_raycast', label: 'Geocode Photo' },
+
+        // Web API to Engines
+        { from: 'c_web_api', to: 'e_triangulation', label: 'Reverse Azimuth' },
+        { from: 'c_web_api', to: 'e_threat_cone', label: 'Project Corridor' },
+        { from: 'c_web_api', to: 'e_dossiers', label: 'Match Base' },
+        { from: 'c_web_api', to: 'e_shelters_idx', label: 'Proximity Search' },
+
+        // Engines to Storage
+        { from: 'e_dbscan', to: 'm_events', label: 'Insert Point' },
+        { from: 'e_triangulation', to: 'm_hot_cache', label: 'Cache Threat' },
+        { from: 'e_threat_cone', to: 'm_hot_cache', label: 'Cache ETA' },
+        { from: 'e_dossiers', to: 'm_poi_db', label: 'Read Hostile' },
+        { from: 'e_threat_cone', to: 'm_poi_db', label: 'Read Substations' },
+
+        // Database to Containers
+        { from: 'm_events', to: 'c_db', label: 'PostGIS Storage' },
+        { from: 'c_db', to: 'c_web_api', label: 'SQL Query' },
+        { from: 'm_hot_cache', to: 'c_redis', label: 'Memory Ops' },
+        { from: 'c_redis', to: 'c_web_api', label: 'Fast Read' },
+        { from: 'c_redis', to: 'c_bot_ui', label: 'Broadcast Queue' },
+
+        // Containers to Clients
+        { from: 'c_web_api', to: 'cl_web_map', label: 'HTTP REST / JSON' },
+        { from: 'c_web_api', to: 'cl_atak_cot', label: 'XML CoT 2.0' },
+        { from: 'c_web_api', to: 'cl_atak_zip', label: 'Mission Zip' },
+        { from: 'c_web_api', to: 'cl_open_webui', label: 'Tool Manifest' },
+        { from: 'c_bot_ui', to: 'cl_telegram_bot', label: 'Aiogram Polling' },
+        { from: 'c_bot_ui', to: 'cl_admin_alert', label: 'Health Alerts' },
+
+        // Ingress & Tunnel
+        { from: 'c_cloudflared', to: 'c_web_api', label: 'Zero-Trust Proxy' }
+      ]
+    };
+
+    // 2. CANVAS ENGINE (Force-directed physics & interactive rendering)
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function resize() {
+      width = canvas.parentElement.clientWidth;
+      height = canvas.parentElement.clientHeight;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Layout Initializer
+    const nodes = graphData.nodes;
+    const edges = graphData.edges;
+
+    const groupCenters = {
+      sensor: { x: width * 0.15, y: height * 0.3 },
+      container: { x: width * 0.45, y: height * 0.35 },
+      engine: { x: width * 0.50, y: height * 0.70 },
+      storage: { x: width * 0.25, y: height * 0.65 },
+      client: { x: width * 0.82, y: height * 0.45 }
+    };
+
+    nodes.forEach((n, idx) => {
+      const c = groupCenters[n.group] || { x: width / 2, y: height / 2 };
+      n.x = c.x + (Math.random() - 0.5) * 160;
+      n.y = c.y + (Math.random() - 0.5) * 160;
+      n.vx = 0;
+      n.vy = 0;
+      n.radius = n.group === 'container' ? 24 : 18;
+      n.visible = true;
+    });
+
+    // Camera State
+    let camX = 0, camY = 0, zoom = 1.0;
+    let isDragging = false, lastMouseX = 0, lastMouseY = 0;
+    let draggedNode = null;
+    let hoveredNode = null;
+    let selectedNode = null;
+    let physicsRunning = true;
+
+    // Simulation loop
+    function updatePhysics() {
+      if (!physicsRunning) return;
+
+      // Spring forces for edges
+      edges.forEach(e => {
+        const source = nodes.find(n => n.id === e.from);
+        const target = nodes.find(n => n.id === e.to);
+        if (!source || !target || !source.visible || !target.visible) return;
+
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const targetDist = 130;
+        const force = (dist - targetDist) * 0.008;
+
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+
+        source.vx += fx;
+        source.vy += fy;
+        target.vx -= fx;
+        target.vy -= fy;
+      });
+
+      // Repulsion between all nodes
+      for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        if (!n1.visible) continue;
+
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n2 = nodes[j];
+          if (!n2.visible) continue;
+
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < 260) {
+            const force = (260 - dist) / dist * 0.45;
+            n1.vx -= (dx / dist) * force;
+            n1.vy -= (dy / dist) * force;
+            n2.vx += (dx / dist) * force;
+            n2.vy += (dy / dist) * force;
+          }
+        }
+
+        // Center gravitation towards group home
+        const center = groupCenters[n1.group] || { x: width / 2, y: height / 2 };
+        n1.vx += (center.x - n1.x) * 0.004;
+        n1.vy += (center.y - n1.y) * 0.004;
+
+        // Apply velocity with damping
+        if (n1 !== draggedNode) {
+          n1.vx *= 0.82;
+          n1.vy *= 0.82;
+          n1.x += n1.vx;
+          n1.y += n1.vy;
+        }
+      }
+    }
+
+    // Render loop
+    function render() {
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.translate(camX, camY);
+      ctx.scale(zoom, zoom);
+
+      // 1. Draw Group Region Backgrounds
+      Object.entries(groupCenters).forEach(([grp, pt]) => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 160, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.015)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.stroke();
+      });
+
+      // 2. Draw Edges
+      edges.forEach(e => {
+        const source = nodes.find(n => n.id === e.from);
+        const target = nodes.find(n => n.id === e.to);
+        if (!source || !target || !source.visible || !target.visible) return;
+
+        const isHighlighted = (selectedNode && (selectedNode.id === source.id || selectedNode.id === target.id)) ||
+                              (hoveredNode && (hoveredNode.id === source.id || hoveredNode.id === target.id));
+
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.strokeStyle = isHighlighted ? '#10b981' : 'rgba(100, 116, 139, 0.25)';
+        ctx.lineWidth = isHighlighted ? 2.5 : 1.2;
+        ctx.stroke();
+
+        // Edge Label (if highlighted)
+        if (isHighlighted && e.label) {
+          const midX = (source.x + target.x) / 2;
+          const midY = (source.y + target.y) / 2;
+          ctx.font = '9px monospace';
+          ctx.fillStyle = '#34d399';
+          ctx.fillText(e.label, midX + 5, midY - 3);
+        }
+      });
+
+      // 3. Draw Nodes
+      nodes.forEach(n => {
+        if (!n.visible) return;
+
+        const isSelected = selectedNode && selectedNode.id === n.id;
+        const isHovered = hoveredNode && hoveredNode.id === n.id;
+
+        // Outer glow
+        if (isSelected || isHovered) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.radius + 8, 0, Math.PI * 2);
+          ctx.fillStyle = n.color + '33';
+          ctx.fill();
+        }
+
+        // Main Node Body
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = n.color;
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = isSelected ? 3 : 1.5;
+        ctx.stroke();
+
+        // Icon inside node
+        ctx.font = `${Math.floor(n.radius * 0.9)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.icon, n.x, n.y);
+
+        // Node Label
+        ctx.font = isSelected ? 'bold 12px sans-serif' : '11px sans-serif';
+        ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y + n.radius + 14);
+
+        // Tech tag under label
+        if (n.tech && (isSelected || isHovered || zoom > 0.9)) {
+          ctx.font = '9px monospace';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(n.tech, n.x, n.y + n.radius + 26);
+        }
+      });
+
+      ctx.restore();
+
+      updatePhysics();
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+    // 3. INTERACTION & EVENT LISTENERS
+    function screenToWorld(sx, sy) {
+      return {
+        x: (sx - camX) / zoom,
+        y: (sy - camY) / zoom
+      };
+    }
+
+    function getNodeAt(x, y) {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        if (!n.visible) continue;
+        const dx = x - n.x;
+        const dy = y - n.y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+          return n;
+        }
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      const pos = screenToWorld(e.clientX, e.clientY - 56);
+      const hit = getNodeAt(pos.x, pos.y);
+      if (hit) {
+        draggedNode = hit;
+        selectNode(hit);
+      } else {
+        isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      }
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (draggedNode) {
+        const pos = screenToWorld(e.clientX, e.clientY - 56);
+        draggedNode.x = pos.x;
+        draggedNode.y = pos.y;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+      } else if (isDragging) {
+        camX += e.clientX - lastMouseX;
+        camY += e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      } else {
+        const pos = screenToWorld(e.clientX, e.clientY - 56);
+        hoveredNode = getNodeAt(pos.x, pos.y);
+        canvas.style.cursor = hoveredNode ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      draggedNode = null;
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      const mousePos = { x: e.clientX, y: e.clientY - 56 };
+      
+      camX = mousePos.x - (mousePos.x - camX) * zoomFactor;
+      camY = mousePos.y - (mousePos.y - camY) * zoomFactor;
+      zoom *= zoomFactor;
+      zoom = Math.max(0.3, Math.min(3.0, zoom));
+    });
+
+    // Touch event listeners for mobile / tablet
+    let initialPinchDist = null;
+    let initialPinchZoom = 1;
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const pos = screenToWorld(touch.clientX, touch.clientY - 56);
+        const hit = getNodeAt(pos.x, pos.y);
+        if (hit) {
+          draggedNode = hit;
+          selectNode(hit);
+        } else {
+          isDragging = true;
+          lastMouseX = touch.clientX;
+          lastMouseY = touch.clientY;
+        }
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        draggedNode = null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDist = Math.hypot(dx, dy);
+        initialPinchZoom = zoom;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', e => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (draggedNode) {
+          const pos = screenToWorld(touch.clientX, touch.clientY - 56);
+          draggedNode.x = pos.x;
+          draggedNode.y = pos.y;
+          draggedNode.vx = 0;
+          draggedNode.vy = 0;
+        } else if (isDragging) {
+          camX += touch.clientX - lastMouseX;
+          camY += touch.clientY - lastMouseY;
+          lastMouseX = touch.clientX;
+          lastMouseY = touch.clientY;
+        }
+      } else if (e.touches.length === 2 && initialPinchDist) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 10) {
+          const factor = dist / initialPinchDist;
+          zoom = Math.max(0.3, Math.min(3.0, initialPinchZoom * factor));
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', e => {
+      if (e.touches.length === 0) {
+        draggedNode = null;
+        isDragging = false;
+        initialPinchDist = null;
+      } else if (e.touches.length === 1) {
+        initialPinchDist = null;
+        const touch = e.touches[0];
+        lastMouseX = touch.clientX;
+        lastMouseY = touch.clientY;
+        isDragging = true;
+      }
+    });
+
+    // 4. INSPECTOR PANEL CONTROLLER
+    function selectNode(n) {
+      selectedNode = n;
+      document.getElementById('insp-icon').textContent = n.icon;
+      document.getElementById('insp-title').textContent = n.label;
+      document.getElementById('insp-desc').textContent = n.desc;
+      document.getElementById('insp-tech').textContent = n.tech;
+      document.getElementById('insp-sla').textContent = n.sla;
+      
+      const badge = document.getElementById('insp-badge');
+      badge.textContent = n.group.toUpperCase();
+      badge.style.color = n.color;
+      badge.style.borderColor = n.color + '66';
+
+      // Inputs
+      const inEdges = edges.filter(e => e.to === n.id);
+      const inContainer = document.getElementById('insp-inputs');
+      inContainer.innerHTML = inEdges.length ? inEdges.map(e => {
+        const fromNode = nodes.find(x => x.id === e.from);
+        return `<span class="bg-[#1e293b] border border-slate-700 px-2 py-0.5 rounded text-[10px] text-slate-300">⬅️ ${fromNode ? fromNode.label : e.from}</span>`;
+      }).join('') : '<span class="text-slate-500 italic text-[11px]">Немає прямих вхідних залежностей</span>';
+
+      // Outputs
+      const outEdges = edges.filter(e => e.from === n.id);
+      const outContainer = document.getElementById('insp-outputs');
+      outContainer.innerHTML = outEdges.length ? outEdges.map(e => {
+        const toNode = nodes.find(x => x.id === e.to);
+        return `<span class="bg-[#1e293b] border border-slate-700 px-2 py-0.5 rounded text-[10px] text-slate-300">➡️ ${toNode ? toNode.label : e.to}</span>`;
+      }).join('') : '<span class="text-slate-500 italic text-[11px]">Кінцева точка видачі</span>';
+
+      // Metrics
+      const mContainer = document.getElementById('insp-metrics');
+      mContainer.innerHTML = (n.metrics || []).map(m => `
+        <div class="flex items-center space-x-1.5 text-slate-300">
+          <span class="text-emerald-400 font-bold">•</span>
+          <span>${m}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('inspector').classList.remove('translate-x-full');
+    }
+
+    function closeInspector() {
+      selectedNode = null;
+      document.getElementById('inspector').classList.add('translate-x-full');
+    }
+
+    // 5. FILTERS & SEARCH
+    function filterType(type) {
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active', 'border-emerald-500/50', 'bg-emerald-500/20', 'text-emerald-300');
+        b.classList.add('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+      });
+      const activeBtn = document.getElementById('btn-' + type);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'border-emerald-500/50', 'bg-emerald-500/20', 'text-emerald-300');
+        activeBtn.classList.remove('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+      }
+
+      nodes.forEach(n => {
+        n.visible = (type === 'all' || n.group === type);
+      });
+    }
+
+    function handleSearch(term) {
+      const q = term.toLowerCase().trim();
+      nodes.forEach(n => {
+        const match = n.label.toLowerCase().includes(q) || 
+                      n.tech.toLowerCase().includes(q) || 
+                      n.desc.toLowerCase().includes(q);
+        n.visible = q === '' || match;
+      });
+    }
+
+    function resetView() {
+      camX = 0;
+      camY = 0;
+      zoom = 1.0;
+    }
+
+    function zoomBy(factor) {
+      const centerX = width / 2;
+      const centerY = height / 2;
+      camX = centerX - (centerX - camX) * factor;
+      camY = centerY - (centerY - camY) * factor;
+      zoom *= factor;
+      zoom = Math.max(0.3, Math.min(3.0, zoom));
+    }
+
+    function togglePhysics() {
+      physicsRunning = !physicsRunning;
+      const btn = document.getElementById('btnPhysics');
+      btn.textContent = physicsRunning ? '⏸️ Фізика: Увімк' : '▶️ Фізика: Пауза';
+      btn.classList.toggle('text-emerald-400', physicsRunning);
+      btn.classList.toggle('text-amber-400', !physicsRunning);
+    }
+  </script>
+</body>
+</html>

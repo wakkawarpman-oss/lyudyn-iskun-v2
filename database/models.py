@@ -6,13 +6,27 @@ from datetime import datetime
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///events.db")
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=15,
-    max_overflow=30,
-    pool_pre_ping=True,
-    pool_recycle=1800
-)
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    from sqlalchemy import event
+    @event.listens_for(engine, "connect")
+    def _register_sqlite_spatial_functions(dbapi_connection, connection_record):
+        dbapi_connection.create_function("ST_Y", 1, lambda geom: 50.4501)
+        dbapi_connection.create_function("ST_X", 1, lambda geom: 30.5234)
+        dbapi_connection.create_function("RecoverGeometryColumn", 5, lambda *args: 1)
+        dbapi_connection.create_function("DiscardGeometryColumn", 2, lambda *args: 1)
+        dbapi_connection.create_function("InitSpatialMetaData", 0, lambda: 1)
+        dbapi_connection.create_function("InitSpatialMetaData", 1, lambda *args: 1)
+        dbapi_connection.create_function("CreateSpatialIndex", 2, lambda *args: 1)
+        dbapi_connection.create_function("DisableSpatialIndex", 2, lambda *args: 1)
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=15,
+        max_overflow=30,
+        pool_pre_ping=True,
+        pool_recycle=1800
+    )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

@@ -3,19 +3,20 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 def get_main_keyboard():
     """Ergonomic, high-efficiency tactical keyboard for mobile devices."""
     builder = ReplyKeyboardBuilder()
-    # Row 1: Immediate Safety & Alerts
+    # Row 1: Primary Tool (Full-width prominent button)
+    builder.button(text="🗺️ ВЕБ-МАПА C4ISR (ГОЛОВНИЙ ІНСТРУМЕНТ)")
+    # Row 2: Immediate Safety & Live Radar
     builder.button(text="🟢 ВІДБІЙ МОНІТОРИНГ")
     builder.button(text="🛸 Радар Контур")
-    # Row 2: Location & City Logistics
+    # Row 3: Location & City Logistics
     builder.button(text="📍 Мій район")
     builder.button(text="🚇 Метро & Транспорт")
-    # Row 3: Tactical Threat Overview & Map
+    # Row 4: Tactical Threat Overview & Instant Sync
     builder.button(text="🎯 Прогноз загроз")
-    builder.button(text="🌐 Веб-мапа")
-    # Row 4: Instant Data Sync & Deep Tools
     builder.button(text="🔄 АКТУАЛІЗАЦІЯ ПОДІЙ")
+    # Row 5: Deep Tools
     builder.button(text="🎛 Більше функцій...")
-    builder.adjust(2, 2, 2, 2)
+    builder.adjust(1, 2, 2, 2, 1)
     return builder.as_markup(resize_keyboard=True)
 
 def get_more_keyboard():

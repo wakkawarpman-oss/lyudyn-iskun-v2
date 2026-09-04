@@ -202,7 +202,9 @@ async def cmd_status(message: types.Message):
         db.close()
 
 
+@router.message(F.text == "🗺️ ВЕБ-МАПА C4ISR (ГОЛОВНИЙ ІНСТРУМЕНТ)")
 @router.message(F.text == "🌐 Веб-мапа")
+@router.message(F.text.ilike("%веб-мапа%"))
 @router.message(Command("map"))
 async def cmd_web_map(message: types.Message):
     dash_url = get_dashboard_url()

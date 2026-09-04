@@ -23,39 +23,52 @@
 <body class="bg-[#0b0f19] text-[#e2e8f0] h-screen w-screen flex flex-col antialiased">
   
   <!-- Header Bar -->
-  <header class="h-14 border-b border-[#1e293b] bg-[#0f172a]/90 backdrop-blur px-4 flex items-center justify-between z-20">
-    <div class="flex items-center space-x-3">
+  <header class="h-14 border-b border-[#1e293b] bg-[#0f172a]/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 gap-2">
+    <div class="flex items-center space-x-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center text-cyan-400 font-black text-sm">
         🕸️
       </div>
       <div>
-        <h1 class="text-sm font-bold text-white tracking-wide uppercase">C4ISR & OSINT Multi-Sensor Graph</h1>
-        <p class="text-[10px] text-[#94a3b8]">Повний системний граф інструментів, сигналів, баз розвідданих та аналітичних пайплайнів</p>
+        <h1 class="text-xs sm:text-sm font-bold text-white tracking-wide uppercase">C4ISR & OSINT Multi-Sensor Graph</h1>
+        <p class="text-[9px] sm:text-[10px] text-[#94a3b8] hidden sm:block">Системний граф сенсорів, потоків та аналітичних ядер</p>
       </div>
     </div>
 
-    <!-- Filter Buttons -->
-    <div class="flex items-center space-x-2 text-xs">
-      <button onclick="filterDomain('all')" class="domain-btn active px-3 py-1.5 rounded-lg border border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-medium">Всі (42)</button>
-      <button onclick="filterDomain('sensor')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">📡 Сенсори (8)</button>
-      <button onclick="filterDomain('intel')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">🎯 Розвіддані (9)</button>
-      <button onclick="filterDomain('pipeline')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">⚙️ Пайплайни (11)</button>
-      <button onclick="filterDomain('recon')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">⚔️ Red Team (8)</button>
-      <button onclick="filterDomain('devops')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">🛡️ QA & C2 (6)</button>
+    <!-- Quick Navigation Switcher -->
+    <div class="flex items-center space-x-1.5 flex-shrink-0">
+      <a href="/" onclick="if (window.parent && window.parent !== window) { window.parent.postMessage({action:'closeGraph'}, '*'); return false; }" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/90 text-cyan-400 hover:border-cyan-500 flex items-center gap-1 font-semibold text-xs transition-colors" title="Повернутися до живої карти">🗺️ <span class="hidden sm:inline">Карта</span></a>
+      <a href="/project_build_graph.html" class="px-2.5 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 flex items-center gap-1 font-semibold text-xs transition-colors" title="Відкрити топологію контейнерів">🏗️ <span class="hidden sm:inline">Збірка</span></a>
+    </div>
+
+    <!-- Filter Buttons (Scrollable on Mobile) -->
+    <div class="flex items-center space-x-1.5 text-xs overflow-x-auto py-1 max-w-[48vw] lg:max-w-none scrollbar-none">
+      <button onclick="filterDomain('all', this)" class="domain-btn active px-2.5 py-1 rounded-lg border border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-medium whitespace-nowrap">Всі (42)</button>
+      <button onclick="filterDomain('sensor', this)" class="domain-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">📡 Сенсори (8)</button>
+      <button onclick="filterDomain('intel', this)" class="domain-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🎯 Розвіддані (9)</button>
+      <button onclick="filterDomain('pipeline', this)" class="domain-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">⚙️ Пайплайни (11)</button>
+      <button onclick="filterDomain('recon', this)" class="domain-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">⚔️ Red Team (8)</button>
+      <button onclick="filterDomain('devops', this)" class="domain-btn px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500 whitespace-nowrap">🛡️ QA & C2 (6)</button>
     </div>
 
     <!-- Search Box -->
-    <div class="relative w-52">
-      <input type="text" id="nodeSearch" placeholder="Пошук інструменту / даних..." 
+    <div class="relative w-36 sm:w-48 flex-shrink-0">
+      <input type="text" id="nodeSearch" placeholder="Пошук..." 
         oninput="handleSearch(this.value)"
-        class="w-full bg-[#1e293b]/70 border border-[#334155] text-xs rounded-lg px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400" />
+        class="w-full bg-[#1e293b]/70 border border-[#334155] text-xs rounded-lg px-2.5 py-1 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400" />
       <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
     </div>
   </header>
 
   <!-- Canvas Container -->
   <div class="relative flex-1 bg-[#090d16] overflow-hidden">
-    <canvas id="graphCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+    <canvas id="graphCanvas" style="touch-action: none;" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+    <!-- Floating Zoom HUD Controls -->
+    <div class="absolute bottom-4 right-4 z-10 flex space-x-1.5 bg-[#0f172a]/95 backdrop-blur border border-[#1e293b] p-1.5 rounded-xl shadow-xl">
+      <button onclick="resetGraphView()" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-cyan-300 font-semibold" title="Скинути зум та позицію">🎯 Центр</button>
+      <button onclick="zoomBy(1.2)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-bold" title="Збільшити масштаб">➕</button>
+      <button onclick="zoomBy(0.8)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 font-bold" title="Зменшити масштаб">➖</button>
+    </div>
 
     <!-- Floating HUD Info -->
     <div class="absolute bottom-4 left-4 z-10 bg-[#0f172a]/90 border border-[#1e293b] rounded-xl p-3 text-[11px] backdrop-blur flex flex-col space-y-1.5 pointer-events-none shadow-xl">
@@ -468,6 +481,90 @@
       zoom = Math.max(0.4, Math.min(3.0, zoom * factor));
     });
 
+    // --- TOUCH EVENTS SUPPORT (MOBILE / TABLET) ---
+    let initialPinchDist = null;
+    let initialPinchZoom = 1;
+
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        const hit = getNodeAt(x, y);
+
+        if (hit) {
+          dragNode = hit;
+          selectedNode = hit;
+          showDrawer(hit);
+        } else {
+          isDragging = true;
+          startX = x - panX;
+          startY = y - panY;
+        }
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        dragNode = null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDist = Math.hypot(dx, dy);
+        initialPinchZoom = zoom;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', e => {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        if (dragNode) {
+          dragNode.x = (x - width / 2 - panX) / zoom + width / 2;
+          dragNode.y = (y - height / 2 - panY) / zoom + height / 2;
+          dragNode.vx = 0;
+          dragNode.vy = 0;
+        } else if (isDragging) {
+          panX = x - startX;
+          panY = y - startY;
+        }
+      } else if (e.touches.length === 2 && initialPinchDist) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 10) {
+          const factor = dist / initialPinchDist;
+          zoom = Math.max(0.4, Math.min(3.0, initialPinchZoom * factor));
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', e => {
+      if (e.touches.length === 0) {
+        dragNode = null;
+        isDragging = false;
+        initialPinchDist = null;
+      } else if (e.touches.length === 1) {
+        initialPinchDist = null;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        startX = (touch.clientX - rect.left) - panX;
+        startY = (touch.clientY - rect.top) - panY;
+        isDragging = true;
+      }
+    });
+
+    function resetGraphView() {
+      panX = 0;
+      panY = 0;
+      zoom = 1.0;
+    }
+
+    function zoomBy(factor) {
+      zoom = Math.max(0.4, Math.min(3.0, zoom * factor));
+    }
+
     // --- DRAWER & FILTERS ---
     function showDrawer(node) {
       const drawer = document.getElementById('nodeDrawer');
@@ -500,14 +597,18 @@
       selectedNode = null;
     }
 
-    function filterDomain(dom) {
+    function filterDomain(dom, btn) {
       currentFilter = dom;
-      document.querySelectorAll('.domain-btn').forEach(btn => {
-        btn.classList.remove('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
-        btn.classList.add('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+      document.querySelectorAll('.domain-btn').forEach(b => {
+        b.classList.remove('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
+        b.classList.add('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
       });
-      event.target.classList.remove('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
-      event.target.classList.add('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
+      const target = btn || (typeof event !== 'undefined' && event ? (event.currentTarget || event.target) : null);
+      if (target) {
+        const activeBtn = target.closest ? target.closest('.domain-btn') || target : target;
+        activeBtn.classList.remove('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+        activeBtn.classList.add('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
+      }
     }
 
     function handleSearch(val) {

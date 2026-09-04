@@ -956,6 +956,33 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        /* ─── Tactical Graph Modal ─── */
+        .tactical-graph-card {
+            background: #080c14;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 14px;
+            width: 96vw;
+            max-width: 1560px;
+            height: 94vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.95), 0 0 35px rgba(56, 189, 248, 0.2);
+            overflow: hidden;
+            animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .active-graph-tab {
+            background: rgba(56, 189, 248, 0.25) !important;
+            color: #38bdf8 !important;
+            border: 1px solid rgba(56, 189, 248, 0.5) !important;
+        }
+        @media (max-width: 768px) {
+            .tactical-graph-card {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+        }
         .modal-head {
             padding: 14px 16px;
             border-bottom: 1px solid var(--border-dim);
@@ -1116,7 +1143,7 @@
                 </button>
             </div>
             <button class="header-btn" id="btn-open-ecosystem" title="Повний реєстр інструментів, даних та нашарувань системи" style="border-color: #00e5ff; color: #00e5ff;">🕸️ СИСТЕМА</button>
-            <a href="/graph_analysis.html" target="_blank" class="header-btn" id="btn-open-graph" title="Інтерактивний граф системи (Force Graph)" style="border-color: #a855f7; color: #c084fc; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px;">🕸️ ГРАФ</a>
+            <button class="header-btn" id="btn-open-graph" onclick="openGraphModal('osint')" title="Інтерактивний граф системи (Force Graph)" style="border-color: #a855f7; color: #c084fc; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px; cursor: pointer;">🕸️ ГРАФ</button>
             <button class="header-btn" id="btn-search">🔍</button>
             <a href="http://136.113.156.17:3000" target="_blank" class="header-btn" id="btn-open-cockpit" title="AI Cockpit / Open WebUI" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">🤖</a>
         </div>
@@ -1298,6 +1325,30 @@
                     <span class="layer-counter-tag" id="cnt-facilities">10</span>
                 </div>
 
+                <div class="layer-checkbox-row" id="row-wez">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>🛡️ Куполи ППО та зони вогню WEZ (Тор/Панцир/С-400)</span>
+                    </div>
+                    <span class="layer-counter-tag">WEZ</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-lob">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>📐 LOB-пеленги та тріангуляція засічок (CEP WGS-84)</span>
+                    </div>
+                    <span class="layer-counter-tag">LOB</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-cctv">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>📹 Оптичні вузли відеорозвідки CCTV ТОТ</span>
+                    </div>
+                    <span class="layer-counter-tag">315 CCTV</span>
+                </div>
+
                 <div class="layer-checkbox-row" id="row-shelters">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box"></div>
@@ -1342,6 +1393,14 @@
                     <span class="layer-counter-tag" id="cnt-tot-telecom">5 ASN</span>
                 </div>
 
+                <div class="layer-checkbox-row" id="row-ew">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>📡 РЕБ / РЛС випромінювачі (Sentinel-1 SAR C-band)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-ew">6 RFI</span>
+                </div>
+
                 <div class="layer-checkbox-row checked" id="row-clustering">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box">✓</div>
@@ -1349,6 +1408,21 @@
                     </div>
                     <span class="layer-counter-tag">Auto</span>
                 </div>
+
+                <div class="layer-checkbox-row" id="row-symbology-mil">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>⚔️ Військова символіка НАТО (MIL-STD-2525C)</span>
+                    </div>
+                    <span class="layer-counter-tag">ATAK</span>
+                </div>
+            </div>
+
+            <!-- ATAK DATAPACKAGE EXPORT -->
+            <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border-dim);">
+                <a href="/api/cot/zip?token=tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c" download="iskun_cot_datapackage.zip" class="tool-btn" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; background:rgba(0,229,255,0.12); border:1.5px solid var(--accent-cyan); color:var(--accent-cyan); font-weight:800; font-size:12px; height:40px; border-radius:10px;">
+                    📦 Завантажити ATAK DataPackage (.zip)
+                </a>
             </div>
         </div>
     </div>
@@ -1611,8 +1685,35 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="tactical-btn-secondary" id="btn-open-interactive-graph" onclick="window.open('/graph_analysis.html', '_blank')">🕸️ Відкрити інтерактивний граф</button>
+                <button class="tactical-btn-secondary" id="btn-open-interactive-graph" onclick="document.getElementById('ecosystem-modal').classList.remove('open'); openGraphModal('osint');">🕸️ Відкрити інтерактивний граф</button>
                 <button class="tactical-btn-primary" onclick="document.getElementById('ecosystem-modal').classList.remove('open')">Зрозуміло</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. Tactical System Graph Fullscreen Modal -->
+    <div class="tactical-modal-overlay" id="tactical-graph-modal">
+        <div class="tactical-graph-card">
+            <div class="modal-head" style="background: #0b101d; border-bottom: 1px solid #1e293b; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 18px;">🕸️</div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px;">C4ISR ТАКТИЧНИЙ ГРАФ СИСТЕМИ</div>
+                        <div style="font-size: 10px; color: #94a3b8;">Повна топологія сенсорів, потоків даних, алгоритмів та розвідданих</div>
+                    </div>
+                </div>
+                <!-- Graph Switcher & Action Controls -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 2px;">
+                        <button id="tab-graph-osint" class="active-graph-tab" onclick="switchGraphMode('osint')" style="padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; transition: all 0.2s;">📡 C4ISR & OSINT (42)</button>
+                        <button id="tab-graph-build" onclick="switchGraphMode('build')" style="padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; border: none; background: transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s;">🏗️ Збірка Проєкту (28)</button>
+                    </div>
+                    <a id="btn-graph-external" href="/graph_analysis.html" target="_blank" title="Відкрити в окремій вкладці браузера" style="color: #94a3b8; text-decoration: none; padding: 5px 10px; border: 1px solid #334155; border-radius: 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.03);">↗️ <span class="desktop-only">Окремо</span></a>
+                    <button id="btn-close-graph-modal" onclick="closeGraphModal()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 8px; padding: 5px 12px; font-weight: 800; font-size: 12px; cursor: pointer;">✕ ЗАКРИТИ</button>
+                </div>
+            </div>
+            <div style="flex: 1; width: 100%; height: calc(100% - 54px); position: relative; background: #060911;">
+                <iframe id="graph-iframe" src="/graph_analysis.html" style="width: 100%; height: 100%; border: none; display: block;" allow="fullscreen"></iframe>
             </div>
         </div>
     </div>
@@ -1693,10 +1794,16 @@
         const infraLayer = L.layerGroup();
         const airfieldsLayer = L.layerGroup();
         const enemyFacilitiesLayer = L.layerGroup();
+        const wezLayer = L.layerGroup();
+        const lobLayer = L.layerGroup();
+        const cctvLayer = L.layerGroup();
         const sheltersLayer = L.layerGroup();
         const thermalLayer = L.layerGroup();
         const totTelecomLayer = L.layerGroup();
+        const ewLayer = L.layerGroup();
         const droneVectorLayer = L.layerGroup().addTo(map);
+        const sunShadowLayer = L.layerGroup().addTo(map);
+        let isMilSymbology = false;
         // New Strategic OSINT Layers
         const powerGridLayer = L.tileLayer('https://tiles.openinframap.org/power/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -2087,9 +2194,207 @@
             }
         });
 
+        toggleLayerRow('row-ew', ewLayer, async (on) => {
+            if (on && ewLayer.getLayers().length === 0) {
+                try {
+                    const res = await fetch('/api/v1/radar/ew-interference');
+                    const data = await res.json();
+                    const features = data.features || [];
+                    features.forEach(f => {
+                        const coords = f.geometry.coordinates;
+                        const p = f.properties;
+                        const isJammer = p.emitter_type === 'EW_JAMMER';
+                        const color = isJammer ? '#ec4899' : '#8b5cf6';
+                        
+                        const m = L.circleMarker([coords[1], coords[0]], {
+                            radius: 7,
+                            fillColor: color,
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        });
+                        
+                        if (p.beam_line && p.beam_line.length >= 2) {
+                            L.polyline([[p.beam_line[0][1], p.beam_line[0][0]], [p.beam_line[1][1], p.beam_line[1][0]]], {
+                                color: color,
+                                weight: 2,
+                                dashArray: '4, 4',
+                                opacity: 0.7
+                            }).addTo(ewLayer);
+                        }
+                        
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:220px; color:#1e293b;">
+                                <div style="font-weight:800; color:${color}; font-size:11px; text-transform:uppercase;">${p.emitter_label}</div>
+                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin:3px 0;">${p.name}</div>
+                                <div style="font-size:11px; color:#475569;"><strong>Частота:</strong> ${p.freq_ghz} GHz | <strong>Інтенсивність:</strong> ${p.intensity}</div>
+                                <div style="font-size:10px; color:#94a3b8; margin-top:4px;">Сенсор: ${p.satellite}</div>
+                            </div>
+                        `);
+                        m.addTo(ewLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load EW layer:', e);
+                }
+            }
+        });
+
         toggleLayerRow('row-clustering', null, (on) => {
             isClusteringEnabled = on;
             renderTimeline(selectedHours);
+        });
+
+        toggleLayerRow('row-symbology-mil', null, (on) => {
+            isMilSymbology = on;
+            renderTimeline(selectedHours);
+        });
+
+        toggleLayerRow('row-wez', wezLayer, async (on) => {
+            if (on && wezLayer.getLayers().length === 0) {
+                try {
+                    const res = await fetch('/api/v1/threats/wez-envelopes');
+                    const data = await res.json();
+                    (data.features || []).forEach(f => {
+                        const [lon, lat] = f.geometry.coordinates;
+                        const p = f.properties;
+
+                        if (p.radar_radius_m) {
+                            L.circle([lat, lon], {
+                                radius: p.radar_radius_m,
+                                color: '#facc15',
+                                weight: 1.5,
+                                dashArray: '6, 6',
+                                fillColor: '#facc15',
+                                fillOpacity: 0.04
+                            }).bindTooltip(`РЛС виявлення: ${p.system_name} (~${Math.round(p.radar_radius_m/1000)} км)`, {sticky: true}).addTo(wezLayer);
+                        }
+
+                        if (p.kill_radius_m) {
+                            L.circle([lat, lon], {
+                                radius: p.kill_radius_m,
+                                color: p.color || '#ef4444',
+                                weight: 2,
+                                fillColor: p.color || '#ef4444',
+                                fillOpacity: 0.14
+                            }).bindTooltip(`Зона вогню: ${p.system_name} (${Math.round(p.kill_radius_m/1000)} км)`, {sticky: true}).addTo(wezLayer);
+                        }
+
+                        const m = L.circleMarker([lat, lon], {
+                            radius: 7,
+                            fillColor: p.color || '#ef4444',
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.95
+                        });
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:230px; color:#1e293b;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; color:${p.color}; font-size:11px; text-transform:uppercase;">🛡️ ${p.category} • ${p.system_type}</span>
+                                    <span style="font-size:9px; background:rgba(239,68,68,0.15); color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:800;">${p.confidence}% Довіра</span>
+                                </div>
+                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:3px;">${p.name}</div>
+                                <div style="font-size:11px; color:#475569; margin-bottom:3px;"><strong>Підрозділ:</strong> ${p.unit}</div>
+                                <div style="font-size:11px; color:#334155; margin-bottom:4px;"><strong>Зона вогню:</strong> до ${Math.round(p.kill_radius_m/1000)} км | <strong>Висота:</strong> до ${p.max_altitude_km} км</div>
+                                <div style="background:#f8fafc; border-left:3px solid ${p.color}; padding:4px 6px; font-size:10px; color:#64748b;">Джерело: ${p.source}</div>
+                            </div>
+                        `);
+                        m.addTo(wezLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load WEZ envelopes:', e);
+                }
+            }
+        });
+
+        toggleLayerRow('row-cctv', cctvLayer, async (on) => {
+            if (on && cctvLayer.getLayers().length === 0) {
+                try {
+                    const res = await fetch('/api/v1/recon/cctv-cameras');
+                    const data = await res.json();
+                    (data.nodes || []).forEach(node => {
+                        const isActive = node.status === 'ACTIVE_STREAM';
+                        const color = isActive ? '#06b6d4' : '#64748b';
+                        const m = L.circleMarker([node.lat, node.lon], {
+                            radius: 6,
+                            fillColor: color,
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        });
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:220px; color:#1e293b;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; color:${color}; font-size:11px;">📹 ${node.type}</span>
+                                    <span style="font-size:9px; background:${isActive ? 'rgba(6,182,212,0.15)' : 'rgba(100,116,139,0.15)'}; color:${color}; padding:1px 5px; border-radius:4px; font-weight:800;">${node.status}</span>
+                                </div>
+                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:2px;">${node.name}</div>
+                                <div style="font-size:11px; color:#475569; margin-bottom:3px;">📍 ${node.city} • ${node.provider}</div>
+                                <div style="background:#f8fafc; border-left:3px solid ${color}; padding:4px 6px; font-size:10.5px; color:#334155; margin-bottom:6px;">
+                                    ${node.dossier}
+                                </div>
+                                <div style="font-size:10px; color:#64748b;">IP/Порт: ${node.ip}:${node.port} • BDA: ${node.verified_bda ? 'ПІДТВЕРДЖЕНО' : 'ОЧІКУВАННЯ'}</div>
+                            </div>
+                        `);
+                        m.addTo(cctvLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load CCTV nodes:', e);
+                }
+            }
+        });
+
+        toggleLayerRow('row-lob', lobLayer, async (on) => {
+            if (on && lobLayer.getLayers().length === 0) {
+                try {
+                    const res = await fetch('/api/v1/geoint/lob-triangulate', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            bearings: [
+                                {lat: 46.40640, lon: 32.63750, azimuth: 250, observer: "КП Гладківка (ТОТ)"},
+                                {lat: 46.43500, lon: 32.58000, azimuth: 165, observer: "Пост спостереження Степове"}
+                            ]
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        (data.rays || []).forEach(r => {
+                            L.polyline([r.start, r.end], {
+                                color: '#38bdf8',
+                                weight: 2,
+                                dashArray: '5, 5',
+                                opacity: 0.8
+                            }).bindTooltip(`${r.observer} (Az ${r.azimuth}°)`).addTo(lobLayer);
+
+                            L.circleMarker(r.start, {
+                                radius: 5,
+                                fillColor: '#38bdf8',
+                                color: '#fff',
+                                weight: 1.5,
+                                fillOpacity: 1
+                            }).bindPopup(`<b>${r.observer}</b><br>Азимут засічки: ${r.azimuth}°`).addTo(lobLayer);
+                        });
+
+                        const t = data.target;
+                        L.circle([t.lat, t.lon], {
+                            radius: data.cep_radius_m || 30,
+                            color: '#f43f5e',
+                            fillColor: '#f43f5e',
+                            fillOpacity: 0.25,
+                            weight: 2
+                        }).bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; color:#1e293b;">
+                                <div style="font-weight:800; color:#e11d48; font-size:11px;">🎯 ТРІАНГУЛЬОВАНА ЦІЛЬ (LOB WGS-84)</div>
+                                <div style="font-size:12px; margin:3px 0;"><strong>Координати:</strong> ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
+                                <div style="font-size:11px; color:#475569;"><strong>Похибка (CEP):</strong> ±${data.cep_radius_m} м</div>
+                                <div style="font-size:10px; color:#059669; font-weight:700;">Довіра засічки: ${data.confidence}%</div>
+                            </div>
+                        `).addTo(lobLayer);
+                    }
+                } catch(e) {
+                    console.warn('Failed to load LOB triangulation:', e);
+                }
+            }
         });
 
         // ─── Profiles (ОПЕРАТИВНИЙ / АНАЛІТИЧНИЙ / НАВІГАЦІЯ / ЧИСТА КАРТА) ───
@@ -2323,16 +2628,29 @@
                 const bg = isStrike ? 'rgba(239, 68, 68, 0.35)' : 'rgba(234, 179, 8, 0.3)';
                 const border = isStrike ? '#ef4444' : '#eab308';
 
-                const icon = L.divIcon({
-                    className: '',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15],
-                    html: `
-                        <div style="width:30px; height:30px; border-radius:50%; background:${bg}; border:2px solid ${border}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${border}; font-size:14px;">
-                            ${emoji}
-                        </div>
-                    `
-                });
+                let icon;
+                if (isMilSymbology) {
+                    const svgHtml = isStrike
+                        ? `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #ef4444);"><polygon points="16,2 30,16 16,30 2,16" fill="rgba(239,68,68,0.35)" stroke="#ef4444" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">💥</text></svg>`
+                        : `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #eab308);"><rect x="3" y="3" width="26" height="26" rx="4" fill="rgba(234,179,8,0.3)" stroke="#eab308" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">⚡</text></svg>`;
+                    icon = L.divIcon({
+                        className: '',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16],
+                        html: svgHtml
+                    });
+                } else {
+                    icon = L.divIcon({
+                        className: '',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                        html: `
+                            <div style="width:30px; height:30px; border-radius:50%; background:${bg}; border:2px solid ${border}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${border}; font-size:14px;">
+                                ${emoji}
+                            </div>
+                        `
+                    });
+                }
 
                 const m = L.marker([e.lat, e.lon], { icon: icon });
                 m.on('click', () => openEventSheet(e));
@@ -2524,9 +2842,14 @@
 
                 ${e.message_text ? `<div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-dim); border-radius:8px; padding:8px 10px; font-size:11px; color:#e2e8f0; margin-bottom:12px;">📝 ${e.message_text}</div>` : ''}
 
-                <div style="display:flex; gap:8px;">
-                    ${srcLink ? `<a href="${srcLink}" target="_blank" class="tool-btn" style="flex:1; width:auto; height:38px; border-color:var(--accent-blue); color:var(--accent-blue); text-decoration:none; font-size:12px;">🌐 Допис →</a>` : ''}
-                    <button class="tool-btn" style="width:auto; height:38px; padding:0 16px; font-size:12px;" onclick="closeObjectSheet()">Закрити</button>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                    <button class="tool-btn" style="width:100%; height:36px; background:rgba(234,179,8,0.12); border-color:#eab308; color:#fde047; font-size:11.5px; font-weight:800;" onclick="checkEventSunShadow(${e.lat}, ${e.lon}, '${e.detected_at || ''}')">
+                        ☀️ Перевірити тінь (хронолокація NOAA)
+                    </button>
+                    <div style="display:flex; gap:8px;">
+                        ${srcLink ? `<a href="${srcLink}" target="_blank" class="tool-btn" style="flex:1; width:auto; height:36px; border-color:var(--accent-blue); color:var(--accent-blue); text-decoration:none; font-size:12px;">🌐 Допис →</a>` : ''}
+                        <button class="tool-btn" style="width:auto; height:36px; padding:0 16px; font-size:12px;" onclick="closeObjectSheet()">Закрити</button>
+                    </div>
                 </div>
             `;
             objSheet.classList.add('open');
@@ -2534,6 +2857,53 @@
             const pt = map.project([e.lat, e.lon], map.getZoom()).subtract([0, 130]);
             map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.3 });
         }
+
+        window.checkEventSunShadow = async function(lat, lon, dtStr) {
+            try {
+                const url = `/api/v1/geoint/sun-shadow?lat=${lat}&lon=${lon}${dtStr ? `&dt=${encodeURIComponent(dtStr)}` : ''}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                sunShadowLayer.clearLayers();
+
+                const sunDistDeg = 0.025; // ~2.5 km vector
+                const sunRad = data.solar_azimuth_deg * Math.PI / 180;
+                
+                // Vector towards Sun
+                const sunEndLat = lat + sunDistDeg * Math.cos(sunRad);
+                const sunEndLon = lon + sunDistDeg * Math.sin(sunRad);
+
+                L.polyline([[lat, lon], [sunEndLat, sunEndLon]], {
+                    color: '#facc15',
+                    weight: 2.5,
+                    dashArray: '4, 4',
+                    opacity: 0.95
+                }).bindTooltip(`☀️ Сонце: ${data.solar_azimuth_deg}° (висота ${data.solar_elevation_deg}°)`, {permanent: true, direction: 'top'}).addTo(sunShadowLayer);
+
+                // Vector of Shadow (opposite direction)
+                const shadowRad = data.shadow_direction_deg * Math.PI / 180;
+                const shadowEndLat = lat + sunDistDeg * Math.cos(shadowRad);
+                const shadowEndLon = lon + sunDistDeg * Math.sin(shadowRad);
+
+                L.polyline([[lat, lon], [shadowEndLat, shadowEndLon]], {
+                    color: '#00e5ff',
+                    weight: 3.5,
+                    opacity: 0.95
+                }).bindTooltip(`🌑 Тінь: ${data.shadow_direction_deg}° (K=${data.shadow_ratio})`, {permanent: true, direction: 'bottom'}).addTo(sunShadowLayer);
+
+                L.circleMarker([lat, lon], {
+                    radius: 7,
+                    fillColor: '#00e5ff',
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 1
+                }).addTo(sunShadowLayer);
+
+                alert(`☀️ ХРОНОЛОКАЦІЯ ТІНІ (NOAA):\n\n• Час події: ${data.kyiv_time} (Київ)\n• Азимут сонця: ${data.solar_azimuth_deg}°\n• Висота сонця: ${data.solar_elevation_deg}°\n• Напрямок тіні: ${data.shadow_direction_deg}°\n• Коефіцієнт довжини тіні: ${data.shadow_ratio}× H\n\nПромені нанесено на тактичну карту.`);
+            } catch(err) {
+                alert('Помилка розрахунку сонячної хронолокації: ' + err.message);
+            }
+        };
 
         function closeObjectSheet() {
             objSheet.classList.remove('open');
@@ -3021,6 +3391,79 @@
         });
         document.getElementById('btn-close-ecosystem')?.addEventListener('click', () => {
             ecosystemModal?.classList.remove('open');
+        });
+
+        // ─── Tactical Graph Modal Handlers ───
+        const graphModal = document.getElementById('tactical-graph-modal');
+        function openGraphModal(mode = 'osint') {
+            if (graphModal) {
+                graphModal.classList.add('open');
+                switchGraphMode(mode);
+            }
+        }
+        function closeGraphModal() {
+            if (graphModal) {
+                graphModal.classList.remove('open');
+            }
+        }
+        function switchGraphMode(mode) {
+            const iframe = document.getElementById('graph-iframe');
+            const tabOsint = document.getElementById('tab-graph-osint');
+            const tabBuild = document.getElementById('tab-graph-build');
+            const extLink = document.getElementById('btn-graph-external');
+
+            if (mode === 'osint') {
+                if (iframe && !iframe.src.endsWith('/graph_analysis.html')) {
+                    iframe.src = '/graph_analysis.html';
+                }
+                if (extLink) extLink.href = '/graph_analysis.html';
+                if (tabOsint) {
+                    tabOsint.style.background = 'rgba(56, 189, 248, 0.25)';
+                    tabOsint.style.color = '#38bdf8';
+                    tabOsint.style.border = '1px solid rgba(56, 189, 248, 0.5)';
+                }
+                if (tabBuild) {
+                    tabBuild.style.background = 'transparent';
+                    tabBuild.style.color = '#94a3b8';
+                    tabBuild.style.border = 'none';
+                }
+            } else {
+                if (iframe && !iframe.src.endsWith('/project_build_graph.html')) {
+                    iframe.src = '/project_build_graph.html';
+                }
+                if (extLink) extLink.href = '/project_build_graph.html';
+                if (tabBuild) {
+                    tabBuild.style.background = 'rgba(16, 185, 129, 0.25)';
+                    tabBuild.style.color = '#34d399';
+                    tabBuild.style.border = '1px solid rgba(16, 185, 129, 0.5)';
+                }
+                if (tabOsint) {
+                    tabOsint.style.background = 'transparent';
+                    tabOsint.style.color = '#94a3b8';
+                    tabOsint.style.border = 'none';
+                }
+            }
+        }
+
+        // Close on backdrop click
+        graphModal?.addEventListener('click', (e) => {
+            if (e.target === graphModal) {
+                closeGraphModal();
+            }
+        });
+
+        // Listen for postMessage from child iframe (e.g. close button inside graph)
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.action === 'closeGraph') {
+                closeGraphModal();
+            }
+        });
+
+        // Close on ESC key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && graphModal?.classList.contains('open')) {
+                closeGraphModal();
+            }
         });
 
         document.getElementById('btn-download-json')?.addEventListener('click', () => {

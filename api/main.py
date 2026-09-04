@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import logging
 from fastapi import FastAPI, Depends
 
@@ -571,6 +571,45 @@ def api_drone_raycast(req: DroneRaycastRequest):
         "slant_range_m": res.slant_range_m,
         "confidence": res.confidence
     }
+
+# ─── New Tactical C4ISR & Target Verification Endpoints ───
+
+@app.get("/api/v1/threats/wez-envelopes")
+def get_wez_envelopes():
+    """Returns Weapon Engagement Zones (WEZ) & Radar detection domes for enemy air defense assets."""
+    from worker.osint.wez_envelopes import generate_wez_geojson
+    return generate_wez_geojson()
+
+class LobTriangulationRequest(BaseModel):
+    bearings: List[Dict[str, Any]]
+
+@app.post("/api/v1/geoint/lob-triangulate")
+def api_lob_triangulate(req: LobTriangulationRequest):
+    """Calculates multi-bearing LOB intersection point and CEP error ellipse."""
+    from worker.osint.lob_triangulation import compute_lob_triangulation
+    return compute_lob_triangulation(req.bearings)
+
+@app.get("/api/v1/recon/cctv-cameras")
+def get_cctv_cameras():
+    """Returns optical CCTV reconnaissance and BDA verification nodes on TOT and frontline."""
+    from worker.osint.cctv_registry import get_cctv_recon_nodes
+    return get_cctv_recon_nodes()
+
+@app.get("/api/v1/geoint/sun-shadow")
+def get_sun_shadow_calculation(lat: float, lon: float, dt: Optional[str] = None):
+    """Calculates solar azimuth, elevation, and shadow vector for photo/video chronolocation."""
+    from worker.osint.geoint_engine import geoint_engine
+    parsed_dt = None
+    if dt:
+        try:
+            parsed_dt = datetime.datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    return geoint_engine.calculate_sun_position(lat, lon, parsed_dt)
+
+# MBTiles Offline Server
+from api.mbtiles_server import router as mbtiles_router
+app.include_router(mbtiles_router)
 
 # OpenWebUI & Agent Tools
 from api.routes.openwebui_tools import router as openwebui_tools_router

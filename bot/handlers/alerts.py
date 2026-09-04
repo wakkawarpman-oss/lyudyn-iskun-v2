@@ -52,6 +52,17 @@ async def cmd_start(message: types.Message):
         "👇 <b>Оберіть потрібний інструмент на клавіатурі нижче:</b>"
     )
     await safe_send(message, greeting, reply_markup=get_main_keyboard())
+    from bot.handlers.osint import get_dashboard_url
+    dash_url = get_dashboard_url()
+    inline_kb = InlineKeyboardBuilder()
+    inline_kb.button(text="🗺️ ВІДКРИТИ ЖИВУ ТАКТИЧНУ ВЕБ-МАПУ", url=dash_url)
+    inline_kb.adjust(1)
+    await safe_send(
+        message,
+        "🗺️ <b>ГОЛОВНИЙ ІНСТРУМЕНТ СИСТЕМИ — ТАКТИЧНА ВЕБ-МАПА C4ISR:</b>\n"
+        "<i>Повний живий моніторинг повітряних цілей, підстанцій під загрозою, укриттів та зон ураження.</i>",
+        reply_markup=inline_kb.as_markup()
+    )
 
 
 @router.message(Command("sync"))
