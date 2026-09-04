@@ -72,17 +72,17 @@ import hashlib
 import threading
 
 _geocode_lock = threading.Lock()
-_GEO_CACHE = {}
 
 def _geocode_cache_key(query: str) -> str:
     h = hashlib.sha256(query.strip().lower().encode("utf-8")).hexdigest()[:16]
     return f"geo:{h}"
 
 def _internal_geocode(query: str):
+    """Geocodes via Nominatim, cached in Redis (24h TTL). Returns WKT 'POINT(lon lat)' string."""
     if not query:
         return None
     cache_key = _geocode_cache_key(query)
-    # 1. Try Redis cache
+    # 1. Try Redis cache (shared across all gevent workers and containers)
     try:
         val = redis_client.get(cache_key)
         if val:
@@ -93,22 +93,16 @@ def _internal_geocode(query: str):
     except Exception as e:
         logger.warning(f"Redis geocode cache get error: {e}")
 
-    # 2. Try In-memory cache
-    if query in _GEO_CACHE:
-        return _GEO_CACHE[query]
-
-    # 3. External geocoding
+    # 2. External geocoding (only on cache miss)
     try:
         geo = geolocator.geocode(query)
         if geo:
             res = f"POINT({geo.longitude} {geo.latitude})"
-            # Set in Redis (24-hour TTL)
+            # Store in Redis (24-hour TTL)
             try:
                 redis_client.setex(cache_key, 86400, res)
             except Exception as ex:
                 logger.warning(f"Redis geocode cache set error: {ex}")
-            if len(_GEO_CACHE) < 2000:
-                _GEO_CACHE[query] = res
             return res
     except Exception as e:
         logger.error(f"Geocoding Error for '{query}': {e}")
