@@ -1142,6 +1142,7 @@
                     АНАЛІЗ
                 </button>
             </div>
+            <button class="header-btn" id="btn-sync-bot" title="Примусова актуалізація Telegram-джерел та синхронізація з ботом" style="border-color: #10b981; color: #10b981; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px; cursor: pointer;">🔄 СИНХР</button>
             <button class="header-btn" id="btn-open-ecosystem" title="Повний реєстр інструментів, даних та нашарувань системи" style="border-color: #00e5ff; color: #00e5ff;">🕸️ СИСТЕМА</button>
             <button class="header-btn" id="btn-open-graph" onclick="openGraphModal('osint')" title="Інтерактивний граф системи (Force Graph)" style="border-color: #a855f7; color: #c084fc; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px; cursor: pointer;">🕸️ ГРАФ</button>
             <button class="header-btn" id="btn-search">🔍</button>
@@ -3503,10 +3504,82 @@
         document.getElementById('btn-zoom-in')?.addEventListener('click', () => map.zoomIn());
         document.getElementById('btn-zoom-out')?.addEventListener('click', () => map.zoomOut());
 
-        // ─── 8. Startup & Polling Intervals ───
+        // ─── 8. Bot Synchronization & Deep Linking ───
+        document.getElementById('btn-sync-bot')?.addEventListener('click', async () => {
+            const btn = document.getElementById('btn-sync-bot');
+            const originalText = btn ? btn.textContent : '🔄 СИНХР';
+            if (btn) {
+                btn.textContent = '⏳ ОПИТУВАННЯ...';
+                btn.style.opacity = '0.7';
+            }
+            try {
+                const res = await fetch('/api/v1/sync', { method: 'POST' });
+                const data = await res.json();
+                console.log('Sync command response:', data);
+                const banner = document.getElementById('threat-banner-text');
+                if (banner) {
+                    const oldText = banner.textContent;
+                    banner.textContent = '🔄 Запущено актуалізацію OSINT-каналів та синхронізацію з ботом...';
+                    setTimeout(() => { banner.textContent = oldText; }, 5000);
+                }
+                setTimeout(() => {
+                    fetchEventsAndZones();
+                    fetchRadarDrones();
+                    if (btn) {
+                        btn.textContent = '✅ ОНОВЛЕНО';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.opacity = '1';
+                        }, 2500);
+                    }
+                }, 4000);
+            } catch(e) {
+                console.error('Sync error:', e);
+                if (btn) {
+                    btn.textContent = originalText;
+                    btn.style.opacity = '1';
+                }
+            }
+        });
+
+        function handleDeepLinks() {
+            const params = new URLSearchParams(window.location.search);
+            const pLat = parseFloat(params.get('lat'));
+            const pLon = parseFloat(params.get('lon'));
+            const pZoom = parseInt(params.get('zoom'), 10);
+            if (!isNaN(pLat) && !isNaN(pLon)) {
+                map.setView([pLat, pLon], pZoom || 14);
+            }
+            const pLayer = params.get('layer');
+            if (pLayer) {
+                setTimeout(() => {
+                    if (pLayer === 'wez') document.getElementById('row-wez')?.click();
+                    else if (pLayer === 'lob') document.getElementById('row-lob')?.click();
+                    else if (pLayer === 'cctv') document.getElementById('row-cctv')?.click();
+                    else if (pLayer === 'ew') document.getElementById('row-ew')?.click();
+                    else if (pLayer === 'thermal') document.getElementById('row-thermal')?.click();
+                    else if (pLayer === 'shelters') document.getElementById('row-shelters')?.click();
+                    else if (pLayer === 'mil') document.getElementById('row-symbology-mil')?.click();
+                }, 600);
+            }
+            const pEventId = params.get('event_id') || params.get('id');
+            if (pEventId) {
+                setTimeout(() => {
+                    const ev = (rawEvents || []).find(e => String(e.id) === String(pEventId));
+                    if (ev && ev.lat && ev.lon) {
+                        map.flyTo([ev.lat, ev.lon], 15, { duration: 1.2 });
+                        if (typeof openEventSheet === 'function') {
+                            openEventSheet(ev);
+                        }
+                    }
+                }, 1500);
+            }
+        }
+
+        // ─── 9. Startup & Polling Intervals ───
         switchOblast(currentOblast, true);
         fetchRadarDrones();
-        fetchEventsAndZones();
+        fetchEventsAndZones().then(() => handleDeepLinks());
         fetchInfrastructurePOIs();
         setInterval(fetchRadarDrones, 4000);
         setInterval(fetchEventsAndZones, 20000);

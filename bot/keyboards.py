@@ -22,6 +22,7 @@ def get_main_keyboard():
 def get_more_keyboard():
     """Secondary keyboard for deep intelligence, satellite feeds, and system tools."""
     builder = ReplyKeyboardBuilder()
+    builder.button(text="🎛 Тактичні шари")
     builder.button(text="🔥 Супутник NASA")
     builder.button(text="🕸️ Мережа ІПСО")
     builder.button(text="🎖 Ключові інциденти")
@@ -32,7 +33,6 @@ def get_more_keyboard():
     builder.button(text="📈 Графік активності")
     builder.button(text="📊 Експорт CSV")
     builder.button(text="🔑 Мій ключ")
-    builder.button(text="🐾 ТУПО МЯВ")
     builder.button(text="🔙 Головне меню")
     builder.adjust(2, 2, 2, 2, 2, 2)
     return builder.as_markup(resize_keyboard=True)
@@ -40,6 +40,7 @@ def get_more_keyboard():
 def get_more_inline_keyboard():
     """Inline widget for advanced intelligence functions."""
     builder = InlineKeyboardBuilder()
+    builder.button(text="🎛 Тактичні шари", callback_data="more:layers")
     builder.button(text="🔥 Супутник NASA", callback_data="more:satellite")
     builder.button(text="🕸️ Мережа ІПСО", callback_data="more:network")
     builder.button(text="🎖 Ключові інциденти", callback_data="more:top")
@@ -47,6 +48,5 @@ def get_more_inline_keyboard():
     builder.button(text="📋 Звіт (12 год)", callback_data="more:report")
     builder.button(text="📡 Статус", callback_data="more:status")
     builder.button(text="🔑 API Ключ", callback_data="more:key")
-    builder.button(text="🐾 Муркотіння", callback_data="more:meow")
     builder.adjust(2, 2, 2, 2)
     return builder.as_markup()

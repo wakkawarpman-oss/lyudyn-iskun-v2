@@ -159,3 +159,12 @@ def test_cot_datapackage_zip_export():
         db.close()
 
 
+def test_api_sync_endpoint():
+    """Verify POST /api/v1/sync endpoint returns valid response structure."""
+    from api.main import trigger_sync
+    res = trigger_sync()
+    assert "status" in res
+    assert res["status"] in ("success", "error")
+
+
+

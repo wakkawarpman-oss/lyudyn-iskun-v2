@@ -208,20 +208,50 @@ async def cmd_status(message: types.Message):
 @router.message(Command("map"))
 async def cmd_web_map(message: types.Message):
     dash_url = get_dashboard_url()
+    token = os.getenv("TACTICAL_API_TOKEN", "tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c")
     text = (
-        "🗺️ <b>ЖИВА ТАКТИЧНА OSINT-МАПА (GEOINT V2)</b>\n\n"
+        "🗺️ <b>ЖИВА ТАКТИЧНА ВЕБ-МАПА C4ISR & GEOINT</b>\n\n"
         "• 🔴 <b>Зони ураження (Blast Radii):</b> 50м / 180м / 450м\n"
-        "• 🛡️ <b>Укриття та Станції Метро Києва:</b> 1,300+ точок\n"
-        "• 🛸 <b>Живий радар БпЛА:</b> засічки, швидкість та підліт\n"
-        "• 📱 <b>Мобільний HUD:</b> швидка тактична навігація для смартфонів\n\n"
+        "• 🛡️ <b>Куполи ППО (WEZ):</b> Тор-М2, Панцир-С1, С-400\n"
+        "• 📐 <b>LOB-пеленгація та CEP:</b> триангуляція звукових засічок\n"
+        "• 📹 <b>Оптична розвідка CCTV:</b> вузли відеоспостереження ТОТ\n"
+        "• 📡 <b>РЕБ Sentinel-1:</b> активні супутникові зони завад C-band\n"
+        "• ⚔️ <b>MIL-STD-2525C:</b> військова символіка НАТО для ATAK / WinTAK\n\n"
         f"🔗 <b>Пряме посилання:</b> <code>{dash_url}</code>\n\n"
-        "<i>Натисніть кнопку нижче або перейдіть за посиланням у будь-якому браузері:</i>"
+        "<i>Оберіть швидкий шар або перейдіть до повної інтерактивної мапи:</i>"
     )
     inline_kb = InlineKeyboardBuilder()
-    inline_kb.button(text="🌐 Відкрити Мапу у Браузері", url=dash_url)
-    inline_kb.adjust(1)
+    inline_kb.button(text="🌐 Відкрити повну тактичну мапу", url=dash_url)
+    inline_kb.button(text="🛡️ Куполи ППО (WEZ)", url=f"{dash_url}/?layer=wez")
+    inline_kb.button(text="📐 LOB-пеленги та CEP", url=f"{dash_url}/?layer=lob")
+    inline_kb.button(text="📹 Вузли CCTV ТОТ", url=f"{dash_url}/?layer=cctv")
+    inline_kb.button(text="📡 РЕБ Sentinel-1", url=f"{dash_url}/?layer=ew")
+    inline_kb.button(text="⚔️ Символіка НАТО", url=f"{dash_url}/?layer=mil")
+    inline_kb.button(text="📦 Завантажити ATAK ZIP", url=f"{dash_url}/api/cot/zip?token={token}")
+    inline_kb.button(text="🔄 Синхронізувати зараз", callback_data="sync_now_trigger")
+    inline_kb.adjust(1, 2, 2, 2, 1)
     
     await safe_send(message, text, reply_markup=inline_kb.as_markup(), disable_web_page_preview=True)
+
+
+@router.message(Command("layers"))
+@router.message(F.text == "🎛 Тактичні шари")
+async def cmd_tactical_layers(message: types.Message):
+    await cmd_web_map(message)
+
+
+@router.callback_query(F.data == "more:layers")
+async def cb_more_layers(callback: types.CallbackQuery):
+    await callback.answer()
+    await cmd_web_map(callback.message)
+
+
+@router.callback_query(F.data == "sync_now_trigger")
+async def cb_sync_now_trigger(callback: types.CallbackQuery):
+    await callback.answer("⏳ Запускаю примусову актуалізацію...")
+    from bot.handlers.alerts import cmd_sync_events
+    await cmd_sync_events(callback.message)
+
 
 
 async def _get_effective_openai_key(message: types.Message):

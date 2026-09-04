@@ -537,6 +537,16 @@ def get_supported_oblasts():
         ]
     }
 
+@app.post("/api/v1/sync")
+def trigger_sync():
+    """Triggers background ingest sync across OSINT channels via Redis pub/sub."""
+    try:
+        redis_client.publish("sync_commands", "sync_now")
+        return {"status": "success", "message": "Синхронізацію успішно ініційовано через Redis"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 class DroneRaycastRequest(BaseModel):
     drone_lat: float
     drone_lon: float

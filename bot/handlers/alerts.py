@@ -15,7 +15,7 @@ from bot.alert_monitor import (
     register_vidbiy_subscriber,
     unregister_vidbiy_subscriber
 )
-from bot.handlers.utils import safe_send, logger
+from bot.handlers.utils import safe_send, logger, get_dashboard_url
 from database.models import SessionLocal, DetectedEvent
 
 router = Router()
@@ -125,6 +125,12 @@ async def cmd_sync_events(message: types.Message):
     # reliably takes longer than any fixed short wait would cover. Only say
     # what's actually true: it was triggered, and processing runs in the
     # background.
+    dash_url = get_dashboard_url()
+    sync_kb = InlineKeyboardBuilder()
+    sync_kb.button(text="🗺️ Переглянути оновлену мапу", url=dash_url)
+    sync_kb.button(text="🎛 Тактичні шари", callback_data="more:layers")
+    sync_kb.adjust(1, 1)
+
     await safe_send(
         message,
         "🔄 <b>Актуалізацію ЗАПУЩЕНО у фоні.</b>\n\n"
@@ -132,7 +138,8 @@ async def cmd_sync_events(message: types.Message):
         "20+ джерел опитуються, нові повідомлення проходять ШІ-аналіз та геоприв'язку — "
         "це займає час, не миттєво. Нові/оновлені дані з'являться в стрічці та на мапі "
         "протягом ~30-60 секунд по мірі обробки.\n\n"
-        "👉 Натисніть <b>💥 Резонанс</b> або <b>🎖 Ключові інциденти</b> за хвилину-дві для перегляду."
+        "👉 Натисніть <b>💥 Резонанс</b> або <b>🎖 Ключові інциденти</b> за хвилину-дві для перегляду.",
+        reply_markup=sync_kb.as_markup()
     )
 
 
