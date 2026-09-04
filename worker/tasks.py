@@ -2,6 +2,7 @@ from worker.llm_engine import process_with_llm
 import os
 import json
 import logging
+from typing import Optional, List, Dict, Tuple, Any
 import redis
 from celery import shared_task
 from geoalchemy2.elements import WKTElement
@@ -198,6 +199,14 @@ def pipeline_extract(self, payload_str):
             logger.warning(f"OSINT error: {e}")
 
     t_lower = text.lower()
+    from worker.geo_disambiguation import detect_external_oblast, is_explicitly_kyiv_context
+    ext_oblast = detect_external_oblast(text)
+    has_kyiv_context = is_explicitly_kyiv_context(text)
+
+    # Fast-exit for explicit non-Kyiv regional news reposts before making expensive LLM calls
+    if ext_oblast and not has_kyiv_context:
+        return {"skip": True, "reason": "not_kyiv", "non_kyiv_oblast": ext_oblast}
+
     is_generic_alert = any(w in t_lower for w in ["увага! повітряна тривога", "відбій повітряної тривоги", "руйнувань та потерпілих немає", "ракетна небезпека", "загроза балістики"])
     if is_generic_alert and len(text) < 150 and not media_path:
         llm_data = {
@@ -215,7 +224,7 @@ def pipeline_extract(self, payload_str):
     is_kyiv_region = llm_data.get("is_kyiv_region", False)
     channel_clean = payload.get("channel", "").lstrip("@").lower()
     
-    # Pure Kyiv-only channels that only post about Kyiv / Kyiv region
+    # Pure Kyiv-only channels that primarily post about Kyiv / Kyiv region
     pure_kyiv_channels = [
         "1181169156", "kyivlive", "kyiv_novosti", "t_kyiv", "kyiv_alarm", "va_kyiv", "vakyiv",
         "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map",
@@ -308,7 +317,11 @@ def pipeline_geocode(self, data):
     # Tier 5: Canonical Toponym Fallback (Settlement ±2000m, Region ±10000m)
     if not geom_wkt:
         raw_location = llm_data.get("location") or "Київ та область"
-        canonical_name, lat, lon, is_fallback = resolve_canonical_toponym(raw_location)
+        canonical_name, lat, lon, is_fallback = resolve_canonical_toponym(
+            raw_location,
+            full_text=text,
+            channel_oblast=payload.get("oblast")
+        )
         llm_data["location"] = canonical_name
         is_fallback_geo = is_fallback
         if lat is not None and lon is not None:
@@ -420,6 +433,26 @@ def pipeline_cluster_and_save(self, data):
                 DetectedEvent.location_text == final_location_text
             )
             cluster_match = query.order_by(DetectedEvent.detected_at.desc()).first()
+
+        # Guard: Prevent cross-district collision (e.g. Pechersk vs Dniprovsky)
+        if cluster_match:
+            def _get_district_token(s: str) -> Optional[str]:
+                if not s:
+                    return None
+                s_low = s.lower()
+                for token in [
+                    "голосіїв", "дарниц", "деснян", "дніпров", "оболон",
+                    "печерськ", "поділ", "святошин", "солом'ян", "соломян", "шевченків"
+                ]:
+                    if token in s_low:
+                        return token
+                return None
+
+            dist_existing = _get_district_token(cluster_match.location_text)
+            dist_new = _get_district_token(final_location_text)
+            if dist_existing and dist_new and dist_existing != dist_new:
+                logger.info(f"🚫 Prevented cross-district merger: '{cluster_match.location_text}' vs '{final_location_text}'")
+                cluster_match = None
 
         if cluster_match:
             # MERGE into existing incident

@@ -156,22 +156,35 @@ CANONICAL_TOPONYMS: Dict[str, Dict] = {
     "чорнобиль": {"canonical": "Чорнобиль", "lat": 51.2725, "lon": 30.2245, "type": "settlement"},
 }
 
-def resolve_canonical_toponym(raw_location: str) -> Tuple[str, Optional[float], Optional[float], bool]:
+def resolve_canonical_toponym(
+    raw_location: str,
+    full_text: str = "",
+    channel_oblast: Optional[str] = None
+) -> Tuple[str, Optional[float], Optional[float], bool]:
     """
-    Normalizes raw location string into a canonical entity with accurate coordinates.
+    Normalizes raw location string into a canonical entity with accurate coordinates,
+    taking into account surrounding message context to resolve homonyms (e.g., Kherson vs Kyiv).
     Returns: (canonical_name, latitude, longitude, is_fallback_geo)
-
-    is_fallback_geo is True when the coordinates are a generic last-resort
-    guess (city/region centroid) rather than a match against an actual named
-    place in the text — callers should use this to distinguish "this really
-    is downtown/Maidan" from "we don't know where this is, defaulting to the
-    city center", since both currently produce the same coordinates.
     """
     if not raw_location or not raw_location.strip():
         return "Київ та область", 50.450034, 30.524136, True
 
     cleaned = raw_location.strip().lower()
     cleaned = re.sub(r'["\']', '', cleaned)
+
+    # 0. Contextual Disambiguation Guard for Homonyms & Regional News
+    try:
+        from worker.geo_disambiguation import disambiguate_toponym
+        dis = disambiguate_toponym(cleaned, full_text=full_text, channel_oblast=channel_oblast)
+        if dis.get("is_homonym"):
+            if not dis.get("is_kyiv"):
+                # Explicit non-Kyiv resolution (e.g. Kherson, Zaporizhzhia, Dnipropetrovsk)
+                return dis["canonical"], dis.get("lat"), dis.get("lon"), dis.get("lat") is None
+            elif dis.get("lat") is not None and dis.get("lon") is not None:
+                # Disambiguated to Kyiv with exact coordinates
+                return dis["canonical"], dis["lat"], dis["lon"], False
+    except Exception as e:
+        pass
 
     # 1. Exact lookup
     if cleaned in CANONICAL_TOPONYMS and CANONICAL_TOPONYMS[cleaned]:

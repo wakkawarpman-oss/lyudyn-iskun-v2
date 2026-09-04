@@ -24,7 +24,14 @@ def build_system_prompt() -> str:
     return f"""Ти професійний OSINT-аналітик військової розвідки.
 ТВОЯ ЗОНА ВІДПОВІДАЛЬНОСТІ — ВИКЛЮЧНО МІСТО КИЇВ ТА КИЇВСЬКА ОБЛАСТЬ!
 ПОТОЧНИЙ СИСТЕМНИЙ ЧАС: {current_time}. Будь-які події за цю дату є актуальними.
-Якщо повідомлення стосується інших міст чи країн (Дніпро, Одеса, Суми, Харків, Росія, закордон) — поверни "is_kyiv_region": false.
+Якщо повідомлення стосується інших міст чи областей (Херсон, Харків, Одеса, Запоріжжя, Дніпро, Суми, Донеччина, Миколаїв тощо) — поверни "is_kyiv_region": false.
+
+УВАГА НА ТОПОНІМИ-ОМОНІМИ:
+- "Дніпровський район Херсона" або "Дніпровський район Запоріжжя" — це ХЕРСОН або ЗАПОРІЖЖЯ, це НЕ КИЇВ! ("is_kyiv_region": false).
+- "Васильківка" або Синельниківський район — це ДНІПРОПЕТРОВСЬКА область, а не Васильків! ("is_kyiv_region": false).
+- "Шевченківський район Харкова" — це ХАРКІВ! ("is_kyiv_region": false).
+- "Подільський район Одеської області" — це ОДЕЩИНА! ("is_kyiv_region": false).
+- Якщо київський канал робить репост про обстріл Херсона чи Харкова — це НЕ Київ! ("is_kyiv_region": false).
 
 ЯКЩО ТОБІ НАДАНО ФОТО — ПРОВЕДИ ВІЗУАЛЬНИЙ АНАЛІЗ ФОТО:
 ЗАБОРОНЕНО вгадувати точний район за типовою архітектурою (наприклад, панельні будинки чи хрущовки є по всьому Києву). 
@@ -139,11 +146,16 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
         'херсон', 'севастопол', 'донецьк', 'луганськ', 'бахмут', 'куп\'янськ', 'нікопол', 'павлоград', 'чернігів'
     ]
     
-    has_kyiv = any(k in t_lower for k in kyiv_keywords)
-    has_non_kyiv = any(k in t_lower for k in non_kyiv_cities)
-    
-    # If it mentions another city and doesn't explicitly mention Kyiv region toponyms, it's not Kyiv!
-    is_kyiv = has_kyiv and not (has_non_kyiv and not any(k in t_lower for k in regional_cities + kyiv_districts + ['київ', 'києв', 'столиц']))
+    from worker.geo_disambiguation import detect_external_oblast, is_explicitly_kyiv_context, disambiguate_toponym
+
+    ext_ob = detect_external_oblast(t_lower)
+    has_explicit_kyiv = is_explicitly_kyiv_context(t_lower)
+
+    # If an external oblast is detected and no explicit Kyiv context exists, this is NOT Kyiv!
+    if ext_ob and not has_explicit_kyiv:
+        is_kyiv = False
+    else:
+        is_kyiv = any(k in t_lower for k in kyiv_keywords)
     
     event_type = "general_alert"
     if any(w in t_lower for w in ['збито', 'подавлено', 'робота ппо', 'збиття', 'відбито атаку', 'збили']):
@@ -174,6 +186,14 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
                 loc_name = kyiv_district_names[k]
                 osm_query = f"{loc_name}, Київ"
                 break
+
+    # Contextual Disambiguation Guard
+    dis = disambiguate_toponym(loc_name, full_text=raw_text)
+    if dis.get("is_homonym"):
+        loc_name = dis["canonical"]
+        if not dis.get("is_kyiv"):
+            is_kyiv = False
+            osm_query = loc_name
                 
     return {
         "is_kyiv_region": is_kyiv,
