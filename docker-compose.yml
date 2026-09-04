@@ -81,7 +81,24 @@ services:
     - ./worker:/app/worker
     - ./database:/app/database
     - ./bot:/app/bot
+  open_webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: lyudyn-iskun-v2-open_webui-1
+    ports:
+    - 3000:8080
+    environment:
+    - WEBUI_AUTH=False
+    - OPENAI_API_BASE_URL=https://api.groq.com/openai/v1
+    - OPENAI_API_KEY=${GROQ_API_KEY}
+    - DEFAULT_MODELS=llama-3.3-70b-versatile
+    - ENABLE_OLLAMA_API=False
+    volumes:
+    - open_webui_data:/app/backend/data
+    depends_on:
+    - web_api
+    restart: unless-stopped
 volumes:
   media_data: null
   postgres_data: null
   redis_data: null
+  open_webui_data: null

@@ -658,6 +658,7 @@
         /* Basemap Radio Options */
         .basemap-radios-row {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 14px;
         }
@@ -1114,7 +1115,9 @@
                     АНАЛІЗ
                 </button>
             </div>
+            <button class="header-btn" id="btn-open-ecosystem" title="Повний реєстр інструментів, даних та нашарувань системи" style="border-color: #00e5ff; color: #00e5ff;">🕸️ СИСТЕМА</button>
             <button class="header-btn" id="btn-search">🔍</button>
+            <a href="http://136.113.156.17:3000" target="_blank" class="header-btn" id="btn-open-cockpit" title="AI Cockpit / Open WebUI" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">🤖</a>
         </div>
     </header>
 
@@ -1215,11 +1218,15 @@
             <div class="basemap-radios-row">
                 <div class="basemap-card active" id="bm-dark">
                     <span class="radio-icon">●</span>
-                    <span class="radio-title">Carto Dark</span>
+                    <span class="radio-title">Тактична Темна</span>
+                </div>
+                <div class="basemap-card" id="bm-hot">
+                    <span class="radio-icon">○</span>
+                    <span class="radio-title">HOT Гуманітарна</span>
                 </div>
                 <div class="basemap-card" id="bm-standard">
                     <span class="radio-icon">○</span>
-                    <span class="radio-title">Стандартна</span>
+                    <span class="radio-title">Стандартна OSM</span>
                 </div>
                 <div class="basemap-card" id="bm-satellite">
                     <span class="radio-icon">○</span>
@@ -1274,6 +1281,22 @@
                     <span class="layer-counter-tag">Sightline</span>
                 </div>
 
+                <div class="layer-checkbox-row" id="row-airfields">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>🛫 Аеродроми та ЗКП (OSINT Overpass)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-airfields">OSM</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-enemy-facilities">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>🔴 Бази запусків та заводи БпЛА РФ (Alabuga/Navlya)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-facilities">10</span>
+                </div>
+
                 <div class="layer-checkbox-row" id="row-shelters">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box"></div>
@@ -1308,6 +1331,14 @@
                         <span>Теплова карта (NASA VIIRS термо-аномалії)</span>
                     </div>
                     <span class="layer-counter-tag">FIRMS</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-tot-telecom">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>🌐 BGP / Телеком-контроль ТОТ (AS201776 / Ростелеком)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-tot-telecom">5 ASN</span>
                 </div>
 
                 <div class="layer-checkbox-row checked" id="row-clustering">
@@ -1445,6 +1476,146 @@
         </div>
     </div>
 
+    <!-- 13. System Ecosystem, Tools & Layers Registry Modal -->
+    <div class="tactical-modal-overlay" id="ecosystem-modal">
+        <div class="tactical-modal-card" style="max-width: 780px; max-height: 85vh;">
+            <div class="modal-head">
+                <div class="modal-title">
+                    <span>🕸️</span> ПОВНИЙ РЕЄСТР ІНСТРУМЕНТІВ, ДАНИХ ТА НАШАРУВАНЬ
+                </div>
+                <button class="header-btn" id="btn-close-ecosystem">✕</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; max-height: calc(85vh - 120px); font-size: 12px; line-height: 1.5;">
+                <div style="background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;">
+                    <div style="font-weight: 800; color: #00e5ff; font-size: 13px; margin-bottom: 3px;">🛡️ ЄДИНА АРХІТЕКТУРА C4ISR & ZERO-LOSS ECOSYSTEM</div>
+                    <div style="color: #cbd5e1; font-size: 11.5px;">
+                        Всі 100% інструментів, джерел даних, розвіддосьє та аналітичних алгоритмів взаємопов'язані та працюють в режимі реального часу. Жодної втрати знань.
+                    </div>
+                </div>
+
+                <!-- 1. СЕНСОРИ ТА ЖИВІ ПОТОКИ -->
+                <div style="margin-bottom: 14px;">
+                    <div style="font-weight: 800; color: #38bdf8; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>📡</span> 1. Сенсори та живі потоки даних (Ingestion Layer)
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">📡 Neptun Radar API</b>: Кінематика БпЛА Shahed, ракет, КАБів у реальному часі (курс, швидкість, трейл).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">💬 Telethon OSINT Listener</b>: Асинхронний моніторинг 20+ Telegram-каналів з авто-нормалізацією посилань.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🔥 NASA VIIRS (FIRMS 375m)</b>: Супутникові термо-аномалії детонацій та пожеж.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🛰️ Sentinel-1 SAR RFI</b>: Виявлення зон радіоелектронних перешкод (РЕБ) C-діапазону.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">⚡ OpenInfraMap (110–750 кВ)</b>: Векторна геометрія ЛЕП та високовольтних підстанцій.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🛫 Overpass OSM API</b>: Векторні контури аеродромів, ЗКП, бункерів та 1197 укриттів.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. РОЗВІДДАНІ ТА БАЗИ ХАБІВ -->
+                <div style="margin-bottom: 14px;">
+                    <div style="font-weight: 800; color: #ef4444; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>🎯</span> 2. Розвіддані та військові об'єкти (AlabugaLeaks / 924 ДЦ / Сенеж)
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🏭 ОЕЗ Алабуга / Dolphin 632</b>: Завод серійного складання Герань-2/3 (Флоров, Спірідонов, Комета-М).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🎖️ 924-й ДЦ БпЛА (в/ч 20924)</b>: Командування БпЛА (Коломна, екс-ком полк. Коломєйцев).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🛡️ 322-й ЦССО «Сенеж» (в/ч 92154)</b>: Розробка прошивок обходу РЕБ («Кодер» / капітан Кузнєцов).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🚀 448-ма РБр (в/ч 35535, Курськ)</b>: Розрахунки Іскандер-М («Сармат», полк. Воробйов).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🇮🇷 Аеродром Кашан (Іран, КВІР)</b>: База підготовки російських операторів Шахедів.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🔴 Стартові позиції РФ</b>: Навля (Брянськ), Цимбулове (Орел), Чауда (Крим), Приморсько-Ахтарськ, Єйськ.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ОБЧИСЛЮВАЛЬНІ АЛГОРИТМИ -->
+                <div style="margin-bottom: 14px;">
+                    <div style="font-weight: 800; color: #10b981; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>⚙️</span> 3. Аналітичні обчислювальні ядра (Fusion Engines)
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">📐 Reverse Launch Triangulation</b>: Реверсний розрахунок точки старту за вектором (курс + 180°).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">⚡ Forward Threat Cone</b>: Сектор руху ±35° до 75 км для розрахунку ETA до підстанцій 110–750 кВ.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">📍 DBSCAN Clustering</b>: Просторово-часове об'єднання свідчень у єдині епіцентри (ε=0.015°).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🎯 OpenAthena Raycast</b>: Геолокація точки ураження за кутами камери дрона та SRTM рельєфом.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🛡️ MITRE ATT&CK Engine</b>: Розпізнавання кібер-кінетичних загроз (Sandworm, Gamaredon, Alabuga).
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🖼️ pHash Deduplication</b>: Перцептивне відсіювання старих або фейкових медіа (Hamming < 8).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. МЕРЕЖЕВА РОЗВІДКА ТА RED TEAM -->
+                <div style="margin-bottom: 14px;">
+                    <div style="font-weight: 800; color: #f59e0b; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>⚔️</span> 4. Інтернет-вимірювання, BGP та Red Team (ТОТ Recon)
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🌐 BGP Toolkit & RIPE Stat</b>: Аналіз автономних систем (ASN), BGP-перехоплень трафіку на ТОТ.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">🔍 Shodan & Censys API</b>: Пасивний пошук відкритих портів, SCADA та серверів управління.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">📜 Passive DNS (crt.sh)</b>: Журнали Certificate Transparency для виявлення прихованої C2.
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-dim); border-radius: 8px; padding: 8px;">
+                            <b style="color: #fff;">📹 Boofuzz / ONVIF Audit</b>: Фазинг протоколів камер спостереження через ізольовані тунелі.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. ТАКТИЧНІ НАШАРУВАННЯ КАРТИ -->
+                <div>
+                    <div style="font-weight: 800; color: #a855f7; font-size: 12px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>▣</span> 5. Тактичні нашарування карти (Layer Switcher)
+                    </div>
+                    <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.3); border-radius: 8px; padding: 8px 12px; font-size: 11.5px; color: #e2e8f0;">
+                        • <b>Події</b> (Влучання, ППО, Вибухи) | • <b>Треки БпЛА Shahed</b> (Neptun Live) | • <b>Вектори та напрямки руху</b><br>
+                        • <b>Зони ураження</b> (50м / 180м / 450м) | • <b>Інфраструктура</b> (Sightline) | • <b>Аеродроми та ЗКП</b> (OSM Overpass)<br>
+                        • <b>🔴 Бази запусків та заводи БпЛА РФ</b> (Alabuga/Navlya/Senezh/Kolomna) | • <b>Укриття та Метро</b> (1,197 об'єктів)<br>
+                        • <b>⚡ Енергомережа України</b> (110–750 кВ) | • <b>⛰️ Рельєф та висоти</b> (Hillshade SRTM) | • <b>Теплові аномалії</b> (VIIRS)<br>
+                        • <b>🌐 BGP / Телеком-контроль ТОТ</b> (AS201776 / Ростелеком) | • <b>Щільність подій</b> (Кластеризація)
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="tactical-btn-secondary" id="btn-open-interactive-graph" onclick="window.open('/graph_analysis.html', '_blank')">🕸️ Відкрити інтерактивний граф</button>
+                <button class="tactical-btn-primary" onclick="document.getElementById('ecosystem-modal').classList.remove('open')">Зрозуміло</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ─── 0. Oblast Administration Registry ───
         const OBLAST_CONFIG = {
@@ -1492,12 +1663,25 @@
             zoomControl: false
         });
 
-        // 4 Basemaps (CartoDB Dark Matter, OpenStreetMap Standard, Esri Satellite, OpenTopoMap Terrain)
-        const bmDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // 5 Basemaps (OSM Tactical Dark [Zero-Watermark], OSM Humanitarian HOT, OSM Standard, Esri Satellite, OpenTopoMap)
+        const savedCartoKey = localStorage.getItem('carto_api_key') || '';
+        const bmDark = savedCartoKey
+            ? L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${savedCartoKey}`, {
+                maxZoom: 19,
+                subdomains: 'abcd',
+                attribution: '© CARTO, © OpenStreetMap'
+            })
+            : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                className: 'osm-tactical-dark',
+                attribution: '© OpenStreetMap contributors (Tactical Dark ODbL)'
+            });
+        bmDark.addTo(map);
+
+        const bmHot = L.tileLayer('https://tile.hotosm.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '© CARTO, © OpenStreetMap contributors'
-        }).addTo(map);
+            attribution: '© OpenStreetMap contributors, Humanitarian OpenStreetMap Team'
+        });
         const bmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' });
         const bmSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
         const bmTerrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap, SRTM' });
@@ -1506,8 +1690,12 @@
         const radarLayer = L.layerGroup().addTo(map);
         const zonesLayer = L.layerGroup().addTo(map);
         const infraLayer = L.layerGroup();
+        const airfieldsLayer = L.layerGroup();
+        const enemyFacilitiesLayer = L.layerGroup();
         const sheltersLayer = L.layerGroup();
         const thermalLayer = L.layerGroup();
+        const totTelecomLayer = L.layerGroup();
+        const droneVectorLayer = L.layerGroup().addTo(map);
         // New Strategic OSINT Layers
         const powerGridLayer = L.tileLayer('https://tiles.openinframap.org/power/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -1553,9 +1741,10 @@
         document.getElementById('tab-layers-menu')?.addEventListener('click', openLayersSheet);
         document.getElementById('btn-close-layers')?.addEventListener('click', closeLayersSheet);
 
-        // Basemap Switching (▣ Базова карта: Темна / Стандартна / Супутник / Рельєф)
+        // Basemap Switching (▣ Базова карта: Тактична Темна / HOT / Стандартна / Супутник / Рельєф)
         const bmCards = {
             'dark': { card: document.getElementById('bm-dark'), layer: bmDark },
+            'hot': { card: document.getElementById('bm-hot'), layer: bmHot },
             'standard': { card: document.getElementById('bm-standard'), layer: bmStandard },
             'satellite': { card: document.getElementById('bm-satellite'), layer: bmSatellite },
             'terrain': { card: document.getElementById('bm-terrain'), layer: bmTerrain }
@@ -1564,6 +1753,7 @@
         function setBasemap(type) {
             Object.keys(bmCards).forEach(k => {
                 const item = bmCards[k];
+                if (!item || !item.card) return;
                 if (k === type) {
                     item.card.classList.add('active');
                     item.card.querySelector('.radio-icon').textContent = '●';
@@ -1577,6 +1767,7 @@
         }
 
         document.getElementById('bm-dark')?.addEventListener('click', () => setBasemap('dark'));
+        document.getElementById('bm-hot')?.addEventListener('click', () => setBasemap('hot'));
         document.getElementById('bm-standard')?.addEventListener('click', () => setBasemap('standard'));
         document.getElementById('bm-satellite')?.addEventListener('click', () => setBasemap('satellite'));
         document.getElementById('bm-terrain')?.addEventListener('click', () => setBasemap('terrain'));
@@ -1746,6 +1937,155 @@
         toggleLayerRow('row-powergrid', powerGridLayer);
         toggleLayerRow('row-hillshade', hillshadeLayer);
 
+        toggleLayerRow('row-airfields', airfieldsLayer, async (on) => {
+            if (on && airfieldsLayer.getLayers().length === 0) {
+                const cntBadge = document.getElementById('cnt-airfields');
+                if (cntBadge) cntBadge.textContent = '...';
+                try {
+                    const overpassQuery = `[out:json][timeout:15];(node["aeroway"="aerodrome"](44.0,22.0,52.5,40.5);way["aeroway"="aerodrome"](44.0,22.0,52.5,40.5););out center 40;`;
+                    const res = await fetch('https://overpass-api.de/api/interpreter', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'data=' + encodeURIComponent(overpassQuery)
+                    });
+                    if (!res.ok) throw new Error('Overpass status: ' + res.status);
+                    const data = await res.json();
+                    airfieldsLayer.clearLayers();
+                    const elements = data.elements || [];
+                    if (cntBadge) cntBadge.textContent = elements.length;
+
+                    elements.forEach(el => {
+                        const lat = el.lat || (el.center && el.center.lat);
+                        const lon = el.lon || (el.center && el.center.lon);
+                        if (!lat || !lon) return;
+                        const name = el.tags?.name || el.tags?.['name:uk'] || el.tags?.aeroway || 'Аеродром/ЗКП';
+                        const m = L.circleMarker([lat, lon], {
+                            radius: 7,
+                            fillColor: '#38bdf8',
+                            color: '#ffffff',
+                            weight: 1.5,
+                            fillOpacity: 0.9
+                        });
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4;">
+                                <div style="font-weight:bold; color:#0284c7;">🛫 Аеродром / Стратегічний обʼєкт</div>
+                                <div style="font-size:13px; font-weight:700; margin:4px 0;">${name}</div>
+                                <div style="color:#64748b;">Координати: ${lat.toFixed(4)}, ${lon.toFixed(4)}</div>
+                                <div style="color:#94a3b8; font-size:10px; margin-top:4px;">Джерело: OpenStreetMap Overpass</div>
+                            </div>
+                        `);
+                        m.addTo(airfieldsLayer);
+                    });
+                } catch(e) {
+                    console.warn('Overpass airfields query error:', e);
+                    if (cntBadge) cntBadge.textContent = '!';
+                }
+            }
+        });
+
+        toggleLayerRow('row-enemy-facilities', enemyFacilitiesLayer, async (on) => {
+            if (on && enemyFacilitiesLayer.getLayers().length === 0) {
+                const cntBadge = document.getElementById('cnt-facilities');
+                try {
+                    const res = await fetch('/api/v1/threats/enemy-facilities');
+                    const data = await res.json();
+                    const list = data.facilities || [];
+                    if (cntBadge) cntBadge.textContent = list.length;
+                    list.forEach(f => {
+                        const isLaunch = f.type === 'launch_site';
+                        const isFactory = f.type === 'factory';
+                        const color = isLaunch ? '#ef4444' : (isFactory ? '#f97316' : '#06b6d4');
+                        const iconSymbol = isLaunch ? '🚀' : (isFactory ? '🏭' : '📡');
+                        
+                        const m = L.circleMarker([f.lat, f.lon], {
+                            radius: isLaunch ? 8 : 7,
+                            fillColor: color,
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        });
+
+                        if (isLaunch) {
+                            L.circle([f.lat, f.lon], {
+                                radius: 35000,
+                                color: color,
+                                weight: 1,
+                                fillOpacity: 0.08,
+                                dashArray: '4, 4'
+                            }).addTo(enemyFacilitiesLayer);
+                        }
+
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:240px; color:#1e293b;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; color:${color}; font-size:11px; text-transform:uppercase;">${iconSymbol} ${f.type.replace('_', ' ')}</span>
+                                    <span style="font-size:9px; background:rgba(239,68,68,0.15); color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:800;">${f.threat_level}</span>
+                                </div>
+                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:4px;">${f.name}</div>
+                                <div style="font-size:11px; color:#475569; margin-bottom:6px;"><strong>Сектор:</strong> ${f.sector}</div>
+                                <div style="background:#f8fafc; border-left:3px solid ${color}; padding:6px 8px; font-size:11px; color:#334155; border-radius:0 4px 4px 0; margin-bottom:6px;">
+                                    ${f.dossier}
+                                </div>
+                                <div style="color:#94a3b8; font-size:10px;">Координати: ${f.lat.toFixed(4)}, ${f.lon.toFixed(4)}</div>
+                            </div>
+                        `);
+                        m.addTo(enemyFacilitiesLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load enemy facilities:', e);
+                    if (cntBadge) cntBadge.textContent = '!';
+                }
+            }
+        });
+
+        toggleLayerRow('row-tot-telecom', totTelecomLayer, async (on) => {
+            if (on && totTelecomLayer.getLayers().length === 0) {
+                try {
+                    const res = await fetch('/api/v1/recon/tot-telecom');
+                    const data = await res.json();
+                    const asns = data.asns || [];
+                    const coordsMap = {
+                        'AS201776': [44.95, 34.10],
+                        'AS48287': [44.60, 33.52],
+                        'AS200000': [48.01, 37.80],
+                        'AS208571': [46.75, 36.78],
+                        'AS57189': [48.57, 39.30]
+                    };
+
+                    asns.forEach(asnItem => {
+                        const coords = coordsMap[asnItem.asn] || [46.5, 35.0];
+                        const marker = L.circleMarker(coords, {
+                            radius: 8,
+                            fillColor: '#8b5cf6',
+                            color: '#ffffff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        });
+
+                        marker.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:240px; color:#1e293b;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-weight:800; color:#7c3aed; font-size:11px;">🌐 ${asnItem.asn}</span>
+                                    <span style="font-size:9px; background:rgba(239,68,68,0.15); color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:800;">${asnItem.risk_level}</span>
+                                </div>
+                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:2px;">${asnItem.name}</div>
+                                <div style="font-size:11px; color:#64748b; margin-bottom:4px;">Регіон: ${asnItem.region}</div>
+                                <div style="background:#f8fafc; border-left:3px solid #7c3aed; padding:6px 8px; font-size:11px; color:#334155; margin-bottom:6px;">
+                                    ${asnItem.dossier}
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">
+                                    <strong>Апстрім BGP:</strong> ${asnItem.upstream_transits.join(', ')}
+                                </div>
+                            </div>
+                        `);
+                        marker.addTo(totTelecomLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load TOT telecom data:', e);
+                }
+            }
+        });
+
         toggleLayerRow('row-clustering', null, (on) => {
             isClusteringEnabled = on;
             renderTimeline(selectedHours);
@@ -1779,6 +2119,7 @@
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
                 setRow('row-thermal', false);
+                setRow('row-enemy-facilities', false);
             } else if (prof === 'analyt') {
                 setBasemap('dark');
                 setRow('row-events', true);
@@ -1788,6 +2129,7 @@
                 setRow('row-infra', true);
                 setRow('row-shelters', false);
                 setRow('row-thermal', true);
+                setRow('row-enemy-facilities', true);
             } else if (prof === 'nav') {
                 setBasemap('standard');
                 setRow('row-events', false);
@@ -1797,6 +2139,7 @@
                 setRow('row-infra', true);
                 setRow('row-shelters', true);
                 setRow('row-thermal', false);
+                setRow('row-enemy-facilities', false);
             } else if (prof === 'clean') {
                 setBasemap('dark');
                 setRow('row-events', false);
@@ -1806,6 +2149,7 @@
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
                 setRow('row-thermal', false);
+                setRow('row-enemy-facilities', false);
             }
         }
 
@@ -1977,8 +2321,77 @@
         const objContent = document.getElementById('object-sheet-content');
 
         function openDroneSheet(d) {
+            droneVectorLayer.clearLayers();
+
+            // 1. Draw reverse vector to launch site if known
+            if (d.estimated_launch && d.estimated_launch.site_lat && d.estimated_launch.site_lon) {
+                L.polyline([[d.estimated_launch.site_lat, d.estimated_launch.site_lon], [d.lat, d.lng]], {
+                    color: '#ef4444',
+                    weight: 2,
+                    dashArray: '6, 8',
+                    opacity: 0.85
+                }).addTo(droneVectorLayer);
+            }
+
+            // 2. Draw forward threat vectors to substations in flight cone
+            if (d.projected_targets && d.projected_targets.length > 0) {
+                d.projected_targets.forEach(t => {
+                    L.polyline([[d.lat, d.lng], [t.lat, t.lon]], {
+                        color: t.urgency === 'IMMEDIATE' ? '#f43f5e' : '#f59e0b',
+                        weight: 2,
+                        dashArray: '4, 4',
+                        opacity: 0.9
+                    }).addTo(droneVectorLayer);
+                });
+            }
+
             const heading = Math.round(d.heading || 0);
             const speed = Math.round(d.speed_kmh || 185);
+
+            let launchBoxHtml = '';
+            if (d.estimated_launch) {
+                const el = d.estimated_launch;
+                launchBoxHtml = `
+                    <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:11px; font-weight:800; color:#f87171;">🎯 ЙМОВІРНА ТОЧКА СТАРТУ (Тріангуляція)</span>
+                            <span style="font-size:10px; font-weight:700; color:#34d399;">C2 Довіра: ${el.confidence_score}%</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:2px;">
+                            ${el.site_name}
+                        </div>
+                        <div style="font-size:11px; color:#cbd5e1; display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span>Відстань: ~${el.distance_km} км</span>
+                            <span>У польоті: ~${el.flight_time_minutes} хв</span>
+                            <span>Похибка: ±${el.angular_error_deg}°</span>
+                        </div>
+                        <div style="font-size:10.5px; color:var(--text-muted); font-style:italic;">
+                            ${el.dossier}
+                        </div>
+                    </div>
+                `;
+            }
+
+            let targetBoxHtml = '';
+            if (d.projected_targets && d.projected_targets.length > 0) {
+                const targetsList = d.projected_targets.slice(0, 3).map(t => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <span style="color:#fde047; font-weight:700;">⚡ ${t.name}</span>
+                        <span style="font-family:var(--font-mono); color:${t.urgency === 'IMMEDIATE' ? '#f87171' : '#38bdf8'}; font-weight:800;">
+                            ETA ~${t.eta_minutes} хв (${t.distance_km} км)
+                        </span>
+                    </div>
+                `).join('');
+
+                targetBoxHtml = `
+                    <div style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="font-size:11px; font-weight:800; color:#fde047; margin-bottom:4px;">
+                            ⚠️ ПІДСТАНЦІЇ ПІД ЗАГРОЗОЮ ПО КУРСУ
+                        </div>
+                        ${targetsList}
+                    </div>
+                `;
+            }
 
             objContent.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -2007,6 +2420,8 @@
                         <div style="font-family:var(--font-mono); font-size:13px; font-weight:800; color:#fff;">~${speed} км/год</div>
                     </div>
                 </div>
+                ${launchBoxHtml}
+                ${targetBoxHtml}
                 <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-dim); border-radius:10px; padding:8px 12px; font-size:11.5px; color:#e2e8f0; margin-bottom:12px;">
                     📝 ${d.text || `Ворожий ударний безпілотник зафіксовано засобами РЛС. Автоматичний розрахунок вектора руху.`}
                 </div>
@@ -2029,8 +2444,24 @@
             const isOfficial = e.is_official || e.verification_status === 'OFFICIAL';
             const hasConsensus = (e.sources_count || 1) >= 2;
             const conf = isOfficial ? 98 : (hasConsensus ? Math.min(94, 75 + (e.sources_count || 2) * 5) : 60);
-            const srcDisplay = e.source_channel ? `@${e.source_channel.replace(/^@/, '')}` : 'OSINT';
-            const srcLink = e.source_channel && e.message_id ? `https://t.me/${e.source_channel.replace(/^@/, '')}/${e.message_id}` : '';
+            
+            // Resolve canonical channel handle
+            let chRaw = (e.source_channel || '').trim();
+            const CHANNEL_MAP = {
+                '1181169156': 'kievreal1',
+                '-1001181169156': 'kievreal1',
+                '2053889953': 'operatyvnyi_monitor',
+                '-1002053889953': 'operatyvnyi_monitor'
+            };
+            const chClean = CHANNEL_MAP[chRaw] || chRaw.replace(/^@/, '');
+            const isNumeric = /^-?\d+$/.test(chClean);
+            const srcDisplay = isNumeric ? `ID:${chClean}` : (chClean ? `@${chClean}` : 'OSINT');
+            
+            // Build direct Telegram link ONLY for valid handles (preventing redirects to telegram.org)
+            let srcLink = e.source_link || '';
+            if (!srcLink && chClean && !isNumeric && e.message_id) {
+                srcLink = `https://t.me/${chClean}/${e.message_id}`;
+            }
 
             objContent.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -2077,6 +2508,7 @@
 
         function closeObjectSheet() {
             objSheet.classList.remove('open');
+            droneVectorLayer.clearLayers();
         }
 
         // ─── 6. Full Operational Overview Drawer ───
@@ -2551,6 +2983,15 @@
         document.getElementById('btn-close-reports')?.addEventListener('click', () => {
             reportsModal.classList.remove('open');
             setActiveTab('tab-map');
+        });
+
+        // Ecosystem Modal Handlers
+        const ecosystemModal = document.getElementById('ecosystem-modal');
+        document.getElementById('btn-open-ecosystem')?.addEventListener('click', () => {
+            ecosystemModal?.classList.add('open');
+        });
+        document.getElementById('btn-close-ecosystem')?.addEventListener('click', () => {
+            ecosystemModal?.classList.remove('open');
         });
 
         document.getElementById('btn-download-json')?.addEventListener('click', () => {

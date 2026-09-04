@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>C4ISR & OSINT System Graph Analysis</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-[#e2e8f0] h-screen w-screen flex flex-col antialiased">
+  
+  <!-- Header Bar -->
+  <header class="h-14 border-b border-[#1e293b] bg-[#0f172a]/90 backdrop-blur px-4 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center text-cyan-400 font-black text-sm">
+        🕸️
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-wide uppercase">C4ISR & OSINT Multi-Sensor Graph</h1>
+        <p class="text-[10px] text-[#94a3b8]">Повний системний граф інструментів, сигналів, баз розвідданих та аналітичних пайплайнів</p>
+      </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex items-center space-x-2 text-xs">
+      <button onclick="filterDomain('all')" class="domain-btn active px-3 py-1.5 rounded-lg border border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-medium">Всі (42)</button>
+      <button onclick="filterDomain('sensor')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">📡 Сенсори (8)</button>
+      <button onclick="filterDomain('intel')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">🎯 Розвіддані (9)</button>
+      <button onclick="filterDomain('pipeline')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">⚙️ Пайплайни (11)</button>
+      <button onclick="filterDomain('recon')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">⚔️ Red Team (8)</button>
+      <button onclick="filterDomain('devops')" class="domain-btn px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500">🛡️ QA & C2 (6)</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="relative w-52">
+      <input type="text" id="nodeSearch" placeholder="Пошук інструменту / даних..." 
+        oninput="handleSearch(this.value)"
+        class="w-full bg-[#1e293b]/70 border border-[#334155] text-xs rounded-lg px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400" />
+      <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
+    </div>
+  </header>
+
+  <!-- Canvas Container -->
+  <div class="relative flex-1 bg-[#090d16] overflow-hidden">
+    <canvas id="graphCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+    <!-- Floating HUD Info -->
+    <div class="absolute bottom-4 left-4 z-10 bg-[#0f172a]/90 border border-[#1e293b] rounded-xl p-3 text-[11px] backdrop-blur flex flex-col space-y-1.5 pointer-events-none shadow-xl">
+      <div class="text-slate-400 font-bold tracking-wider uppercase text-[9.5px]">📊 Легенда взаємодій</div>
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#38bdf8]"></span>
+        <span>Сенсори та зовнішні потоки (Real-Time Ingestion)</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></span>
+        <span>Розвіддані та ворожі хаби (AlabugaLeaks / 924 ДЦ / Сенеж)</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
+        <span>Обчислювальні ядра C4ISR (Тріангуляція / Конус / Geocoding)</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
+        <span>Red Team & Інтернет-розвідка (BGP / Shodan / RTSP / IoT)</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#a855f7]"></span>
+        <span>C2 Архітектура, QA & Hardening (Docker / Pytest / Semgrep)</span>
+      </div>
+      <div class="text-[9.5px] text-slate-500 pt-1">💡 Клікніть на вузол для відкриття досьє. Перетягуйте вузли мишею. Коліщатко — масштаб.</div>
+    </div>
+
+    <!-- Node Detail Drawer (Slide-out) -->
+    <div id="nodeDrawer" class="absolute top-4 right-4 w-96 max-h-[88vh] overflow-y-auto bg-[#0f172a]/95 border border-[#334155] rounded-xl p-4 shadow-2xl backdrop-blur z-20 hidden transition-all">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <span id="drawerBadge" class="badge bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">СЕНСОР</span>
+          <h2 id="drawerTitle" class="text-base font-bold text-white mt-1">Neptun Radar Feed</h2>
+        </div>
+        <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+      </div>
+      <p id="drawerDesc" class="text-xs text-slate-300 leading-relaxed mb-3">Детальний опис компонента...</p>
+      
+      <div class="space-y-2.5 text-xs">
+        <div class="bg-[#1e293b]/50 p-2.5 rounded-lg border border-[#334155]">
+          <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">🔗 Вхідні джерела (Inputs)</div>
+          <div id="drawerInputs" class="text-slate-200">-</div>
+        </div>
+        <div class="bg-[#1e293b]/50 p-2.5 rounded-lg border border-[#334155]">
+          <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">🎯 Вихідний результат (Outputs)</div>
+          <div id="drawerOutputs" class="text-slate-200">-</div>
+        </div>
+        <div class="bg-[#1e293b]/50 p-2.5 rounded-lg border border-[#334155]">
+          <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">🛡️ OPSEC & Оцінка безпеки</div>
+          <div id="drawerOpsec" class="text-slate-200">-</div>
+        </div>
+        <div class="bg-[#1e293b]/50 p-2.5 rounded-lg border border-[#334155]">
+          <div class="text-[10px] text-slate-400 font-bold uppercase mb-1">🛠️ Технологічний стек / Файли</div>
+          <div id="drawerTech" class="font-mono text-[11px] text-cyan-300">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- GRAPH DATA SPECIFICATION ---
+    const NODES = [
+      // SENSORS & FEEDS
+      { id: 'neptun', label: 'Neptun Radar API', domain: 'sensor', color: '#38bdf8', size: 18, desc: 'Радарний стрім кінематичних треків БпЛА, крилатих ракет і КАБів над Україною.', inputs: 'РЛС виявлення, мобільні групи', outputs: 'Курс, швидкість, висота, трейли', opsec: 'Високий (read-only proxy через бекенд)', tech: 'worker/osint/neptun_radar.py' },
+      { id: 'telethon', label: 'Telethon OSINT Listener', domain: 'sensor', color: '#38bdf8', size: 16, desc: 'Асинхронний монітор Telegram-каналів з автоматичною дедуплікацією та нормалізацією.', inputs: '20+ перевірених каналів (Київ, Дніпро, Суми)', outputs: 'Події ударів, влучання, тривоги', opsec: 'Сесійні пули, захист від flood-limit', tech: 'listener/telethon_client.py' },
+      { id: 'firms', label: 'NASA VIIRS (FIRMS)', domain: 'sensor', color: '#38bdf8', size: 15, desc: 'Супутникові термо-аномалії над територією бойових дій (виявлення вибухів і пожеж).', inputs: 'NASA Earthdata API / VIIRS 375m', outputs: 'Координати та яскравість теплових спалахів', opsec: 'Публічний супутниковий шар, zero footprint', tech: 'worker/osint/firms_viirs.py' },
+      { id: 'sentinel', label: 'Sentinel-1 RFI (EW)', domain: 'sensor', color: '#38bdf8', size: 14, desc: 'Детекція радіоелектронних перешкод (РЕБ) за супутниковими знімками радара SAR C-діапазону.', inputs: 'ESA Copernicus Open Access', outputs: 'Зони глушіння GPS / навігації', opsec: 'Пасивний супутниковий аналіз', tech: 'worker/sensors/sentinel_rfi.py' },
+      { id: 'overpass', label: 'Overpass OSM API', domain: 'sensor', color: '#38bdf8', size: 14, desc: 'Онлайн вивантаження векторних контурів аеродромів, ЗКП, укриттів та цивільних обʼєктів.', inputs: 'OpenStreetMap геобаза', outputs: 'Геометрії та атрибути POI', opsec: 'Публічний API з кешуванням', tech: 'api/static/index.html' },
+      { id: 'openinframap', label: 'OpenInfraMap (110-750kV)', domain: 'sensor', color: '#38bdf8', size: 14, desc: 'Шар топології високовольтних ліній передач та електричних підстанцій України.', inputs: 'Power Grid Vector Tiles', outputs: 'Тайли ЛЕП та координати вузлів', opsec: 'Відкриті джерела енергоструктури', tech: 'Leaflet TileLayer' },
+      { id: 'tg_alert', label: 'Alert Monitor', domain: 'sensor', color: '#38bdf8', size: 13, desc: 'Моніторинг офіційних сповіщень про повітряну тривогу по областях.', inputs: 'API alerts.in.ua / Telegram офіційні', outputs: 'Статус тривоги по областях', opsec: 'Авторизовані офіційні джерела', tech: 'bot/alert_monitor.py' },
+      { id: 'rss_intel', label: 'RSS Cross-Check', domain: 'sensor', color: '#38bdf8', size: 12, desc: 'Крос-валідація оперативних повідомлень з інформаційними агентствами.', inputs: 'RSS-стрічки ЗМІ та ДСНС', outputs: 'Підтвердження фактів влучань', opsec: 'Пасивний збір', tech: 'worker/osint/rss_intel.py' },
+
+      // INTEL & BASES (Шахеди_Аналіз / AlabugaLeaks)
+      { id: 'alabuga_hub', label: 'ОЕЗ Алабуга (Dolphin 632)', domain: 'intel', color: '#ef4444', size: 18, desc: 'Завод складання Шахед-136/Герань-2 у Татарстані. Схема постачань CRPA «Комета-М».', inputs: 'AlabugaLeaks, митні декларації', outputs: 'Серійні номери, модифікації, комплектуючі', opsec: 'Контррозвідувальні дані', tech: 'worker/osint/apt_matcher.py' },
+      { id: 'unit_20924', label: '924-й ДЦ БпЛА (в/ч 20924)', domain: 'intel', color: '#ef4444', size: 17, desc: 'Командування БпЛА МО РФ (Коломна). Підготовка операторів та планування ударів.', inputs: 'Перехоплення, списки особового складу', outputs: 'Ідентифікація екіпажів та розрахунків', opsec: 'Державні секрети РФ', tech: 'worker/osint/launch_triangulation.py' },
+      { id: 'navlya_site', label: 'Пусковий майданчик Навля', domain: 'intel', color: '#ef4444', size: 16, desc: 'Активна база запусків Шахедів у Брянській обл. на напрямок Чернігів/Київ.', inputs: 'CTGNN телеком-моделі, РЛС', outputs: 'Вектори підльоту та часові вікна', opsec: 'Бойова позиція ворога', tech: 'KNOWN_ENEMY_FACILITIES' },
+      { id: 'tsymbulovo_site', label: 'Пусковий хаб Цимбулове', domain: 'intel', color: '#ef4444', size: 16, desc: 'Пусковий хаб на базі Орловської обл. (мобільні пускові на шасі КамАЗ).', inputs: 'OSINT радіоперехоплення', outputs: 'Північно-східний сектор ударів', opsec: 'Бойова позиція ворога', tech: 'KNOWN_ENEMY_FACILITIES' },
+      { id: 'chauda_site', label: 'Полігон Мис Чауда (Крим)', domain: 'intel', color: '#ef4444', size: 16, desc: 'Головна південна морська база пусків ударних БпЛА на Одесу та Дніпро.', inputs: 'Супутникові знімки, РЛС моніторинг', outputs: 'Морські траєкторії польотів', opsec: 'Окупована територія', tech: 'KNOWN_ENEMY_FACILITIES' },
+      { id: 'senezh_hub', label: '322-й Центр ССО «Сенеж»', domain: 'intel', color: '#ef4444', size: 16, desc: 'Підрозділ розробки прошивок для обходу українського РЕБ (в/ч 92154).', inputs: 'Прошивки дронів, дамп переписки', outputs: 'Алгоритми супутникового джампінгу', opsec: 'Спецпідрозділ ГРУ/ССО РФ', tech: 'worker/osint/apt_matcher.py' },
+      { id: 'kursk_448', label: '448-ма РБр (в/ч 35535 Курськ)', domain: 'intel', color: '#ef4444', size: 15, desc: 'Дивізіони ракетних комплексів «Іскандер-М» та координація пусків БпЛА.', inputs: 'Супутники, перехоплення наведення', outputs: 'Балістичні загрози на Суми/Харків', opsec: 'Ракетні війська РФ', tech: 'worker/osint/apt_matcher.py' },
+      { id: 'kashan_base', label: 'Аеродром Кашан (Іран, КВІР)', domain: 'intel', color: '#ef4444', size: 14, desc: 'База підготовки російських офіцерів 924-го ДЦ інструкторами КВІР.', inputs: 'Авіарейси Іл-76, паспорти офіцерів', outputs: 'Ланцюги військової допомоги Ірану', opsec: 'Міжнародне розслідування', tech: 'KNOWN_ENEMY_FACILITIES' },
+      { id: 'poi_registry', label: 'База критичних обʼєктів POI', domain: 'intel', color: '#ef4444', size: 15, desc: 'Реєстр 150+ стратегічних підстанцій 110–750 кВ, ТЕЦ, нафтобаз та оборонних заводів.', inputs: 'Міські реєстри, супутникові мапи', outputs: 'Цільові координати захисту', opsec: 'Конфіденційні геопросторові дані', tech: 'database/kyiv_poi.json' },
+
+      // PIPELINES & COMPUTATION
+      { id: 'triangulation', label: 'Reverse Launch Triangulation', domain: 'pipeline', color: '#10b981', size: 18, desc: 'Реверсний розрахунок точки пуску БпЛА за зворотним вектором курсу та швидкістю.', inputs: 'Neptun Heading + Координати', outputs: 'Ймовірний старт (Навля/Чауда/Курськ) + ETA', opsec: 'Математична геодезія Haversine', tech: 'worker/osint/launch_triangulation.py' },
+      { id: 'threat_cone', label: 'Forward Threat Cone', domain: 'pipeline', color: '#10b981', size: 17, desc: 'Проєктування конуса підльоту дрона до підстанцій (110–750 кВ) з точним розрахунком ETA.', inputs: 'Вектор руху + База POI', outputs: 'Перелік підстанцій під загрозою + ETA хв', opsec: 'Раннє попередження ДТЕК/НЕК', tech: 'worker/osint/launch_triangulation.py' },
+      { id: 'dbscan', label: 'DBSCAN Spatial Clustering', domain: 'pipeline', color: '#10b981', size: 15, desc: 'Просторово-часова кластеризація розрізнених повідомлень про вибухи в єдині епіцентри.', inputs: 'Події з координатами та часом', outputs: 'Кластери з центроїдами та радіусом', opsec: 'Захист від дублювання та паніки', tech: 'worker/analytics/dbscan_clustering.py' },
+      { id: 'apt_engine', label: 'MITRE APT Correlation Engine', domain: 'pipeline', color: '#10b981', size: 16, desc: 'Зіставлення кібер- та кінетичних атак із сигнатурами Sandworm, Gamaredon, Alabuga.', inputs: 'Тексти перехоплень, дописи OSINT', outputs: 'Ідентифіковані TTPs та загрози', opsec: 'Автоматизоване розпізнавання загроз', tech: 'worker/osint/apt_matcher.py' },
+      { id: 'raycast', label: 'OpenAthena Raycast Geolocation', domain: 'pipeline', color: '#10b981', size: 15, desc: 'Розрахунок наземних координат цілі за кутами підвісу камери дрона та рельєфом SRTM.', inputs: 'Drone Alt, Pitch, Yaw, HFOV', outputs: 'Точні координати точки влучання (±15м)', opsec: 'Високоточна артилерійська математика', tech: 'worker/osint/drone_raycast.py' },
+      { id: 'ctgnn_telecom', label: 'CTGNN Telecom Predictor', domain: 'pipeline', color: '#10b981', size: 14, desc: 'Графова нейромережа прогнозування запусків БпЛА за вечірньою активністю мобільних кластерів.', inputs: 'Телеком-трафік прикордонних вишок РФ', outputs: 'Ймовірність пуску протягом 12 годин (87%)', opsec: 'SIGINT аналітика вищого рівня', tech: 'ШАХЕДИ_АНАЛІЗ / CTGNN' },
+      { id: 'address_parser', label: 'Address & Toponym Parser', domain: 'pipeline', color: '#10b981', size: 14, desc: 'Витягування київських топонімів, вулиць та районів із неструктурованого тексту повідомлень.', inputs: 'Тексти очевидців та моніторингових каналів', outputs: 'Стандартизовані адреси та мікрорайони', opsec: 'Локальний NLP без витоку назовні', tech: 'worker/geo_extractors/address_extractor.py' },
+      { id: 'image_dedup', label: 'pHash Image Deduplication', domain: 'pipeline', color: '#10b981', size: 13, desc: 'Перцептивний хеш фото/відео вибухів для відсіювання старих або фейкових медіа.', inputs: 'Зображення з Telegram', outputs: 'Унікальний хеш Hamming Distance < 8', opsec: 'Виявлення інформаційних вкидів', tech: 'worker/osint/image_dedup.py' },
+      { id: 'network_lineage', label: 'Channel Lineage Graph', domain: 'pipeline', color: '#10b981', size: 13, desc: 'Побудова графа першоджерел та пересилань повідомлень між OSINT-каналами.', inputs: 'ID пересилань та час появи', outputs: 'Визначення каналу-першоджерела', opsec: 'Виявлення C2 мереж дезінформації', tech: 'database/repository.py' },
+      { id: 'consensus_c2', label: 'C2 Consensus Verifier', domain: 'pipeline', color: '#10b981', size: 14, desc: 'Багаторівнева перевірка достовірності: офіційні джерела vs незалежні очевидці (C2 Score).', inputs: 'Кількість джерел, репутація каналів', outputs: 'Рейтинг довіри (0-100%)', opsec: 'Запобігання маніпуляціям', tech: 'worker/verification/' },
+      { id: 'ui_formatter', label: 'Tactical UI Formatter', domain: 'pipeline', color: '#10b981', size: 13, desc: 'Форматування зведених даних для миттєвого відображення на мобільних пристроях операторів.', inputs: 'Всі агреговані загрози', outputs: 'JSON-потоки для Leaflet веб-інтерфейсу', opsec: 'Швидкодія < 50мс', tech: 'api/main.py' },
+
+      // RED TEAM & INTERNET MEASUREMENT
+      { id: 'bgp_toolkit', label: 'BGP Toolkit & RIPE Stat', domain: 'recon', color: '#f59e0b', size: 15, desc: 'Аналіз BGP-маршрутизації, автономних систем (ASN) та захоплення мереж на ТОТ.', inputs: 'bgp.he.net, stat.ripe.net, RIS', outputs: 'Префікси, транзитні провайдери, Hijacking', opsec: 'Пасивний моніторинг інтернет-трас', tech: 'Pipeline A (BGP/Topology)' },
+      { id: 'shodan_censys', label: 'Shodan & Censys Recon', domain: 'recon', color: '#f59e0b', size: 16, desc: 'Пошук відкритих сервісів, промислових контролерів (SCADA) та вразливих серверів ворога.', inputs: 'IP-діапазони, SSL-сертифікати, банери', outputs: 'Відкриті порти, пристрої, вразливості', opsec: 'Пасивні запити через API без прямого сканування', tech: 'Pipeline D (Attack Surface)' },
+      { id: 'passive_dns', label: 'Passive DNS & CT Logs', domain: 'recon', color: '#f59e0b', size: 14, desc: 'Історичні записи DNS та журнали Certificate Transparency для виявлення прихованої C2.', inputs: 'crt.sh, SecurityTrails, VirusTotal', outputs: 'Піддомени, приховані сервери управління', opsec: 'Нульова видимість для супротивника', tech: 'Pipeline B (pDNS/CT)' },
+      { id: 'boofuzz_rtsp', label: 'Boofuzz / RTSP Audit', domain: 'recon', color: '#f59e0b', size: 14, desc: 'Аудит протоколів відеопотоків камер спостереження та тестування на переповнення буфера.', inputs: 'RTSP-стріми відеокамер', outputs: 'Виявлення вразливостей перехоплення відео', opsec: 'Суворо через тунелі, без прямих пакетів', tech: 'ENRICHMENT_NORTH Analysis' },
+      { id: 'onvif_discovery', label: 'ONVIF Device Manager', domain: 'recon', color: '#f59e0b', size: 13, desc: 'Виявлення IP-камер та сенсорів через WS-Discovery та Digest-автентифікацію.', inputs: 'Multicast 239.255.255.250:3702', outputs: 'Профілі відеострімів, PTZ-контроль', opsec: 'Внутрішні ізольовані підмережі', tech: 'ENRICHMENT_NORTH Tools' },
+      { id: 'pivot_north', label: 'PivotNorth RedTeam Framework', domain: 'recon', color: '#f59e0b', size: 14, desc: 'Фреймворк проксування та проникнення у ворожі сегменти мережі з обходом Dahua/Mikrotik.', inputs: 'CVE-2021-33044, Winbox/RDP проби', outputs: 'SOCKS-тунелі в тил ворога', opsec: 'Вимагає обовʼязкового OPSEC-проксі', tech: 'ENRICHMENT_NORTH Framework' },
+      { id: 'maxmind_geoip', label: 'GeoIP Enriched DB', domain: 'recon', color: '#f59e0b', size: 13, desc: 'Географічна привʼязка серверів та мереж (MaxMind GeoLite2, IPinfo, DB-IP).', inputs: 'IP-адреси вузлів', outputs: 'Місто, координати, провайдер', opsec: 'Локальна база даних', tech: 'Pipeline 1 (GeoIP)' },
+      { id: 'spiderfoot', label: 'SpiderFoot / Maltego OSINT', domain: 'recon', color: '#f59e0b', size: 14, desc: 'Автоматизований збір цифрових відбитків інфраструктури, доменів та корпоративних звʼязків.', inputs: 'Домени, ASN, електронні пошти', outputs: 'Граф повʼязаних сутностей', opsec: 'Агрегатор з відкритих реєстрів', tech: 'Pipeline C (Corporate/Prefix)' },
+
+      // DEVOPS, HARDENING & C2
+      { id: 'docker_mesh', label: 'Docker Production Cluster', domain: 'devops', color: '#a855f7', size: 17, desc: 'Ізольовані контейнери на сервері GCP iskun-server (136.113.156.17).', inputs: 'docker-compose.yml', outputs: 'Безперебійна робота web_api, worker, redis', opsec: 'Мінімальні привілеї, внутрішні мережі', tech: 'docker-compose' },
+      { id: 'postgis_db', label: 'PostgreSQL 15 / PostGIS 3.3', domain: 'devops', color: '#a855f7', size: 17, desc: 'Просторова реляційна база даних з індексами GiST для мікросекундних гео-запитів.', inputs: 'Події, трейли БпЛА, реєстри POI', outputs: 'ST_DWithin, ST_Distance обчислення', opsec: 'Зашифрований том даних', tech: 'database/models.py' },
+      { id: 'redis_cache', label: 'Redis 7 In-Memory Cache', domain: 'devops', color: '#a855f7', size: 15, desc: 'Кешування живих радарних цілей, геокодування та черга задач Celery.', inputs: 'Радарні мітки, геокеш', outputs: 'TTL 30-120с надшвидка віддача клієнтам', opsec: 'Захищений локальний сокет', tech: 'worker/celery_app.py' },
+      { id: 'semgrep_audit', label: 'Semgrep & Ruff Security', domain: 'devops', color: '#a855f7', size: 15, desc: 'Статичний аналіз безпеки вихідного коду (SAST), пошук витоків токенів та SQL/XSS інʼєкцій.', inputs: 'Вихідний код Python/JS', outputs: '0 вразливостей, бездоганний linting', opsec: 'Повний контроль безпеки', tech: 'ruff / semgrep scan' },
+      { id: 'pytest_suite', label: 'Pytest Verification Suite', domain: 'devops', color: '#a855f7', size: 16, desc: 'Автоматизований тестовий сьют (149/149 тестів пройдено) для захисту від регресій.', inputs: 'Модульні та інтеграційні тести', outputs: 'Гарантія безпомилковості розрахунків', opsec: 'CI/CD верифікація', tech: 'tests/' },
+      { id: 'openwebui', label: 'OpenWebUI Agent Hub', domain: 'devops', color: '#a855f7', size: 14, desc: 'Шлюз інтеграції штучного інтелекту для швидких тактичних запитів через LLM.', inputs: 'Запити оператора', outputs: 'Аналітичні зведення та інсайти', opsec: 'Ізольований порт 3000', tech: 'api/routes/openwebui_tools.py' }
+    ];
+
+    const EDGES = [
+      // SENSORS TO PIPELINES
+      { source: 'neptun', target: 'triangulation', label: 'Course & Speed' },
+      { source: 'neptun', target: 'threat_cone', label: 'Heading Vector' },
+      { source: 'telethon', target: 'address_parser', label: 'Raw text' },
+      { source: 'telethon', target: 'image_dedup', label: 'Media attachments' },
+      { source: 'telethon', target: 'network_lineage', label: 'Forward tracking' },
+      { source: 'telethon', target: 'apt_engine', label: 'Intel mentions' },
+      { source: 'firms', target: 'consensus_c2', label: 'Thermal anomalies' },
+      { source: 'sentinel', target: 'ui_formatter', label: 'RFI EW polygons' },
+      { id: 'e_overpass_poi', source: 'overpass', target: 'poi_registry', label: 'Enrich POIs' },
+      { source: 'openinframap', target: 'threat_cone', label: '110-750kV targets' },
+      { source: 'tg_alert', target: 'consensus_c2', label: 'Alert states' },
+      { source: 'rss_intel', target: 'consensus_c2', label: 'News cross-check' },
+
+      // INTEL TO PIPELINES
+      { source: 'alabuga_hub', target: 'apt_engine', label: 'Dolphin 632 specs' },
+      { source: 'unit_20924', target: 'triangulation', label: 'Crew telemetry' },
+      { source: 'navlya_site', target: 'triangulation', label: 'Launch origin' },
+      { source: 'tsymbulovo_site', target: 'triangulation', label: 'Launch origin' },
+      { source: 'chauda_site', target: 'triangulation', label: 'Launch origin' },
+      { source: 'senezh_hub', target: 'apt_engine', label: 'EW bypass malware' },
+      { source: 'kursk_448', target: 'triangulation', label: 'Iskander/UAV hub' },
+      { source: 'kashan_base', target: 'unit_20924', label: 'Training officers' },
+      { source: 'poi_registry', target: 'threat_cone', label: 'Target coordinates' },
+      { source: 'ctgnn_telecom', target: 'triangulation', label: 'Telecom predictive signal' },
+
+      // PIPELINES TO C2 / DATABASE
+      { source: 'triangulation', target: 'ui_formatter', label: 'Enriched Drone JSON' },
+      { source: 'threat_cone', target: 'ui_formatter', label: 'Substation ETA' },
+      { source: 'address_parser', target: 'dbscan', label: 'Geocoded coords' },
+      { source: 'dbscan', target: 'postgis_db', label: 'Clustered Events' },
+      { source: 'consensus_c2', target: 'postgis_db', label: 'Verified status' },
+      { source: 'raycast', target: 'postgis_db', label: 'Impact Point' },
+      { source: 'apt_engine', target: 'postgis_db', label: 'Threat actor logs' },
+      { source: 'image_dedup', target: 'redis_cache', label: 'Hash blacklist' },
+      { source: 'ui_formatter', target: 'redis_cache', label: 'Live Cache (TTL 30s)' },
+
+      // RED TEAM & RECON TO INTELLIGENCE
+      { source: 'bgp_toolkit', target: 'shodan_censys', label: 'Discovered CIDR' },
+      { source: 'shodan_censys', target: 'pivot_north', label: 'Exposed services' },
+      { source: 'passive_dns', target: 'shodan_censys', label: 'Subdomain IPs' },
+      { source: 'boofuzz_rtsp', target: 'pivot_north', label: 'RTSP exploits' },
+      { source: 'onvif_discovery', target: 'pivot_north', label: 'Camera discovery' },
+      { source: 'pivot_north', target: 'network_lineage', label: 'Exfiltrated logs' },
+      { source: 'maxmind_geoip', target: 'bgp_toolkit', label: 'Country routing' },
+      { source: 'spiderfoot', target: 'apt_engine', label: 'OSINT footprints' },
+
+      // DEVOPS / HARDENING COUPLING
+      { source: 'docker_mesh', target: 'postgis_db', label: 'Container db-1' },
+      { source: 'docker_mesh', target: 'redis_cache', label: 'Container redis-1' },
+      { source: 'docker_mesh', target: 'ui_formatter', label: 'Container web_api-1' },
+      { source: 'pytest_suite', target: 'triangulation', label: '9 Geometry Tests' },
+      { source: 'pytest_suite', target: 'threat_cone', label: 'Threat Cone Tests' },
+      { source: 'semgrep_audit', target: 'docker_mesh', label: 'SAST Audit PASS' },
+      { source: 'openwebui', target: 'ui_formatter', label: 'REST API Query' }
+    ];
+
+    // --- CANVAS GRAPH RENDERING LOGIC ---
+    const canvas = document.getElementById('graphCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let selectedNode = null;
+
+    // Camera view transform
+    let zoom = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let dragNode = null;
+    let startX, startY;
+
+    function resize() {
+      width = canvas.parentElement.clientWidth;
+      height = canvas.parentElement.clientHeight;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Initialize random positions
+    NODES.forEach((n, i) => {
+      const angle = (i / NODES.length) * Math.PI * 2;
+      const radius = 220 + Math.random() * 220;
+      n.x = width / 2 + Math.cos(angle) * radius;
+      n.y = height / 2 + Math.sin(angle) * radius;
+      n.vx = 0;
+      n.vy = 0;
+    });
+    panX = 0;
+    panY = 0;
+
+    // Simulation loop
+    function updatePhysics() {
+      // Repulsion between all nodes
+      for (let i = 0; i < NODES.length; i++) {
+        for (let j = i + 1; j < NODES.length; j++) {
+          const a = NODES[i];
+          const b = NODES[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < 320) {
+            const force = (320 - dist) / dist * 0.45;
+            a.vx -= dx * force * 0.05;
+            a.vy -= dy * force * 0.05;
+            b.vx += dx * force * 0.05;
+            b.vy += dy * force * 0.05;
+          }
+        }
+      }
+
+      // Attraction along edges
+      EDGES.forEach(e => {
+        const a = NODES.find(n => n.id === e.source);
+        const b = NODES.find(n => n.id === e.target);
+        if (a && b) {
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const targetDist = 110;
+          const force = (dist - targetDist) * 0.003;
+          a.vx += dx * force;
+          a.vy += dy * force;
+          b.vx -= dx * force;
+          b.vy -= dy * force;
+        }
+      });
+
+      // Center gravity & velocity dampening
+      NODES.forEach(n => {
+        if (n !== dragNode) {
+          n.vx += (width / 2 - n.x) * 0.0006;
+          n.vy += (height / 2 - n.y) * 0.0006;
+          n.x += n.vx;
+          n.y += n.vy;
+          n.vx *= 0.86;
+          n.vy *= 0.86;
+        }
+      });
+    }
+
+    function render() {
+      updatePhysics();
+
+      ctx.save();
+      ctx.clearRect(0, 0, width, height);
+
+      // Apply camera pan/zoom
+      ctx.translate(width / 2 + panX, height / 2 + panY);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-width / 2, -height / 2);
+
+      // Draw Edges
+      EDGES.forEach(e => {
+        const a = NODES.find(n => n.id === e.source);
+        const b = NODES.find(n => n.id === e.target);
+        if (!a || !b) return;
+
+        const isHighlighted = selectedNode && (selectedNode.id === a.id || selectedNode.id === b.id);
+        const aMatches = isNodeVisible(a);
+        const bMatches = isNodeVisible(b);
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+
+        if (isHighlighted) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.2;
+          ctx.globalAlpha = 0.9;
+        } else if (aMatches && bMatches) {
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1.0;
+          ctx.globalAlpha = 0.35;
+        } else {
+          ctx.strokeStyle = '#1e293b';
+          ctx.lineWidth = 0.5;
+          ctx.globalAlpha = 0.08;
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+
+        // Draw edge label if highlighted
+        if (isHighlighted && e.label) {
+          const midX = (a.x + b.x) / 2;
+          const midY = (a.y + b.y) / 2;
+          ctx.font = '9px monospace';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(e.label, midX + 4, midY - 4);
+        }
+      });
+
+      // Draw Nodes
+      NODES.forEach(n => {
+        const visible = isNodeVisible(n);
+        const isSelected = selectedNode && selectedNode.id === n.id;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
+
+        if (visible) {
+          ctx.fillStyle = n.color;
+          ctx.globalAlpha = isSelected ? 1.0 : (searchQuery || currentFilter !== 'all' ? 0.95 : 0.8);
+          ctx.fill();
+
+          // Outer Glow
+          ctx.lineWidth = isSelected ? 3.5 : 1.5;
+          ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
+          ctx.stroke();
+
+          // Text Label
+          ctx.font = `${isSelected ? 'bold 12px' : '11px'} -apple-system, BlinkMacSystemFont, sans-serif`;
+          ctx.fillStyle = isSelected ? '#ffffff' : '#e2e8f0';
+          ctx.textAlign = 'center';
+          ctx.fillText(n.label, n.x, n.y + n.size + 14);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.globalAlpha = 0.15;
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+
+      ctx.restore();
+      requestAnimationFrame(render);
+    }
+
+    function isNodeVisible(n) {
+      if (currentFilter !== 'all' && n.domain !== currentFilter) return false;
+      if (searchQuery && !n.label.toLowerCase().includes(searchQuery) && !n.desc.toLowerCase().includes(searchQuery)) return false;
+      return true;
+    }
+
+    // --- INTERACTION HANDLERS ---
+    function getNodeAt(x, y) {
+      const transformedX = (x - width / 2 - panX) / zoom + width / 2;
+      const transformedY = (y - height / 2 - panY) / zoom + height / 2;
+      for (let i = NODES.length - 1; i >= 0; i--) {
+        const n = NODES[i];
+        const dist = Math.hypot(n.x - transformedX, n.y - transformedY);
+        if (dist <= n.size + 6) return n;
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const hit = getNodeAt(x, y);
+
+      if (hit) {
+        dragNode = hit;
+        selectedNode = hit;
+        showDrawer(hit);
+      } else {
+        isDragging = true;
+        startX = x - panX;
+        startY = y - panY;
+      }
+    });
+
+    window.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (dragNode) {
+        dragNode.x = (x - width / 2 - panX) / zoom + width / 2;
+        dragNode.y = (y - height / 2 - panY) / zoom + height / 2;
+        dragNode.vx = 0;
+        dragNode.vy = 0;
+      } else if (isDragging) {
+        panX = x - startX;
+        panY = y - startY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragNode = null;
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.08 : 0.92;
+      zoom = Math.max(0.4, Math.min(3.0, zoom * factor));
+    });
+
+    // --- DRAWER & FILTERS ---
+    function showDrawer(node) {
+      const drawer = document.getElementById('nodeDrawer');
+      const badge = document.getElementById('drawerBadge');
+      
+      const domainMap = {
+        sensor: { text: 'СЕНСОР / ПОТОК', color: 'bg-sky-500/20 text-sky-400 border-sky-500/40' },
+        intel: { text: 'РОЗВІДДАНИЙ ХАБ', color: 'bg-red-500/20 text-red-400 border-red-500/40' },
+        pipeline: { text: 'C4ISR ОБЧИСЛЕННЯ', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' },
+        recon: { text: 'RED TEAM / RECON', color: 'bg-amber-500/20 text-amber-400 border-amber-500/40' },
+        devops: { text: 'C2 / DEVOPS / HARDENING', color: 'bg-purple-500/20 text-purple-400 border-purple-500/40' }
+      };
+
+      const meta = domainMap[node.domain] || { text: 'КОМПОНЕНТ', color: 'bg-slate-500/20 text-slate-300 border-slate-500/40' };
+      badge.textContent = meta.text;
+      badge.className = `badge border ${meta.color}`;
+
+      document.getElementById('drawerTitle').textContent = node.label;
+      document.getElementById('drawerDesc').textContent = node.desc;
+      document.getElementById('drawerInputs').textContent = node.inputs;
+      document.getElementById('drawerOutputs').textContent = node.outputs;
+      document.getElementById('drawerOpsec').textContent = node.opsec;
+      document.getElementById('drawerTech').textContent = node.tech;
+
+      drawer.classList.remove('hidden');
+    }
+
+    function closeDrawer() {
+      document.getElementById('nodeDrawer').classList.add('hidden');
+      selectedNode = null;
+    }
+
+    function filterDomain(dom) {
+      currentFilter = dom;
+      document.querySelectorAll('.domain-btn').forEach(btn => {
+        btn.classList.remove('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
+        btn.classList.add('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+      });
+      event.target.classList.remove('border-slate-700', 'bg-slate-800/80', 'text-slate-300');
+      event.target.classList.add('border-cyan-500/50', 'bg-cyan-500/20', 'text-cyan-300');
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.trim().toLowerCase();
+      if (searchQuery) {
+        const found = NODES.find(n => n.label.toLowerCase().includes(searchQuery));
+        if (found) {
+          panX = -(found.x - width / 2) * zoom;
+          panY = -(found.y - height / 2) * zoom;
+          selectedNode = found;
+          showDrawer(found);
+        }
+      }
+    }
+
+    // Start simulation & render
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
