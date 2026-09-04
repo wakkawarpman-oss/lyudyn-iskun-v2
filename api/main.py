@@ -584,6 +584,21 @@ async def serve_index():
     response.headers["Expires"] = "0"
     return response
 
+@app.get("/graph_analysis.html", include_in_schema=False)
+@app.get("/graph_analysis", include_in_schema=False)
+@app.get("/graph", include_in_schema=False)
+@app.get("/static/graph_analysis.html", include_in_schema=False)
+@app.get("/api/static/graph_analysis.html", include_in_schema=False)
+@app.get("/api/graph_analysis.html", include_in_schema=False)
+async def serve_graph_analysis():
+    response = FileResponse("api/static/graph_analysis.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+app.mount("/api/static", StaticFiles(directory="api/static"), name="api_static_dir")
 app.mount("/static", StaticFiles(directory="api/static"), name="static_dir")
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")
+
 
