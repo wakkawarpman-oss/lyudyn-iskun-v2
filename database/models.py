@@ -19,6 +19,11 @@ if DATABASE_URL.startswith("sqlite"):
         dbapi_connection.create_function("InitSpatialMetaData", 1, lambda *args: 1)
         dbapi_connection.create_function("CreateSpatialIndex", 2, lambda *args: 1)
         dbapi_connection.create_function("DisableSpatialIndex", 2, lambda *args: 1)
+        dbapi_connection.create_function("GeomFromEWKT", 1, lambda geom: geom)
+        dbapi_connection.create_function("GeomFromText", 1, lambda geom: geom)
+        dbapi_connection.create_function("GeomFromText", 2, lambda geom, srid: geom)
+        dbapi_connection.create_function("AsEWKB", 1, lambda geom: geom)
+        dbapi_connection.create_function("AsBinary", 1, lambda geom: geom)
 else:
     engine = create_engine(
         DATABASE_URL,
@@ -128,6 +133,22 @@ class ChannelForwardEdge(Base):
     __table_args__ = (
         UniqueConstraint('source_channel', 'target_channel', name='uq_source_target_edge'),
     )
+
+
+class HITLFeedbackAudit(Base):
+    __tablename__ = "hitl_feedback_audit"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_id = Column(Integer, nullable=True, index=True)
+    analyst_id = Column(BigInteger, nullable=False, index=True)
+    analyst_name = Column(String(128), nullable=True)
+    decision = Column(String(32), nullable=False, index=True)  # CONFIRM | FAKE | NOISE
+    source_channel = Column(String(128), nullable=True, index=True)
+    reputation_before = Column(Float, nullable=True)
+    reputation_after = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    notes = Column(Text, nullable=True)
+
 
 import base64
 import hashlib

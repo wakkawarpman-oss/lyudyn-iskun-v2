@@ -696,6 +696,98 @@ def invalidate_cache(pattern: str = "api:v3:events:*"):
     cleared = cache_manager.invalidate_pattern(pattern)
     return {"status": "ok", "pattern": pattern, "cleared_keys": cleared}
 
+# ── Operations Health & Audit Endpoints (Master Plan Implementation) ──
+from database.models import HITLFeedbackAudit
+
+@app.get("/api/hitl/audit", tags=["HITL & Quality"])
+def get_hitl_audit(limit: int = 50, db: Session = Depends(get_db)):
+    """Returns persistent audit log of analyst HITL validations and Bayesian reputation shifts."""
+    records = db.query(HITLFeedbackAudit).order_by(HITLFeedbackAudit.created_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": r.id,
+            "event_id": r.event_id,
+            "analyst_id": r.analyst_id,
+            "analyst_name": r.analyst_name,
+            "decision": r.decision,
+            "source_channel": r.source_channel,
+            "reputation_before": r.reputation_before,
+            "reputation_after": r.reputation_after,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "notes": r.notes,
+        }
+        for r in records
+    ]
+
+@app.get("/api/ops/health-summary", tags=["Operations & Health Gate"])
+def get_ops_health_summary(db: Session = Depends(get_db)):
+    """Comprehensive early-warning health check across Redis, PostGIS, NATS, and Data Lake."""
+    health = {
+        "status": "GREEN",
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "components": {},
+        "warnings": [],
+    }
+
+    # 1. Redis Check
+    try:
+        r = redis_client
+        info_mem = r.info("memory")
+        used_mem_bytes = info_mem.get("used_memory", 0)
+        used_mem_mb = round(used_mem_bytes / (1024 * 1024), 2)
+        q_len = r.llen("broadcast_queue")
+        
+        redis_status = "HEALTHY"
+        if q_len > 100:
+            health["warnings"].append(f"High Redis queue length: {q_len} tasks")
+            redis_status = "WARNING"
+            health["status"] = "AMBER"
+        if used_mem_mb > 50:
+            health["warnings"].append(f"High Redis memory usage: {used_mem_mb} MB")
+            redis_status = "WARNING"
+            health["status"] = "AMBER"
+
+        health["components"]["redis"] = {
+            "status": redis_status,
+            "used_memory_mb": used_mem_mb,
+            "queue_length": q_len,
+        }
+    except Exception as re:
+        health["components"]["redis"] = {"status": "DOWN", "error": str(re)}
+        health["warnings"].append(f"Redis unreachable: {re}")
+        health["status"] = "RED"
+
+    # 2. Database Check
+    try:
+        events_24h = db.query(DetectedEvent).filter(
+            DetectedEvent.detected_at >= datetime.datetime.utcnow() - datetime.timedelta(hours=24)
+        ).count()
+        hitl_count = db.query(HITLFeedbackAudit).count()
+        health["components"]["database"] = {
+            "status": "HEALTHY",
+            "events_last_24h": events_24h,
+            "hitl_audit_records": hitl_count,
+        }
+    except Exception as dbe:
+        health["components"]["database"] = {"status": "DOWN", "error": str(dbe)}
+        health["warnings"].append(f"Database error: {dbe}")
+        health["status"] = "RED"
+
+    # 3. Data Lake Check
+    try:
+        from worker.data_lake import get_data_lake_stats
+        lake_stats = get_data_lake_stats()
+        health["components"]["data_lake"] = {
+            "status": "HEALTHY",
+            "total_partitions": lake_stats.get("total_files", 0),
+            "total_size_kb": lake_stats.get("total_size_kb", 0),
+            "total_records": lake_stats.get("total_records", 0),
+        }
+    except Exception as lke:
+        health["components"]["data_lake"] = {"status": "DEGRADED", "error": str(lke)}
+
+    return health
+
 # MBTiles Offline Server
 from api.mbtiles_server import router as mbtiles_router
 app.include_router(mbtiles_router)

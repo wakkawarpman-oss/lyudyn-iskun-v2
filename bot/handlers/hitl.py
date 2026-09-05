@@ -15,7 +15,7 @@ from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import redis
-from database.models import SessionLocal, DetectedEvent
+from database.models import SessionLocal, DetectedEvent, HITLFeedbackAudit
 from worker.grading import SourceReputation
 
 logger = logging.getLogger(__name__)
@@ -163,6 +163,24 @@ async def process_hitl_callback(callback: types.CallbackQuery):
         db.commit()
         save_source_reputation(ch_clean, rep, r_client=r)
         new_score = int(rep.reputation() * 100)
+
+        # Permanent audit persistence in PostgreSQL
+        try:
+            audit_entry = HITLFeedbackAudit(
+                event_id=ev.id,
+                analyst_id=callback.from_user.id if callback.from_user else 0,
+                analyst_name=analyst_name,
+                decision=action.upper(),
+                source_channel=ch_clean,
+                reputation_before=float(old_score),
+                reputation_after=float(new_score),
+                created_at=datetime.utcnow(),
+                notes=f"Status: {ev.verification_status}"
+            )
+            db.add(audit_entry)
+            db.commit()
+        except Exception as audit_err:
+            logger.warning(f"Failed to save HITL audit log: {audit_err}")
 
         updated_text = (
             f"{decision_title} [#{ev.id}]\n"
