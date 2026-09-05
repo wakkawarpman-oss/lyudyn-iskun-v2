@@ -258,3 +258,160 @@ def evaluate_bayesian_threat_confidence(evidence: Dict[str, Any]) -> Dict[str, A
         'active_corroborating_sources_count': active_sources,
         'evidence_breakdown': breakdown
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1: Temporal Decay, MNAR & Dynamic Multi-Domain Fusion
+# ─────────────────────────────────────────────────────────────────────────────
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+
+SENSOR_TAU: Dict[str, float] = {
+    "RADAR": 90.0,
+    "ACOUSTIC": 90.0,
+    "SIGINT": 180.0,
+    "OSINT": 300.0,
+    "ADS_B": 60.0,
+    "FIRMS": 600.0,
+}
+
+BASE_LIKELIHOOD_RATIOS: Dict[str, float] = {
+    "RADAR": 8.0,
+    "ACOUSTIC": 4.0,
+    "SIGINT": 6.0,
+    "OSINT": 3.0,
+    "ADS_B": 0.05,
+    "FIRMS": 5.0,
+}
+
+
+@dataclass
+class Evidence:
+    sensor_type: str
+    timestamp: datetime
+    base_lr: float = 1.0
+    altitude_m: Optional[float] = None
+    terrain_masked: bool = False
+    target_type: str = "GENERIC_UAV"
+
+
+@dataclass
+class ThreatAssessment:
+    threat_probability: float
+    confidence_label: str
+    log_odds: float
+    contributing_sensors: List[str] = field(default_factory=list)
+    decayed_sensors: List[str] = field(default_factory=list)
+    mnar_sensors: List[str] = field(default_factory=list)
+
+
+def decay_likelihood_ratio(base_lr: float, dt_s: float, tau_s: float) -> float:
+    """Calculates exponential temporal decay of sensor evidence towards neutral 1.0."""
+    if dt_s <= 0:
+        return base_lr
+    return 1.0 + (base_lr - 1.0) * math.exp(-dt_s / tau_s)
+
+
+def mnar_adjustment(
+    sensor_type: str,
+    altitude_m: Optional[float] = None,
+    terrain_masked: bool = False,
+    target_type: str = "GENERIC_UAV"
+) -> Optional[float]:
+    """
+    Missing Not At Random (MNAR) model:
+    If a sensor is expected to be blind due to terrain or altitude, absence is neutral (returns None).
+    Otherwise returns base likelihood ratio.
+    """
+    st = sensor_type.upper()
+    if st == "RADAR":
+        if altitude_m is not None and altitude_m < 80.0:
+            return None
+        if terrain_masked:
+            return None
+        return BASE_LIKELIHOOD_RATIOS.get("RADAR", 8.0)
+    elif st == "SIGINT":
+        if terrain_masked and target_type.upper() in ["GERAN_2", "SHAHED_136"]:
+            return None
+        return BASE_LIKELIHOOD_RATIOS.get("SIGINT", 6.0)
+    elif st == "ACOUSTIC":
+        # Acoustic signature of engine (MD-550 142 Hz) is omnidirectional and independent of LoS
+        return BASE_LIKELIHOOD_RATIOS.get("ACOUSTIC", 4.0)
+    elif st == "ADS_B":
+        if (altitude_m is not None and altitude_m < 80.0) or terrain_masked:
+            return None
+        return BASE_LIKELIHOOD_RATIOS.get("ADS_B", 0.05)
+    return BASE_LIKELIHOOD_RATIOS.get(st, 1.0)
+
+
+def fuse_multi_domain_evidence(
+    evidence_list: List[Evidence],
+    current_time: Optional[datetime] = None,
+    prior_prob: float = 0.5
+) -> ThreatAssessment:
+    """Fuses multi-domain evidence with temporal decay and MNAR handling."""
+    if not evidence_list:
+        return ThreatAssessment(
+            threat_probability=prior_prob,
+            confidence_label="STALE",
+            log_odds=prob_to_log_odds(prior_prob),
+            contributing_sensors=[],
+            decayed_sensors=[],
+            mnar_sensors=[]
+        )
+
+    now = current_time or datetime.utcnow()
+    current_lo = prob_to_log_odds(prior_prob)
+    contributing = []
+    decayed = []
+    mnar = []
+
+    for ev in evidence_list:
+        st = ev.sensor_type.upper()
+        # Check MNAR
+        effective_lr = mnar_adjustment(st, ev.altitude_m, ev.terrain_masked, ev.target_type)
+        if effective_lr is None:
+            mnar.append(st)
+            continue
+
+        tau = SENSOR_TAU.get(st, 120.0)
+        dt_s = max(0.0, (now - ev.timestamp).total_seconds())
+        actual_lr = decay_likelihood_ratio(ev.base_lr or effective_lr, dt_s, tau)
+        
+        current_lo += math.log(max(0.001, actual_lr))
+        contributing.append(st)
+        if dt_s >= tau:
+            decayed.append(st)
+
+    prob = log_odds_to_prob(current_lo)
+    if prob >= 0.75:
+        label = "HIGH"
+    elif prob >= 0.55:
+        label = "MEDIUM"
+    elif prob >= 0.35:
+        label = "LOW"
+    else:
+        label = "STALE"
+
+    return ThreatAssessment(
+        threat_probability=prob,
+        confidence_label=label,
+        log_odds=current_lo,
+        contributing_sensors=contributing,
+        decayed_sensors=decayed,
+        mnar_sensors=mnar
+    )
+
+
+def format_threat_summary(assessment: ThreatAssessment) -> str:
+    """Generates human-readable tactical summary of threat assessment."""
+    pct = int(round(assessment.threat_probability * 100))
+    sensors_str = []
+    for s in assessment.contributing_sensors:
+        if s in assessment.decayed_sensors:
+            sensors_str.append(f"{s}(decayed)")
+        else:
+            sensors_str.append(s)
+    sensors_joined = "+".join(sensors_str) if sensors_str else "None"
+    return f"{pct}% [{sensors_joined}] ({assessment.confidence_label})"
+

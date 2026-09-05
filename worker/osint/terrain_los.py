@@ -140,8 +140,8 @@ def distance_point_to_segment_km(px: float, py: float, x1: float, y1: float, x2:
 
 def find_nearest_river_corridor(lat: float, lng: float) -> Optional[dict]:
     """Finds if a target is traversing along any known river canyon corridor with spatial grid caching."""
-    grid_lat = round(lat, 2)
-    grid_lng = round(lng, 2)
+    grid_lat = round(lat, 3)
+    grid_lng = round(lng, 3)
     cache_key = f"tactical:cache:river_mask:{grid_lat}_{grid_lng}"
 
     r = _get_redis_client()

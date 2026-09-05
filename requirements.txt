@@ -31,3 +31,4 @@ nats-py>=2.7.0
 pyarrow>=15.0.0
 PySocks>=1.7.1
 python-socks[asyncio]>=2.4.0
+filterpy>=1.4.5

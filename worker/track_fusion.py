@@ -1,13 +1,16 @@
 """
 OKINT-PRO · Kalman Track Fusion Engine (ENU, per-source R, OOSM Retrodiction, ETA Cone)
 Local East-North-Up (ENU) coordinates tracking with Continuous White Noise Acceleration (CWNA)
-process noise, per-source measurement covariance, out-of-sequence replay buffer, and sigma-dispersion ETA cones.
+process noise, aerodynamic envelope limits, out-of-sequence replay buffer, and sigma-dispersion ETA cones.
 """
 from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Tuple
+
+import numpy as np
+from filterpy.kalman import KalmanFilter
 
 R_EARTH_M = 6371000.0
 
@@ -58,6 +61,167 @@ THREAT_TYPE_Q_ACCEL = {
 }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Аеродинамічний профіль цілі (інтегровано з OSINT-даних)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class AerodynamicEnvelope:
+    """
+    Фізичні межі планера та параметри процесного шуму.
+
+    q_eff(v) = min(q_max, q_base * (1 + beta * (v / v_ref)^2))
+
+    Джерела даних:
+    - Shahed-136/Герань-2: витоки AlabugaLeaks, в/ч 20924, аеродром Кашан (Іран)
+    - Орлан-10: перехоплені звіти 2КНМ ЛНР, бортові логи
+    - Тахіон: дані 138-ї ОМСБр
+    - КН-101: відкриті довідники тактико-технічних характеристик
+    """
+    v_stall_ms: float       # швидкість звалювання (мінімальна стійка), м/с
+    v_dive_ms: float        # максимальна швидкість піке/набору, м/с
+    v_cruise_ms: float      # типова крейсерська швидкість, м/с
+    q_base: float = 0.5     # базовий рівень шуму при v=0
+    q_max: float = 35.0     # насичення (ceil) шуму
+    beta: float = 0.8       # коефіцієнт квадратичного члена
+    v_ref_ms: float = 50.0  # референсна швидкість для нормалізації
+    threat_category: str = "UAV"  # UAV, CRUISE_MISSILE, BALLISTIC
+    deployment_time_min: float = 30.0  # хвилин на розгортання
+
+    def effective_q(self, v_ms: float) -> float:
+        """Квадратична модель q_eff з насиченням."""
+        if v_ms <= 0:
+            return self.q_base
+        ratio = v_ms / self.v_ref_ms
+        q = self.q_base * (1.0 + self.beta * ratio ** 2)
+        return min(self.q_max, q)
+
+    def clamp_velocity(self, v_ms: float) -> float:
+        """Жорстке обмеження швидкості фізичними межами планера."""
+        return max(self.v_stall_ms, min(self.v_dive_ms, v_ms))
+
+
+# Аеродинамічна база даних загроз — верифікована на OSINT-даних
+AERO_DB: Dict[str, AerodynamicEnvelope] = {
+    # Shahed-136 (іранський оригінал) — дані з навчальної бази Кашан, Іран
+    "SHAHED_136": AerodynamicEnvelope(
+        v_stall_ms=33.0,      # 120 км/год — мінімальна стійка
+        v_dive_ms=75.0,       # 270 км/год — максимальне піке
+        v_cruise_ms=55.0,     # ~198 км/год — крейсерська
+        q_base=0.5,
+        q_max=35.0,
+        beta=0.8,
+        v_ref_ms=50.0,
+        threat_category="UAV",
+        deployment_time_min=25.0,
+    ),
+    # Герань-2 (російська локалізація Shahed-136) — ОЕЗ Алабуга, ТОВ Альбатрос
+    "GERAN_2": AerodynamicEnvelope(
+        v_stall_ms=33.0,
+        v_dive_ms=75.0,
+        v_cruise_ms=55.0,
+        q_base=0.6,          # вищий базовий шум через варіативність збірки
+        q_max=40.0,
+        beta=0.9,
+        v_ref_ms=50.0,
+        threat_category="UAV",
+        deployment_time_min=20.0,
+    ),
+    # Shahed-238 — апгрейд з турбореактивним двигуном
+    "SHAHED_238": AerodynamicEnvelope(
+        v_stall_ms=70.0,      # 252 км/год
+        v_dive_ms=190.0,      # 684 км/год
+        v_cruise_ms=130.0,    # ~468 км/год
+        q_base=1.0,
+        q_max=50.0,
+        beta=0.6,
+        v_ref_ms=100.0,
+        threat_category="UAV",
+        deployment_time_min=30.0,
+    ),
+    # КН-101 — крилата ракета
+    "KH_101": AerodynamicEnvelope(
+        v_stall_ms=180.0,     # 648 км/год
+        v_dive_ms=270.0,      # 972 км/год
+        v_cruise_ms=220.0,    # ~792 км/год
+        q_base=2.0,
+        q_max=80.0,
+        beta=0.4,
+        v_ref_ms=200.0,
+        threat_category="CRUISE_MISSILE",
+        deployment_time_min=15.0,
+    ),
+    # Орлан-10 — розвідувальний БпЛА (дані бортів 10253, 10258)
+    "ORLAN_10": AerodynamicEnvelope(
+        v_stall_ms=15.0,      # ~54 км/год
+        v_dive_ms=45.0,       # ~162 км/год
+        v_cruise_ms=28.0,     # ~100 км/год
+        q_base=0.3,
+        q_max=20.0,
+        beta=1.0,
+        v_ref_ms=30.0,
+        threat_category="UAV",
+        deployment_time_min=10.0,
+    ),
+    # Тахіон — тактичний розвідувальний комплекс (138-я ОМСБр)
+    "TACHION": AerodynamicEnvelope(
+        v_stall_ms=12.0,
+        v_dive_ms=35.0,
+        v_cruise_ms=22.0,     # ~80 км/год
+        q_base=0.25,
+        q_max=15.0,
+        beta=1.2,
+        v_ref_ms=25.0,
+        threat_category="UAV",
+        deployment_time_min=8.0,
+    ),
+    # Іскандер-М — ОТРК
+    "ISKANDER_M": AerodynamicEnvelope(
+        v_stall_ms=1500.0,    # ~5400 км/год
+        v_dive_ms=2100.0,     # ~7560 км/год
+        v_cruise_ms=1800.0,   # ~6480 км/год
+        q_base=10.0,
+        q_max=500.0,
+        beta=0.1,
+        v_ref_ms=1800.0,
+        threat_category="BALLISTIC",
+        deployment_time_min=12.0,
+    ),
+    # GENERIC_UAV — запасний профіль
+    "GENERIC_UAV": AerodynamicEnvelope(
+        v_stall_ms=15.0,
+        v_dive_ms=60.0,
+        v_cruise_ms=30.0,
+        q_base=0.5,
+        q_max=35.0,
+        beta=0.8,
+        v_ref_ms=50.0,
+        threat_category="UAV",
+        deployment_time_min=30.0,
+    ),
+}
+
+# Aliases
+AERO_DB["DRONE"] = AERO_DB["GENERIC_UAV"]
+AERO_DB["UAV"] = AERO_DB["GENERIC_UAV"]
+AERO_DB["SUPERCAM"] = AERO_DB["ORLAN_10"]
+AERO_DB["SUPER_CAM"] = AERO_DB["ORLAN_10"]
+AERO_DB["CRUISE_MISSILE"] = AERO_DB["KH_101"]
+AERO_DB["BALLISTIC"] = AERO_DB["ISKANDER_M"]
+
+
+def get_aero_profile(threat_type: str) -> AerodynamicEnvelope:
+    """Повертає аеродинамічний профіль за типом загрози."""
+    if not threat_type:
+        return AERO_DB["GENERIC_UAV"]
+    key = threat_type.upper().replace("-", "_")
+    return AERO_DB.get(key, AERO_DB["GENERIC_UAV"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Геодезичні перетворення (WGS84 <-> Local ENU)
+# ─────────────────────────────────────────────────────────────────────────────
+
 def latlon_to_enu(lat: float, lon: float, ref_lat: float, ref_lon: float) -> Tuple[float, float]:
     """Convert WGS84 (lat, lon) to local East-North-Up (meters) relative to (ref_lat, ref_lon)."""
     d_lat = math.radians(lat - ref_lat)
@@ -99,7 +263,7 @@ class TrackState:
     # Covariance 4x4 flat list
     P: List[List[float]]
     n_updates: int = 0
-    threat_type: str = "drone"  # drone | cruise_missile | ballistic
+    threat_type: str = "drone"
 
     @property
     def lat(self) -> float:
@@ -125,14 +289,182 @@ class TrackState:
         return (h + 360.0) % 360.0
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. ETA Cone з аеродинамічними межами
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class ETACone:
+    eta_min_s: float
+    eta_nom_s: float
+    eta_max_s: float
+    theta_cone_deg: float
+    polygons: List[dict] = field(default_factory=list)
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
+
+    def __contains__(self, item: str) -> bool:
+        return hasattr(self, item)
+
+
+def estimate_eta_cone(
+    state: dict,
+    corridor_distance_m: float,
+    threat_type: str = "GENERIC_UAV",
+) -> ETACone:
+    """
+    Розрахунок конуса розсіювання та ETA до цілі на основі аеродинамічного профілю.
+
+    - eta_nom:  відстань / поточна швидкість
+    - eta_min:  відстань / v_dive (найшвидше можливе)
+    - eta_max:  відстань / v_stall (найповільніше можливе)
+    """
+    if corridor_distance_m <= 0:
+        return ETACone(0.0, 0.0, 0.0, 0.0, [])
+
+    aero = get_aero_profile(threat_type)
+    v_current = state.get("v_ms", 0.0)
+    v_current = aero.clamp_velocity(v_current)
+
+    q = aero.effective_q(v_current)
+    theta_cone_deg = min(45.0, 5.0 + (q / aero.q_max) * 40.0)
+
+    eta_nom = corridor_distance_m / v_current if v_current > 0 else float("inf")
+    eta_min = corridor_distance_m / aero.v_dive_ms
+    eta_max = corridor_distance_m / aero.v_stall_ms
+
+    polygons = []
+    for minutes in [5, 10, 15]:
+        t = minutes * 60.0
+        d_nom = v_current * t
+        d_max = aero.v_dive_ms * t
+        d_min = aero.v_stall_ms * t
+        spread_m = math.tan(math.radians(theta_cone_deg)) * d_nom
+
+        polygons.append({
+            "time_min": minutes,
+            "d_nom_m": round(d_nom, 0),
+            "d_min_m": round(d_min, 0),
+            "d_max_m": round(d_max, 0),
+            "lateral_spread_m": round(spread_m, 0),
+            "note": f"Reachable envelope at T+{minutes}min",
+        })
+
+    return ETACone(
+        eta_min_s=round(eta_min, 1),
+        eta_nom_s=round(eta_nom, 1),
+        eta_max_s=round(eta_max, 1),
+        theta_cone_deg=round(theta_cone_deg, 2),
+        polygons=polygons,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Kalman CWNA з динамічним q_eff(v) та підтримкою обох інтерфейсів
+# ─────────────────────────────────────────────────────────────────────────────
+
 class KalmanTrackFilter:
     """
     Continuous-Discrete Kalman Filter in local ENU frame with
-    Continuous White Noise Acceleration (CWNA) and Out-Of-Sequence Measurement (OOSM) handling.
+    Continuous White Noise Acceleration (CWNA), quadratic q_eff(v) process noise,
+    aerodynamic limits clamping, and Out-Of-Sequence Measurement (OOSM) handling.
     """
-    def __init__(self, q_accel: float = 8.0, max_history: int = 50):
+
+    def __init__(
+        self,
+        q_accel: float = 8.0,
+        max_history: int = 50,
+        dt: float = 1.0,
+        threat_type: str = "GENERIC_UAV",
+        measure_noise_sd: float = 5.0,
+        init_cov_sd: float = 100.0,
+    ):
         self.q_accel = q_accel
         self.max_history = max_history
+        self.dt = dt
+        self.threat_type = threat_type
+        self.aero = get_aero_profile(threat_type)
+
+        # State: [x, y, vx, vy]^T via filterpy.kalman.KalmanFilter
+        self.kf = KalmanFilter(dim_x=4, dim_z=2)
+        self.kf.F = np.array([
+            [1.0, 0.0,  dt,  0.0],
+            [0.0, 1.0,  0.0,  dt ],
+            [0.0, 0.0,  1.0, 0.0],
+            [0.0, 0.0,  0.0, 1.0],
+        ])
+        self.kf.H = np.array([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+        ])
+        self.kf.P *= init_cov_sd
+        self.kf.R *= measure_noise_sd ** 2
+        self.kf.Q = np.eye(4) * self.aero.q_base
+        self._last_aero_clamped = False
+
+    def _update_q_matrix(self, v_ms: float) -> np.ndarray:
+        """Формує матрицю процесного шуму CWNA для заданого q_eff."""
+        dt = self.dt
+        q = self.aero.effective_q(v_ms)
+        q_mat = np.array([
+            [dt**4 / 4, 0.0,       dt**3 / 2, 0.0      ],
+            [0.0,       dt**4 / 4, 0.0,       dt**3 / 2],
+            [dt**3 / 2, 0.0,       dt**2,     0.0      ],
+            [0.0,       dt**3 / 2, 0.0,       dt**2    ],
+        ]) * q
+        return q_mat
+
+    def predict(self):
+        """
+        Крок передбачення з аеродинамічним клампінгом швидкості
+        та оновленням Q відповідно до q_eff(v).
+        """
+        vx = float(self.kf.x[2, 0])
+        vy = float(self.kf.x[3, 0])
+        v_ms = math.hypot(vx, vy)
+
+        v_clamped = self.aero.clamp_velocity(v_ms)
+        if v_ms > 0 and abs(v_clamped - v_ms) > 0.01:
+            scale = v_clamped / v_ms
+            self.kf.x[2, 0] = vx * scale
+            self.kf.x[3, 0] = vy * scale
+            v_ms = v_clamped
+            self._last_aero_clamped = True
+        else:
+            self._last_aero_clamped = False
+
+        self.kf.Q = self._update_q_matrix(v_ms)
+        self.kf.predict()
+
+    def update(self, z: np.ndarray):
+        """Крок оновлення по вимірюванню z = [x, y]."""
+        self.kf.update(z)
+
+    @property
+    def state(self) -> dict:
+        """Фільтрований стан у зручному для downstream форматі."""
+        x, y, vx, vy = self.kf.x.flatten()
+        v_ms = math.hypot(vx, vy)
+        heading = math.degrees(math.atan2(vy, vx)) % 360.0
+        return {
+            "x_m": float(x),
+            "y_m": float(y),
+            "vx_ms": float(vx),
+            "vy_ms": float(vy),
+            "v_ms": float(v_ms),
+            "v_kmh": round(float(v_ms * 3.6), 1),
+            "heading_deg": round(heading, 1),
+            "q_eff": round(float(self.aero.effective_q(v_ms)), 3),
+            "aero_clamped": getattr(self, "_last_aero_clamped", False) or bool(abs(v_ms - self.aero.clamp_velocity(v_ms)) > 0.01),
+            "cov_trace": float(np.trace(self.kf.P)),
+            "threat_category": self.aero.threat_category,
+        }
+
+    # ── Legacy / TrackState-based methods for radar fusion & downstream pipelines ──
 
     def init_track(self, track_id: str, lat: float, lon: float, t: float,
                    source_type: str = "radar", initial_heading_deg: Optional[float] = None,
@@ -150,7 +482,7 @@ class KalmanTrackFilter:
 
         sigma_pos = DEFAULT_SOURCE_SIGMA.get(source_type, DEFAULT_SOURCE_SIGMA["default"])
         r_pos = sigma_pos ** 2
-        r_vel = (20.0) ** 2  # ~20 m/s initial speed uncertainty
+        r_vel = (20.0) ** 2
 
         P = [
             [r_pos, 0.0,   0.0,   0.0],
@@ -174,11 +506,6 @@ class KalmanTrackFilter:
         if dt <= 0:
             return [v for v in x], [[c for c in row] for row in P]
 
-        # F matrix:
-        # [1, 0, dt,  0]
-        # [0, 1,  0, dt]
-        # [0, 0,  1,  0]
-        # [0, 0,  0,  1]
         x_pred = [
             x[0] + dt * x[2],
             x[1] + dt * x[3],
@@ -186,10 +513,6 @@ class KalmanTrackFilter:
             x[3]
         ]
 
-        # Q CWNA matrix:
-        # dt3_3 = q * dt^3 / 3
-        # dt2_2 = q * dt^2 / 2
-        # dt1   = q * dt
         q_eff = q_val if q_val is not None else self.q_accel
         dt2 = dt * dt
         dt3 = dt2 * dt
@@ -204,22 +527,18 @@ class KalmanTrackFilter:
             [0.0, q12, 0.0, q22]
         ]
 
-        # P_pred = F * P * F^T + Q
-        # Compute F * P:
         FP = [
             [P[0][c] + dt * P[2][c] for c in range(4)],
             [P[1][c] + dt * P[3][c] for c in range(4)],
             [P[2][c] for c in range(4)],
             [P[3][c] for c in range(4)]
         ]
-        # Compute (FP) * F^T:
         P_pred = [
             [FP[r][0] + dt * FP[r][2] for r in range(4)],
             [FP[r][1] + dt * FP[r][3] for r in range(4)],
             [FP[r][2] for r in range(4)],
             [FP[r][3] for r in range(4)]
         ]
-        # Transpose to match rows/cols and add Q:
         P_final = [[0.0]*4 for _ in range(4)]
         for r in range(4):
             for c in range(4):
@@ -229,18 +548,10 @@ class KalmanTrackFilter:
 
     def _update_measurement(self, x_pred: List[float], P_pred: List[List[float]],
                             z: Tuple[float, float], sigma_m: float) -> Tuple[List[float], List[List[float]]]:
-        # Measurement matrix H = [[1, 0, 0, 0], [0, 1, 0, 0]]
-        # Innovation y = z - H * x_pred
         y0 = z[0] - x_pred[0]
         y1 = z[1] - x_pred[1]
 
         r_val = sigma_m ** 2
-        # S = H * P * H^T + R
-        # S is 2x2:
-        # S[0][0] = P_pred[0][0] + r_val
-        # S[0][1] = P_pred[0][1]
-        # S[1][0] = P_pred[1][0]
-        # S[1][1] = P_pred[1][1] + r_val
         s00 = P_pred[0][0] + r_val
         s01 = P_pred[0][1]
         s10 = P_pred[1][0]
@@ -250,14 +561,11 @@ class KalmanTrackFilter:
         if abs(det_s) < 1e-9:
             return x_pred, P_pred
 
-        # S^-1
         inv_s00 = s11 / det_s
         inv_s01 = -s01 / det_s
         inv_s10 = -s10 / det_s
         inv_s11 = s00 / det_s
 
-        # P * H^T is 4x2: col 0 is P[:][0], col 1 is P[:][1]
-        # Kalman Gain K = (P * H^T) * S^-1 (4x2)
         K = [[0.0, 0.0] for _ in range(4)]
         for i in range(4):
             p0 = P_pred[i][0]
@@ -265,18 +573,14 @@ class KalmanTrackFilter:
             K[i][0] = p0 * inv_s00 + p1 * inv_s10
             K[i][1] = p0 * inv_s01 + p1 * inv_s11
 
-        # Updated state x = x_pred + K * y
         x_up = [x_pred[i] + K[i][0] * y0 + K[i][1] * y1 for i in range(4)]
 
-        # Updated covariance: P = (I - K*H) * P_pred
-        # KH is 4x4 where KH[i][0] = K[i][0], KH[i][1] = K[i][1], rest 0
         P_up = [[0.0]*4 for _ in range(4)]
         for i in range(4):
             for j in range(4):
                 val = P_pred[i][j] - (K[i][0] * P_pred[0][j] + K[i][1] * P_pred[1][j])
                 P_up[i][j] = val
 
-        # Symmetrize P
         for i in range(4):
             for j in range(i + 1, 4):
                 avg = (P_up[i][j] + P_up[j][i]) / 2.0
@@ -293,26 +597,21 @@ class KalmanTrackFilter:
         if threat_type:
             state.threat_type = threat_type
 
-        # Compute adaptive q_accel based on threat_type & speed
+        # Compute adaptive q_accel based on aerodynamic envelope & speed
         current_speed = math.hypot(state.x[2], state.x[3])
-        q_base = THREAT_TYPE_Q_ACCEL.get(state.threat_type, self.q_accel)
-        if current_speed > 100.0:  # > 360 km/h (Jet drone / Cruise missile / Supersonic)
-            q_eff = max(q_base, min(35.0, current_speed * 0.06))
-        else:
-            q_eff = q_base
+        aero = get_aero_profile(state.threat_type)
+        q_eff = aero.effective_q(current_speed)
 
         new_meas = MeasurementRecord(timestamp=t, lat=lat, lon=lon, source_type=source_type,
                                      source_id=source_id, cep_m=sigma_m)
 
         # Check if measurement is out of sequence (OOSM: t < state.t)
         if t < state.t:
-            # Insert measurement in sorted order
             meas_history.append(new_meas)
             meas_history.sort(key=lambda m: m.timestamp)
             if len(meas_history) > self.max_history:
                 meas_history = meas_history[-self.max_history:]
 
-            # Re-run filter forward from earliest recorded measurement
             m0 = meas_history[0]
             curr_state, _ = self.init_track(
                 track_id=state.track_id, lat=m0.lat, lon=m0.lon, t=m0.timestamp,
@@ -322,7 +621,9 @@ class KalmanTrackFilter:
             for m in meas_history[1:]:
                 dt = m.timestamp - curr_state.t
                 if dt > 0:
-                    x_pred, P_pred = self._predict(curr_state.x, curr_state.P, dt, q_val=q_eff)
+                    spd = math.hypot(curr_state.x[2], curr_state.x[3])
+                    q_step = aero.effective_q(spd)
+                    x_pred, P_pred = self._predict(curr_state.x, curr_state.P, dt, q_val=q_step)
                     ez, nz = latlon_to_enu(m.lat, m.lon, curr_state.ref_lat, curr_state.ref_lon)
                     x_up, P_up = self._update_measurement(x_pred, P_pred, (ez, nz), m.cep_m)
                     curr_state.x = x_up
@@ -367,22 +668,18 @@ class KalmanTrackFilter:
         heading_rad = math.atan2(ve, vn)
         bearing_to_target = math.atan2(de, dn)
 
-        # Angular difference
         diff_rad = math.atan2(math.sin(bearing_to_target - heading_rad), math.cos(bearing_to_target - heading_rad))
         diff_deg = abs(math.degrees(diff_rad))
 
-        # Velocity sigma from covariance
         sigma_ve = math.sqrt(max(0.1, state.P[2][2]))
         sigma_vn = math.sqrt(max(0.1, state.P[3][3]))
         sigma_v = math.sqrt(sigma_ve**2 + sigma_vn**2)
 
-        # Cone opening half-angle (2-sigma transverse uncertainty)
         cone_half_angle_rad = max(math.radians(10.0), min(math.radians(60.0), 2.0 * math.atan2(sigma_v, speed)))
         cone_half_angle_deg = math.degrees(cone_half_angle_rad)
 
         is_in_corridor = diff_deg <= cone_half_angle_deg
 
-        # ETA calculations with 2-sigma speed interval
         v_min = max(5.0, speed - 2.0 * sigma_v)
         v_max = speed + 2.0 * sigma_v
 
@@ -390,15 +687,12 @@ class KalmanTrackFilter:
         eta_min_sec = dist_m / v_max
         eta_max_sec = dist_m / v_min
 
-        # Generate cone boundary polygon points (WGS84)
-        left_angle = heading_rad - cone_half_angle_rad
-        right_angle = heading_rad + cone_half_angle_rad
-        cone_length = min(dist_m * 1.5, max(15000.0, speed * 600.0))  # 10 min projection or 1.5x dist
+        cone_length = min(dist_m * 1.5, max(15000.0, speed * 600.0))
 
-        le = ce + cone_length * math.sin(left_angle)
-        ln = cn + cone_length * math.cos(left_angle)
-        re = ce + cone_length * math.sin(right_angle)
-        rn = cn + cone_length * math.cos(right_angle)
+        le = ce + cone_length * math.sin(heading_rad - cone_half_angle_rad)
+        ln = cn + cone_length * math.cos(heading_rad - cone_half_angle_rad)
+        re = ce + cone_length * math.sin(heading_rad + cone_half_angle_rad)
+        rn = cn + cone_length * math.cos(heading_rad + cone_half_angle_rad)
 
         lat_c, lon_c = enu_to_latlon(ce, cn, state.ref_lat, state.ref_lon)
         lat_l, lon_l = enu_to_latlon(le, ln, state.ref_lat, state.ref_lon)
