@@ -43,8 +43,8 @@ class DetectedEvent(Base):
     event_type = Column(String, index=True) # explosion, air_defense, shelling
     location_text = Column(String)
     
-    # PostGIS geometric point for radius searches
-    geom = Column(Geometry('POINT', srid=4326), index=True)
+    # PostGIS geometric point for radius searches (GiST indexed by GeoAlchemy2)
+    geom = Column(Geometry('POINT', srid=4326))
     
     # Two-Dimensional Scoring (0 - 100)
     significance_score = Column(Integer, default=50) # Physical severity / destructive impact
@@ -101,7 +101,7 @@ class BombShelter(Base):
     capacity = Column(Integer, default=150)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)
-    geom = Column(Geometry('POINT', srid=4326), index=True)
+    geom = Column(Geometry('POINT', srid=4326))
     is_operational = Column(Boolean, default=True)
 
 

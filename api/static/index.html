@@ -2527,6 +2527,7 @@
         }
 
         const droneMarkerCache = new Map();
+        const droneConeCache = new Map();
 
         async function fetchRadarDrones() {
             try {
@@ -2549,6 +2550,25 @@
                     currentIds.add(dId);
                     const heading = Math.round(d.heading || 0);
 
+                    // Render Kalman ETA uncertainty cone polygon
+                    if (d.eta_cone && d.eta_cone.cone_polygon && d.eta_cone.cone_polygon.length >= 3) {
+                        const coneCoords = d.eta_cone.cone_polygon;
+                        if (droneConeCache.has(dId)) {
+                            droneConeCache.get(dId).setLatLngs(coneCoords);
+                        } else {
+                            const conePoly = L.polygon(coneCoords, {
+                                color: d.color || '#ff0055',
+                                weight: 1.5,
+                                dashArray: '5, 5',
+                                fillColor: d.color || '#ff0055',
+                                fillOpacity: 0.12,
+                                interactive: false
+                            }).addTo(radarLayer);
+                            droneConeCache.set(dId, conePoly);
+                        }
+                    }
+
+                    const etaBadge = (d.eta_cone && d.eta_cone.eta_time_str) ? ` · ⏱️ ${d.eta_cone.eta_time_str}` : '';
                     const iconHtml = `
                         <div class="m-drone-container">
                             <div class="m-drone-ping"></div>
@@ -2559,7 +2579,7 @@
                                 </svg>
                             </div>` : ''}
                             <div class="m-drone-dot"></div>
-                            <div class="m-drone-tag">🔴 ${d.place || 'БпЛА'} ${heading ? `${heading}°` : ''}</div>
+                            <div class="m-drone-tag">🔴 ${d.place || 'БпЛА'} ${heading ? `${heading}°` : ''}${etaBadge}</div>
                         </div>
                     `;
 
@@ -2588,11 +2608,17 @@
                     }
                 });
 
-                // Remove departed markers without full-layer clear
+                // Remove departed markers and cones without full-layer clear
                 for (const [id, m] of droneMarkerCache.entries()) {
                     if (!currentIds.has(id)) {
                         radarLayer.removeLayer(m);
                         droneMarkerCache.delete(id);
+                    }
+                }
+                for (const [id, poly] of droneConeCache.entries()) {
+                    if (!currentIds.has(id)) {
+                        radarLayer.removeLayer(poly);
+                        droneConeCache.delete(id);
                     }
                 }
             } catch(e) {
@@ -2847,6 +2873,41 @@
                 `;
             }
 
+            let kalmanBoxHtml = '';
+            if (d.eta_cone) {
+                const ec = d.eta_cone;
+                const corridorBadge = ec.is_in_corridor
+                    ? '<span style="color:#10b981; font-weight:800; font-size:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); padding:2px 6px; border-radius:4px;">🎯 В КУРСОВОМУ КОРИДОРІ</span>'
+                    : '<span style="color:#f59e0b; font-weight:800; font-size:10px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); padding:2px 6px; border-radius:4px;">🔄 ЗМІЩЕННЯ ВІД КУРСУ</span>';
+                const speedSigmaKmh = Math.round((ec.speed_sigma_mps || 0) * 3.6);
+                kalmanBoxHtml = `
+                    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:11px; font-weight:800; color:#34d399;">📐 ФІЛЬТР КАЛМАНА (ENU КІНЕМАТИКА)</span>
+                            ${corridorBadge}
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; font-size:11px; margin-bottom:4px;">
+                            <div style="color:#cbd5e1;">
+                                <span style="color:var(--text-muted);">Розрахунковий ETA:</span>
+                                <strong style="color:#fff; font-family:var(--font-mono);"> ~${ec.eta_time_str || '--'}</strong>
+                            </div>
+                            <div style="color:#cbd5e1;">
+                                <span style="color:var(--text-muted);">Швидкість (±2σ):</span>
+                                <strong style="color:#fff; font-family:var(--font-mono);"> ${ec.speed_kmh} км/год (±${speedSigmaKmh})</strong>
+                            </div>
+                            <div style="color:#cbd5e1;">
+                                <span style="color:var(--text-muted);">Пеленг на ціль:</span>
+                                <strong style="color:#fff; font-family:var(--font-mono);"> ${ec.bearing_deg}° (Δ ${ec.angle_diff_deg}°)</strong>
+                            </div>
+                            <div style="color:#cbd5e1;">
+                                <span style="color:var(--text-muted);">Конус невизначеності:</span>
+                                <strong style="color:#fff; font-family:var(--font-mono);"> ±${ec.cone_half_angle_deg}°</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             let targetBoxHtml = '';
             if (d.projected_targets && d.projected_targets.length > 0) {
                 const targetsList = d.projected_targets.slice(0, 3).map(t => `
@@ -2895,6 +2956,7 @@
                         <div style="font-family:var(--font-mono); font-size:13px; font-weight:800; color:#fff;">~${speed} км/год</div>
                     </div>
                 </div>
+                ${kalmanBoxHtml}
                 ${launchBoxHtml}
                 ${targetBoxHtml}
                 <div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-dim); border-radius:10px; padding:8px 12px; font-size:11.5px; color:#e2e8f0; margin-bottom:12px;">
