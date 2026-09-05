@@ -9,11 +9,17 @@ import logging
 import os
 from typing import Optional, Dict, Any
 
-import nats
-from nats.aio.client import Client as NATSClient
-from nats.js import JetStreamContext
-from nats.js.api import StreamConfig, RetentionPolicy, StorageType
-from nats.js.errors import BadRequestError
+try:
+    import nats
+    from nats.aio.client import Client as NATSClient
+    from nats.js import JetStreamContext
+    from nats.js.api import StreamConfig, RetentionPolicy, StorageType
+    from nats.js.errors import BadRequestError
+    HAS_NATS = True
+except ImportError:
+    HAS_NATS = False
+    NATSClient = Any
+    JetStreamContext = Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +34,8 @@ _lock = asyncio.Lock()
 
 async def get_jetstream() -> Optional[JetStreamContext]:
     """Returns a connected JetStream context, reconnecting if necessary."""
+    if not HAS_NATS:
+        return None
     global _nc, _js
     if _js is not None and _nc is not None and _nc.is_connected:
         return _js
