@@ -46,4 +46,8 @@ app.conf.beat_schedule = {
         'task': 'worker.tasks.fetch_rss_news_task',
         'schedule': 300.0, # Every 5 minutes
     },
+    'auto-sanitize-tactical-events': {
+        'task': 'worker.tasks.auto_sanitize_tactical_events_task',
+        'schedule': 30.0, # Every 30 seconds
+    },
 }

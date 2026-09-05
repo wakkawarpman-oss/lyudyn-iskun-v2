@@ -416,7 +416,13 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "sigint_corroboration": sigint_corrob_data,
             "bayesian_confidence": bayesian_confidence,
         }
-        drones.append(drone_obj)
+        try:
+            from worker.schemas import TacticalDroneTrackSchema
+            valid_drone = TacticalDroneTrackSchema.model_validate(drone_obj)
+            drones.append(valid_drone.model_dump())
+        except Exception as e_val:
+            logger.debug(f"Drone validation fallback: {e_val}")
+            drones.append(drone_obj)
 
     # Sort drones by distance to Kyiv (closest first)
     drones.sort(key=lambda d: d["distance_to_kyiv_km"])

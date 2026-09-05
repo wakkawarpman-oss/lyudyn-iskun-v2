@@ -9,9 +9,28 @@ Implements:
 """
 import math
 import logging
+import os
+import json
+try:
+    import redis
+except ImportError:
+    redis = None
 from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+_redis_client = None
+
+def _get_redis_client():
+    global _redis_client
+    if _redis_client is None and redis is not None:
+        try:
+            _redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=1.0)
+        except Exception as e:
+            logger.debug("Terrain LoS Redis connection skipped: %s", e)
+            _redis_client = None
+    return _redis_client
 
 # Atmospheric refraction constant (k = 4/3)
 EARTH_RADIUS_KM = 6371.0
@@ -120,7 +139,22 @@ def distance_point_to_segment_km(px: float, py: float, x1: float, y1: float, x2:
 
 
 def find_nearest_river_corridor(lat: float, lng: float) -> Optional[dict]:
-    """Finds if a target is traversing along any known river canyon corridor."""
+    """Finds if a target is traversing along any known river canyon corridor with spatial grid caching."""
+    grid_lat = round(lat, 2)
+    grid_lng = round(lng, 2)
+    cache_key = f"tactical:cache:river_mask:{grid_lat}_{grid_lng}"
+
+    r = _get_redis_client()
+    if r is not None:
+        try:
+            cached = r.get(cache_key)
+            if cached == "NULL":
+                return None
+            elif cached:
+                return json.loads(cached)
+        except Exception as e:
+            logger.debug("Redis read failed for %s: %s", cache_key, e)
+
     closest_corridor = None
     min_dist = float('inf')
 
@@ -140,9 +174,20 @@ def find_nearest_river_corridor(lat: float, lng: float) -> Optional[dict]:
                     'distance_to_river_km': round(dist, 1)
                 }
 
+    result = None
     if closest_corridor and closest_corridor['distance_to_river_km'] <= closest_corridor['masking_buffer_km']:
-        return closest_corridor
-    return None
+        result = closest_corridor
+
+    if r is not None:
+        try:
+            if result:
+                r.set(cache_key, json.dumps(result), ex=3600)
+            else:
+                r.set(cache_key, "NULL", ex=3600)
+        except Exception as e:
+            logger.debug("Redis write failed for %s: %s", cache_key, e)
+
+    return result
 
 
 def evaluate_terrain_masking(lat: float, lng: float, target_alt_agl_m: float = 60.0) -> dict:

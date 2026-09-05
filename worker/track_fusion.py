@@ -22,6 +22,41 @@ DEFAULT_SOURCE_SIGMA = {
     "default": 200.0     # Default fallback
 }
 
+THREAT_TYPE_Q_ACCEL = {
+    "shahed_136": 8.0,
+    "SHAHED_136": 8.0,
+    "drone": 8.0,
+    "DRONE": 8.0,
+    "super_cam": 6.0,
+    "SUPER_CAM": 6.0,
+    "supercam": 6.0,
+    "shahed_238": 18.0,
+    "SHAHED_238": 18.0,
+    "jet_drone": 18.0,
+    "JET_DRONE": 18.0,
+    "cruise_missile": 25.0,
+    "CRUISE_MISSILE": 25.0,
+    "kh_101": 25.0,
+    "KH_101": 25.0,
+    "kalibr": 25.0,
+    "KALIBR": 25.0,
+    "ballistic": 35.0,
+    "BALLISTIC": 35.0,
+    "iskander_m": 35.0,
+    "ISKANDER_M": 35.0,
+    "kab": 12.0,
+    "kab_500": 12.0,
+    "KAB_500": 12.0,
+    "artillery": 4.0,
+    "msta_s": 4.0,
+    "MSTA_S": 4.0,
+    "maritime": 2.0,
+    "MARITIME": 2.0,
+    "maritime_salvo": 2.0,
+    "MARITIME_SALVO": 2.0,
+    "default": 8.0
+}
+
 
 def latlon_to_enu(lat: float, lon: float, ref_lat: float, ref_lon: float) -> Tuple[float, float]:
     """Convert WGS84 (lat, lon) to local East-North-Up (meters) relative to (ref_lat, ref_lon)."""
@@ -135,7 +170,7 @@ class KalmanTrackFilter:
         meas_hist = [MeasurementRecord(timestamp=t, lat=lat, lon=lon, source_type=source_type, source_id="init")]
         return state, meas_hist
 
-    def _predict(self, x: List[float], P: List[List[float]], dt: float) -> Tuple[List[float], List[List[float]]]:
+    def _predict(self, x: List[float], P: List[List[float]], dt: float, q_val: Optional[float] = None) -> Tuple[List[float], List[List[float]]]:
         if dt <= 0:
             return [v for v in x], [[c for c in row] for row in P]
 
@@ -155,11 +190,12 @@ class KalmanTrackFilter:
         # dt3_3 = q * dt^3 / 3
         # dt2_2 = q * dt^2 / 2
         # dt1   = q * dt
+        q_eff = q_val if q_val is not None else self.q_accel
         dt2 = dt * dt
         dt3 = dt2 * dt
-        q11 = self.q_accel * dt3 / 3.0
-        q12 = self.q_accel * dt2 / 2.0
-        q22 = self.q_accel * dt
+        q11 = q_eff * dt3 / 3.0
+        q12 = q_eff * dt2 / 2.0
+        q22 = q_eff * dt
 
         Q = [
             [q11, 0.0, q12, 0.0],
@@ -251,8 +287,20 @@ class KalmanTrackFilter:
 
     def add_measurement(self, state: TrackState, meas_history: List[MeasurementRecord],
                         lat: float, lon: float, t: float, source_type: str,
-                        source_id: str, custom_sigma: Optional[float] = None) -> TrackState:
+                        source_id: str, custom_sigma: Optional[float] = None,
+                        threat_type: Optional[str] = None) -> TrackState:
         sigma_m = custom_sigma or DEFAULT_SOURCE_SIGMA.get(source_type, DEFAULT_SOURCE_SIGMA["default"])
+        if threat_type:
+            state.threat_type = threat_type
+
+        # Compute adaptive q_accel based on threat_type & speed
+        current_speed = math.hypot(state.x[2], state.x[3])
+        q_base = THREAT_TYPE_Q_ACCEL.get(state.threat_type, self.q_accel)
+        if current_speed > 100.0:  # > 360 km/h (Jet drone / Cruise missile / Supersonic)
+            q_eff = max(q_base, min(35.0, current_speed * 0.06))
+        else:
+            q_eff = q_base
+
         new_meas = MeasurementRecord(timestamp=t, lat=lat, lon=lon, source_type=source_type,
                                      source_id=source_id, cep_m=sigma_m)
 
@@ -270,10 +318,11 @@ class KalmanTrackFilter:
                 track_id=state.track_id, lat=m0.lat, lon=m0.lon, t=m0.timestamp,
                 source_type=m0.source_type
             )
+            curr_state.threat_type = state.threat_type
             for m in meas_history[1:]:
                 dt = m.timestamp - curr_state.t
                 if dt > 0:
-                    x_pred, P_pred = self._predict(curr_state.x, curr_state.P, dt)
+                    x_pred, P_pred = self._predict(curr_state.x, curr_state.P, dt, q_val=q_eff)
                     ez, nz = latlon_to_enu(m.lat, m.lon, curr_state.ref_lat, curr_state.ref_lon)
                     x_up, P_up = self._update_measurement(x_pred, P_pred, (ez, nz), m.cep_m)
                     curr_state.x = x_up
@@ -285,7 +334,7 @@ class KalmanTrackFilter:
         else:
             # Sequential update
             dt = t - state.t
-            x_pred, P_pred = self._predict(state.x, state.P, dt)
+            x_pred, P_pred = self._predict(state.x, state.P, dt, q_val=q_eff)
             ez, nz = latlon_to_enu(lat, lon, state.ref_lat, state.ref_lon)
             x_up, P_up = self._update_measurement(x_pred, P_pred, (ez, nz), sigma_m)
 

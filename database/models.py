@@ -158,7 +158,7 @@ class SanitizedEvent(Base):
     __tablename__ = "sanitized_events"
     __table_args__ = {"schema": schema_or_none("public_osint")}
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
     event_uid = Column(String(64), unique=True, nullable=False, index=True)
     event_type = Column(String(64), nullable=False, index=True)
     detected_at = Column(DateTime, nullable=False, index=True)
@@ -191,7 +191,7 @@ class TacticalEvent(Base):
     __tablename__ = "tactical_events"
     __table_args__ = {"schema": schema_or_none("restricted_ops")}
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
     incident_id = Column(String(64), nullable=False, index=True)
     exact_lat = Column(Float, nullable=False)
     exact_lng = Column(Float, nullable=False)

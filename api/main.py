@@ -554,8 +554,9 @@ def get_radar_drones(
     check_rate_limit(client_ip, is_authenticated=is_authorized)
 
     threats_data = get_live_radar_threats(oblast=oblast)
-    drones = threats_data.get("drones", [])
-    inbound_drones = threats_data.get("inbound_drones", [])
+    import copy
+    drones = copy.deepcopy(threats_data.get("drones", []))
+    inbound_drones = copy.deepcopy(threats_data.get("inbound_drones", []))
 
     substations = None
     if is_authorized:

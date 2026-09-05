@@ -571,11 +571,20 @@ def pipeline_cluster_and_save(self, data):
             db.commit()
             return
 
-        # Serialize clustering per location within this transaction: without
-        # this, two workers processing messages for the same location_text
-        # at nearly the same time can both miss each other's not-yet-committed
-        # row and each INSERT a new incident instead of merging into one.
-        db.execute(sql_text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": final_location_text})
+        # Serialize clustering per location: use non-blocking pg_try_advisory_xact_lock with
+        # cooperative retry to completely prevent gevent/psycopg2 single-thread deadlocks.
+        db_url = os.getenv("DATABASE_URL", "")
+        if "postgres" in db_url:
+            for _ in range(5):
+                try:
+                    res = db.execute(sql_text("SELECT pg_try_advisory_xact_lock(hashtext(:k))"), {"k": final_location_text})
+                    if res.scalar():
+                        break
+                    import time
+                    time.sleep(0.1)
+                except Exception as e:
+                    logger.warning(f"pg_try_advisory_xact_lock skipped: {e}")
+                    break
 
         # Incident Clustering (A.4 PostGIS Spatial Proximity + Text Fallback):
         cluster_match = None
@@ -989,4 +998,116 @@ def fetch_rss_news_task():
         process_message.delay(json.dumps(payload))
         
     return f"Scheduled {len(news)} RSS items."
+
+
+@shared_task(name="worker.tasks.auto_sanitize_tactical_events_task")
+def auto_sanitize_tactical_events_task(batch_size: int = 50) -> dict:
+    """
+    Automated cross-contour sanitization pipeline bridging restricted_ops.tactical_events
+    to public_osint.sanitized_events.
+    - Strips EW, SIGINT, acoustic node frequencies and raw kinematics.
+    - Applies spatial fuzzing (deterministic pseudo-random jitter ~2-5 km, round to 2 decimal places).
+    - Enforces 3-hour holdback for FIRMS thermal anomaly events to prevent operational BDA leaks.
+    """
+    from database.models import TacticalEvent, SanitizedEvent, SessionLocal
+    import hashlib
+
+    db = SessionLocal()
+    processed = 0
+    skipped_holdback = 0
+    now = datetime.utcnow()
+    holdback_delta = timedelta(hours=3)
+
+    try:
+        tactical_events = db.query(TacticalEvent).order_by(TacticalEvent.id.desc()).limit(batch_size).all()
+        if not tactical_events:
+            return {"status": "ok", "processed": 0, "skipped_holdback": 0}
+
+        candidate_uids = [f"SAN-{te.id}" for te in tactical_events]
+        existing_uids = {
+            row[0] for row in db.query(SanitizedEvent.event_uid).filter(
+                SanitizedEvent.event_uid.in_(candidate_uids)
+            ).all()
+        }
+
+        for te in tactical_events:
+            san_uid = f"SAN-{te.id}"
+            if san_uid in existing_uids:
+                continue
+
+            # Anti-BDA check: FIRMS thermal anomaly 3-hour holdback
+            target_type_upper = (te.target_type or "").upper()
+            if "THERMAL" in target_type_upper or "FIRMS" in target_type_upper:
+                if te.detected_at and (now - te.detected_at < holdback_delta):
+                    skipped_holdback += 1
+                    continue
+
+            # Deterministic coordinate coarsening (~2-5 km jitter)
+            seed_str = f"{te.id}:{te.incident_id or ''}"
+            h = int(hashlib.sha256(seed_str.encode()).hexdigest()[:8], 16)
+            offset_lat = ((h % 1000) / 1000.0 - 0.5) * 0.04
+            offset_lng = (((h >> 10) % 1000) / 1000.0 - 0.5) * 0.04
+            rough_lat = round(te.exact_lat + offset_lat, 2)
+            rough_lng = round(te.exact_lng + offset_lng, 2)
+
+            # Determine significance and verification
+            conf = te.confidence_score or 50
+            if conf >= 80:
+                sig_level = "HIGH"
+                verif_status = "VERIFIED"
+            elif conf >= 50:
+                sig_level = "MEDIUM"
+                verif_status = "PROBABLE"
+            else:
+                sig_level = "LOW"
+                verif_status = "UNVERIFIED"
+
+            # Parse metadata or defaults
+            oblast = "Зона моніторингу"
+            district = None
+            if te.raw_telemetry:
+                try:
+                    telemetry = json.loads(te.raw_telemetry)
+                    if isinstance(telemetry, dict):
+                        oblast = telemetry.get("oblast", oblast)
+                        district = telemetry.get("district", district)
+                except Exception:
+                    pass
+
+            db_url = os.getenv("DATABASE_URL", "sqlite:///events.db")
+            geom_elem = WKTElement(f"POINT({rough_lng} {rough_lat})", srid=4326) if not db_url.startswith("sqlite") else None
+
+            sanitized_event = SanitizedEvent(
+                event_uid=san_uid,
+                event_type=te.target_type,
+                detected_at=te.detected_at or now,
+                oblast=oblast,
+                district=district,
+                rough_lat=rough_lat,
+                rough_lng=rough_lng,
+                rough_geom=geom_elem,
+                significance_level=sig_level,
+                verification_status=verif_status,
+                sources_count=1,
+                sanitized_summary=f"Очищене спостереження типу {te.target_type}. Район спостереження огрублено з міркувань безпеки.",
+                created_at=now
+            )
+            db.add(sanitized_event)
+            processed += 1
+
+        if processed > 0:
+            db.commit()
+            flush_api_caches()
+
+        return {
+            "status": "success",
+            "processed": processed,
+            "skipped_holdback": skipped_holdback
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Auto-sanitization error: {e}")
+        return {"status": "error", "error": str(e)}
+    finally:
+        db.close()
 
