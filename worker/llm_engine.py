@@ -201,7 +201,7 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
         event_type = "air_defense"
     elif 'вибух' in t_lower:
         event_type = "explosion"
-    elif 'приліт' in t_lower or 'влучання' in t_lower:
+    elif 'приліт' in t_lower or 'влуч' in t_lower or 'снаряд' in t_lower or 'обстріл' in t_lower:
         event_type = "direct_strike"
     elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'бпла', 'дрон', 'мопед', '🛵', 'вектор ціл', 'реактив', 'каб', 'авіа']) or any(
         phrase in t_lower for phrase in ['рух ціл', 'рух бпла', 'рух ракет', 'рух дронів', 'курс на', 'летить на', 'помічено ціль', 'повітряна ціль']

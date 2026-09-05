@@ -367,13 +367,21 @@ CIVILIAN_NOISE_PHRASES = [
     "гороскоп", "футбол", "чемпіонат", "концерт"
 ]
 
+RETROSPECTIVE_DIGEST_PHRASES = [
+    "найважливіше за тиждень", "підсумки тижня", "головне за тиждень", "підсумки доби",
+    "зведення за тиждень", "цього тижня у столиці", "цього тижня в області",
+    "тижневий дайджест", "дайджест новин", "огляд тижня", "найважливіше за добу",
+    "підсумки дня", "найголовніше за добу", "головні події тижня", "зведення за добу"
+]
+
 MILITARY_THREAT_KEYWORDS = [
-    "вибух", "приліт", "влучан", "збит", "збили", "ппо", "пуск", "баліст", "крилат", "ракет",
+    "вибух", "приліт", "влуч", "збит", "збили", "ппо", "пуск", "баліст", "крилат", "ракет",
     "шахед", "бпла", "дрон", "каб", "умпк", "авіа", "артобстріл", "повітрян", "тривог", "відбій",
     "детонац", "уламк", "обстріл", "артилері", "постраждал", "руйнуван", "мопед", "герань",
     "ланцет", "зала", "zala", "суперкам", "supercam", "орлан", "реактив", "калібр", "іскандер",
     "кинджал", "х-101", "х-59", "х-69", "х-22", "стратегіч", "ту-95", "ту-22", "міг-31",
-    "вектор ціл", "рух ціл", "рух бпла", "курс на", "летить на", "помічено ціль", "дорозвідк"
+    "вектор ціл", "рух ціл", "рух бпла", "курс на", "летить на", "помічено ціль", "дорозвідк",
+    "швидкісн", "ціль на", "цілі на", "снаряд", "міномет"
 ]
 
 def is_civilian_non_threat_noise(text: str) -> bool:
@@ -384,11 +392,14 @@ def is_civilian_non_threat_noise(text: str) -> bool:
     if not text:
         return False
     t_lower = text.lower()
-    has_noise = any(p in t_lower for p in CIVILIAN_NOISE_PHRASES)
+    has_noise = any(p in t_lower for p in CIVILIAN_NOISE_PHRASES) or any(p in t_lower for p in RETROSPECTIVE_DIGEST_PHRASES)
     if not has_noise:
         return False
     # If noise word is present, only permit if strong unambiguous kinetic attack terms appear
-    strong_threat_terms = ["збит", "збили", "приліт", "влучан", "вибух", "шахед", "ракет", "каб", "падіння уламк"]
+    # Retrospective summaries are never permitted even with kinetic terms
+    if any(p in t_lower for p in RETROSPECTIVE_DIGEST_PHRASES):
+        return True
+    strong_threat_terms = ["збит", "збили", "приліт", "влуч", "вибух", "шахед", "ракет", "каб", "снаряд", "падіння уламк"]
     has_strong_threat = any(k in t_lower for k in strong_threat_terms)
     return has_noise and not has_strong_threat
 
@@ -397,11 +408,15 @@ def is_tactical_threat_candidate(text: str) -> bool:
     """
     Strict C4ISR Gating: Evaluates if a raw message has legitimate tactical or military
     air defense significance. Fast-rejects general news, corruption, court hearings,
-    call centers, domestic crime, and civilian traffic.
+    call centers, domestic crime, civilian traffic, and retrospective digests.
     """
     if not text:
         return False
     t_lower = text.lower()
+
+    # Fast reject retrospective weekly/daily digests which summarize past events
+    if any(p in t_lower for p in RETROSPECTIVE_DIGEST_PHRASES):
+        return False
 
     if is_civilian_non_threat_noise(t_lower):
         return False

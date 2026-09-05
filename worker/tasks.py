@@ -212,6 +212,8 @@ def pipeline_extract(self, payload_str):
     )
 
     # Fast-reject civilian municipal maintenance / corruption / judicial noise BEFORE any DB/media/LLM processing
+    if is_civilian_non_threat_noise(text):
+        return {"skip": True, "reason": "civilian_noise"}
     if not is_tactical_threat_candidate(text):
         return {"skip": True, "reason": "non_tactical"}
 
@@ -651,13 +653,38 @@ def pipeline_cluster_and_save(self, data):
             cluster_match.has_media = cluster_match.has_media or has_media
             cluster_match.last_seen_at = max(cluster_match.last_seen_at or msg_date, msg_date)
             
-            # Upgrade event_type to highest kinetic impact
+            # Upgrade event_type to highest kinetic impact with strict C4ISR gating
             type_hierarchy = {
                 "direct_strike": 5, "casualties": 5, "destruction": 4, "explosion": 3,
                 "fire": 3, "armed_conflict": 3, "air_defense": 2, "radar_track": 1, "general_alert": 0
             }
-            if type_hierarchy.get(event_type, 0) > type_hierarchy.get(cluster_match.event_type, 0):
+            new_rank = type_hierarchy.get(event_type, 0)
+            cur_rank = type_hierarchy.get(cluster_match.event_type, 0)
+
+            # Gate kinetic upgrade: Secondary unverified source cannot upgrade official military track to strike/casualties without media
+            allow_type_upgrade = False
+            if new_rank > cur_rank:
+                if cluster_match.is_official and not is_official_src and not has_media:
+                    logger.warning(
+                        f"🛡️ Gated kinetic upgrade from secondary source '{channel}' ({event_type}) "
+                        f"for official incident ID {cluster_match.id} ({cluster_match.event_type})"
+                    )
+                else:
+                    allow_type_upgrade = True
+
+            if allow_type_upgrade:
                 cluster_match.event_type = event_type
+
+            # Attribution & Text Integrity:
+            # If incoming is official and existing was unofficial, upgrade primary source to official
+            if is_official_src and not cluster_match.is_official:
+                cluster_match.source_channel = channel
+                cluster_match.message_id = msg_id
+                cluster_match.message_text = final_message_text
+            elif cluster_match.is_official and not is_official_src:
+                # Strictly preserve authentic official military alert text from being overwritten by aggregators
+                logger.info(f"🛡️ Preserved official text from @{cluster_match.source_channel} over secondary update from @{channel}")
+            elif allow_type_upgrade:
                 cluster_match.message_text = f"{final_message_text} [Оновлено]"
 
             # Recalculate 2D scores for consolidated incident

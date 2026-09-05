@@ -76,7 +76,7 @@ def get_dashboard_url() -> str:
                 return url_str
     except Exception:
         pass
-    return "http://127.0.0.1"
+    return os.getenv("DEFAULT_PUBLIC_URL", "http://136.113.156.17")
 
 
 async def safe_send(message: types.Message, text: str, **kwargs):
