@@ -143,7 +143,7 @@
 12. **🎛️ Комплекс тактичних нашарувань C4ISR та верифікації цілей:**
     - **WEZ (Weapons Engagement Zones):** Розрахунок зон вогню та радарних куполів комплексів Тор-М2, Панцир-С1, Бук-М3, С-400 (`/api/v1/threats/wez-envelopes`).
     - **LOB Triangulation & CEP:** Геодезична засічка WGS-84, триангуляція азимутів та розрахунок кругового ймовірного відхилення епіцентру цілей (`/api/v1/recon/triangulate-lob`).
-    - **CCTV TOT Optical Recon:** 315+ вузлів оптичного спостереження ТОТ (Донецьк, Севастополь, Харків, Енергодар) з розрахунком Time-on-Target (`/api/v1/recon/cctv-cameras`).
+    - **CCTV Optical Recon:** 315+ вузлів оптичного спостереження ТОТ (Донецьк, Севастополь, Луганськ, Енергодар) та прифронтового сектору Харкова з розрахунком Time-on-Target (`/api/v1/recon/cctv-cameras`).
     - **NOAA Solar Chronolocation:** Хронолокація за висотою/азимутом сонця та вектором тіней (`worker/osint/geoint_engine.py`).
     - **ATAK CoT XML 2.0 & DataPackages:** Повна підтримка MIL-STD-2525C для ATAK / WinTAK (`/api/cot/zip`, `/api/cot`).
     - **Двостороння шина синхронізації:** Двостороння синхронізація бот ⟷ мапа через Redis Pub/Sub (`POST /api/v1/sync`, `/sync`, кнопка `🔄 СИНХР`).
