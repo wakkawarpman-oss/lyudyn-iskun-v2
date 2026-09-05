@@ -6,6 +6,7 @@ from telethon.sessions import StringSession
 import json
 from worker.celery_app import app as celery_app
 import redis.asyncio as aioredis
+from listener.nats_publisher import publish_tg_report
 
 API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
@@ -144,6 +145,11 @@ async def perform_sync(client, valid_channels):
                         "fwd_from": extract_forward_source(msg)
                     }
                     celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
+                    # Shadow publish to NATS JetStream (P2.1 Zero-Loss buffer)
+                    try:
+                        await publish_tg_report(payload)
+                    except Exception:
+                        pass
                     backfilled_count += 1
                 await set_channel_last_id(ch_clean, msg.id)
         except Exception as ex:
@@ -273,8 +279,12 @@ async def main():
             }
             
             celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
+            try:
+                await publish_tg_report(payload)
+            except Exception:
+                pass
             await set_channel_last_id(ch_clean, msg.id)
-            print(f"⚡ Live event from {payload['channel']} (ID: {msg.id}) -> Celery Worker")
+            print(f"⚡ Live event from {payload['channel']} (ID: {msg.id}) -> Celery Worker + NATS")
 
     # Initial sync
     sync_tasks = []
