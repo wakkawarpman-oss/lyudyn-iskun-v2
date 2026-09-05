@@ -11,10 +11,21 @@ from worker.schemas import ParsedEventSchema
 KYIV_TZ = ZoneInfo("Europe/Kyiv")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+XAI_URL = "https://api.x.ai/v1/chat/completions"
+XAI_MODEL = os.getenv("XAI_MODEL", "grok-4.20-0309-non-reasoning")
+MAX_XAI_DAILY_CALLS = int(os.getenv("MAX_XAI_DAILY_CALLS", "600"))
+
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+
+try:
+    import redis
+    redis_client = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
+except Exception:
+    redis_client = None
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +54,9 @@ def build_system_prompt() -> str:
 ЯКЩО ТОБІ НАДАНО ФОТО — ПРОВЕДИ ВІЗУАЛЬНИЙ АНАЛІЗ ФОТО:
 ЗАБОРОНЕНО вгадувати точний район за типовою архітектурою (наприклад, панельні будинки чи хрущовки). 
 Якщо на фото немає унікальних орієнтирів (чіткі вивіски, відомі пам'ятники, унікальні перехрестя, читабельний текст вулиці), локація ПОВИННА бути визначена як загальна (наприклад, назва міста або області). 
-Краще вказати загальний регіон, ніж згенерувати хибну точну координату, яка призведе до паніки.
-Використай ці підказки, щоб безпечно і відповідально витягти `location`.
+ЯКЩО ПОВІДОМЛЕННЯ ЦИВІЛЬНЕ АБО НЕ Є ВІЙСЬКОВОЮ ПОДІЄЮ:
+- Якщо новина про політику, корупцію, кол-центри, суди, прокуратуру, НАБУ, побутовий кримінал, ТЦК, звичайні ДТП, погоду, комунальні аварії — ОБОВ'ЯЗКОВО повертай:
+  "event_type": "civilian_noise", "is_confirmed_incident": false, "is_radar_track": false, "short_summary": "Не військова подія".
 
 Поверни ТІЛЬКИ валідний JSON у такій структурі:
 {{
@@ -52,7 +64,7 @@ def build_system_prompt() -> str:
   "target_oblast": "код області (наприклад: kharkiv, odesa, dnipropetrovsk, kyiv_city, zaporizhzhia...)",
   "is_confirmed_incident": true/false,
   "is_radar_track": true/false,
-  "event_type": "air_defense|direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
+  "event_type": "air_defense|direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert|civilian_noise",
   "location": "точна назва району/вулиці/міста",
   "osm_query": "вибери ЛИШЕ ОДНУ найбільш конкретну локацію для OpenStreetMap (наприклад: Салтівка, Харків або Пересип, Одеса)",
   "casualties": true/false,
@@ -183,21 +195,35 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     else:
         is_kyiv = any(k in t_lower for k in kyiv_keywords)
     
-    event_type = "general_alert"
+    event_type = None
     if any(w in t_lower for w in ['збито', 'подавлено', 'робота ппо', 'збиття', 'відбито атаку', 'збили']):
         event_type = "air_defense"
     elif 'вибух' in t_lower:
         event_type = "explosion"
     elif 'приліт' in t_lower or 'влучання' in t_lower:
         event_type = "direct_strike"
-    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'бпла', 'дрон', 'мопед', '🛵', 'вектор ціл']) or any(
+    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'бпла', 'дрон', 'мопед', '🛵', 'вектор ціл', 'реактив', 'каб', 'авіа']) or any(
         phrase in t_lower for phrase in ['рух ціл', 'рух бпла', 'рух ракет', 'рух дронів', 'курс на', 'летить на', 'помічено ціль', 'повітряна ціль']
     ):
         event_type = "radar_track"
     elif 'пожеж' in t_lower or 'загорян' in t_lower:
-        event_type = "fire"
-    elif any(w in t_lower for w in ['тривог', 'відбій', 'увага']):
+        if any(w in t_lower for w in ['приліт', 'уламк', 'атак', 'вибух', 'обстріл', 'удар']):
+            event_type = "fire"
+    elif any(w in t_lower for w in ['повітряна тривога', 'відбій повітряної', 'загроза балістики', 'ракетна небезпека', 'повітряної тривоги', 'тривог', 'відбій']):
         event_type = "general_alert"
+
+    # Strict Gatekeeper: If no genuine tactical threat detected, fast-reject as civilian noise
+    if not event_type:
+        return {
+            "is_kyiv_region": False,
+            "target_oblast": "all",
+            "is_confirmed_incident": False,
+            "is_radar_track": False,
+            "event_type": "civilian_noise",
+            "location": "Цивільне повідомлення",
+            "osm_query": "Україна",
+            "short_summary": "Повідомлення не містить тактичних загроз"
+        }
     
     loc_name = "Київ та область"
     osm_query = "Київ"
@@ -207,6 +233,9 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
             # Guard: If preceded by street designator (e.g. 'вул. Коцюбинського'), this is a street, not a town!
             if re.search(r'(?:вул\.?|вулиц[яіе]|пров\.?|проспект|просп\.?|бульвар|бул\.?)\s+' + re.escape(k), t_lower):
                 continue
+            # Guard: 'лесі українки' or 'українки' in street names is NOT the town 'Українка'
+            if k == 'українк' and any(st in t_lower for st in ['лесі українки', 'леси украинки', 'бульвар лесі', 'проспект лесі', 'площа лесі']):
+                continue
             loc_name = regional_city_names[k]
             osm_query = f"{loc_name}, Київська область, Україна"
             break
@@ -214,6 +243,12 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     if loc_name == "Київ та область":
         for k in kyiv_districts:
             if k in t_lower:
+                # Guard: 'новопечерськ' is NOT Pechersk district in a military threat context!
+                if k == 'печерс' and 'новопечерськ' in t_lower:
+                    continue
+                # Guard: 'дніпровський металургійний' or non-Kyiv industrial plants
+                if k == 'дніпровськ' and any(ex in t_lower for ex in ['металургійн', 'завод', 'херсон', 'запоріж']):
+                    continue
                 loc_name = kyiv_district_names[k]
                 osm_query = f"{loc_name}, Київ"
                 break
@@ -330,37 +365,111 @@ def _call_ollama_text(text: str, sys_prompt: str, model: str = None) -> dict:
         logger.debug(f"Ollama local inference unavailable: {e}")
     return {}
 
+def _call_xai_text(text: str, sys_prompt: str) -> Optional[dict]:
+    """Calls xAI Grok with intelligent token economy and budget preservation.
+    - Caches responses in Redis (24h TTL) to avoid duplicate billable API calls.
+    - Limits input text to 800 chars and max_tokens to 160.
+    - Enforces a daily call budget circuit breaker (default 600 calls/day, ~$0.10/day).
+    """
+    if not XAI_API_KEY or not text:
+        return None
+
+    import hashlib
+    h = hashlib.sha256(text.strip().lower().encode("utf-8")).hexdigest()[:16]
+    cache_key = f"xai_cache:{h}"
+
+    # 1. Semantic cache check (0 tokens, $0.00 cost)
+    if redis_client:
+        try:
+            cached = redis_client.get(cache_key)
+            if cached:
+                logger.debug(f"[XAI_CACHE_HIT] Reusing Grok extraction for {h}")
+                return json.loads(cached)
+        except Exception:
+            pass
+
+    # 2. Daily call quota circuit breaker
+    today_str = datetime.date.today().isoformat()
+    daily_key = f"xai_daily_calls:{today_str}"
+    if redis_client:
+        try:
+            curr_calls = int(redis_client.get(daily_key) or 0)
+            if curr_calls >= MAX_XAI_DAILY_CALLS:
+                logger.warning(f"xAI Grok daily budget reached ({curr_calls}/{MAX_XAI_DAILY_CALLS}). Preserving funds, falling back to local heuristic.")
+                return None
+        except Exception:
+            pass
+
+    # 3. Compact payload invocation
+    payload = {
+        "model": XAI_MODEL,
+        "messages": [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": text[:800]}
+        ],
+        "max_tokens": 160,
+        "temperature": 0.1
+    }
+
+    try:
+        resp = requests.post(
+            XAI_URL,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {XAI_API_KEY}"
+            },
+            json=payload,
+            timeout=10
+        )
+        if resp.status_code == 200:
+            content = resp.json()["choices"][0]["message"]["content"]
+            parsed = clean_and_validate_json_response(content)
+            if parsed:
+                if redis_client:
+                    try:
+                        redis_client.setex(cache_key, 86400, json.dumps(parsed))
+                        redis_client.incr(daily_key)
+                        redis_client.expire(daily_key, 86400 * 2)
+                    except Exception:
+                        pass
+                return parsed
+        else:
+            logger.warning(f"xAI Grok returned {resp.status_code}: {resp.text[:200]}")
+    except Exception as e:
+        logger.warning(f"xAI Grok connection error: {e}")
+    return None
+
 def _route_text_llm(text: str, sys_prompt: str) -> dict:
     if not text:
         return {}
-    
+
+    # Priority 1: High-Precision xAI Grok (Budget-managed & cached)
+    if XAI_API_KEY:
+        xai_res = _call_xai_text(text, sys_prompt)
+        if xai_res:
+            return xai_res
+
+    # Priority 2: Secondary Groq API (Free tier)
     resp = None
-    try:
-        resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.8-27b")
-    except Exception as e:
-        logger.warning(f"Groq API connection error: {e}")
+    if GROQ_API_KEY:
+        try:
+            resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.8-27b")
+            if resp is not None and resp.status_code == 200:
+                return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            logger.warning(f"Groq API connection error: {e}")
 
-    if resp is not None and resp.status_code == 200:
-        return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
-
-    # OPSEC Tier 1 Offline Fallback: Local Ollama LLM
-    if resp is None or resp.status_code in (429, 503, 500, 504):
+    # Priority 3: Local Ollama LLM
+    if resp is None or getattr(resp, 'status_code', None) in (429, 503, 500, 504):
         logger.info("Attempting local Ollama LLM fallback...")
         ollama_data = _call_ollama_text(text, sys_prompt)
         if ollama_data:
             return ollama_data
 
-    # Cloud secondary fallback if OpenAI key exists
-    if resp is not None and resp.status_code in (429, 503, 500) and OPENAI_API_KEY:
-        logger.warning(f"Groq API returned {resp.status_code}. Switching to OpenAI fallback...")
+    # Priority 4: Cloud secondary fallback if OpenAI key exists
+    if resp is not None and getattr(resp, 'status_code', None) in (429, 503, 500) and OPENAI_API_KEY:
+        logger.warning("Switching to OpenAI fallback...")
         resp = _call_openai_text(text, sys_prompt)
-        if resp.status_code == 200:
-            return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
-
-    # Fallback to secondary Groq model if not rate-limited
-    if resp is not None and resp.status_code not in (429, 401, 200):
-        logger.warning(f"Groq API error {resp.status_code}. Switching to Qwen 3.6 fallback...")
-        resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.6-27b")
         if resp.status_code == 200:
             return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
 

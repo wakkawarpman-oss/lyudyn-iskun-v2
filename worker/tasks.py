@@ -176,14 +176,15 @@ def process_message(self, payload_str):
         except Exception:
             pass
 
-    from worker.geo_disambiguation import is_civilian_non_threat_noise
-    if is_civilian_non_threat_noise(text):
+    from worker.geo_disambiguation import is_tactical_threat_candidate, is_civilian_non_threat_noise
+    # Gatekeeper 1: Drop non-tactical civic, political, judicial noise and messages lacking military significance
+    if not is_tactical_threat_candidate(text):
         if channel and message_id is not None and redis_client:
             try:
                 redis_client.setex(f"processed_msg:{channel}:{message_id}", 86400, "1")
             except Exception:
                 pass
-        return {"skip": True, "reason": "civilian_noise"}
+        return {"skip": True, "reason": "non_tactical"}
 
     # Entry point for the pipeline
     workflow = chain(
@@ -206,12 +207,13 @@ def pipeline_extract(self, payload_str):
         detect_external_oblast,
         is_explicitly_kyiv_context,
         detect_channel_oblast,
-        is_civilian_non_threat_noise
+        is_civilian_non_threat_noise,
+        is_tactical_threat_candidate
     )
 
-    # Fast-reject civilian municipal maintenance / road works / traffic delays BEFORE any DB/media/LLM processing
-    if is_civilian_non_threat_noise(text):
-        return {"skip": True, "reason": "civilian_noise"}
+    # Fast-reject civilian municipal maintenance / corruption / judicial noise BEFORE any DB/media/LLM processing
+    if not is_tactical_threat_candidate(text):
+        return {"skip": True, "reason": "non_tactical"}
 
     channel_clean = payload.get("channel", "").lstrip("@").lower()
     ch_native_oblast = detect_channel_oblast(channel_clean) or payload.get("oblast")

@@ -80,6 +80,14 @@ SOURCE_REGISTRY: Dict[str, Dict[str, Any]] = {
         "scope": "Tactical",
         "latency_tier": "INSTANT"
     },
+    "delta_odesa": {
+        "title": "Дельта Одеса / Радар Півдня",
+        "type": "RADAR_MONITOR",
+        "tier": "A",
+        "base_weight": 0.85,
+        "scope": "Odesa / South",
+        "latency_tier": "INSTANT"
+    },
     "ssternenko": {
         "title": "Сергій Стерненко",
         "type": "VERIFIED_PUBLIC",

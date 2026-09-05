@@ -1524,76 +1524,12 @@
                     <span class="layer-counter-tag" id="cnt-airfields">OSM</span>
                 </div>
 
-                <div class="layer-checkbox-row" id="row-enemy-facilities">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>🔴 Бази запусків та заводи БпЛА РФ (Alabuga/Navlya)</span>
-                    </div>
-                    <span class="layer-counter-tag" id="cnt-facilities">10</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-wez">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>🛡️ Куполи ППО та зони вогню WEZ (Тор/Панцир/С-400)</span>
-                    </div>
-                    <span class="layer-counter-tag">WEZ</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-lob">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>📐 LOB-пеленги та тріангуляція засічок (CEP WGS-84)</span>
-                    </div>
-                    <span class="layer-counter-tag">LOB</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-cctv">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>📹 Оптичні вузли відеорозвідки CCTV ТОТ</span>
-                    </div>
-                    <span class="layer-counter-tag">315 CCTV</span>
-                </div>
-
                 <div class="layer-checkbox-row" id="row-weather-wind">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box"></div>
                         <span>💨 Вектори вітру (925 hPa) & знос</span>
                     </div>
                     <span class="layer-counter-tag" id="cnt-wind">METEO</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-acoustic-sensors">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>🎙️ Акустичні сенсори (Sky Fortress / Zvook)</span>
-                    </div>
-                    <span class="layer-counter-tag" id="cnt-acoustic">MIC</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-maritime-ais">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>⚓ Носії «Калібрів» AIS (ВМС РФ у Чорному морі)</span>
-                    </div>
-                    <span class="layer-counter-tag" id="cnt-maritime">AIS</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-terrain-los">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>⛰️ Радіогоризонт & каньйони маскування</span>
-                    </div>
-                    <span class="layer-counter-tag" id="cnt-terrain">LoS</span>
-                </div>
-
-                <div class="layer-checkbox-row" id="row-sigint-emitters">
-                    <div class="layer-checkbox-left">
-                        <div class="custom-check-box"></div>
-                        <span>📡 SIGINT / РЕР пеленги та завади 5.8 GHz</span>
-                    </div>
-                    <span class="layer-counter-tag" id="cnt-sigint">SDR</span>
                 </div>
 
                 <div class="layer-checkbox-row" id="row-shelters">
@@ -2061,20 +1997,11 @@
         const zonesLayer = L.layerGroup().addTo(map);
         const infraLayer = L.layerGroup();
         const airfieldsLayer = L.layerGroup();
-        const enemyFacilitiesLayer = L.layerGroup();
-        const wezLayer = L.layerGroup();
-        const lobLayer = L.layerGroup();
-        const cctvLayer = L.layerGroup();
         const sheltersLayer = L.layerGroup();
         const thermalLayer = L.layerGroup();
         const totTelecomLayer = L.layerGroup();
         const ewLayer = L.layerGroup();
         const weatherWindLayer = L.layerGroup();
-        const acousticSensorsLayer = L.layerGroup();
-        const maritimeAisLayer = L.layerGroup();
-        const terrainLosLayer = L.layerGroup();
-        const sigintEmittersLayer = L.layerGroup();
-        let latestMaritimeStatus = null;
         const droneVectorLayer = L.layerGroup().addTo(map);
         const sunShadowLayer = L.layerGroup().addTo(map);
         let isMilSymbology = false;
@@ -2406,61 +2333,6 @@
             }
         });
 
-        toggleLayerRow('row-enemy-facilities', enemyFacilitiesLayer, async (on) => {
-            if (on && enemyFacilitiesLayer.getLayers().length === 0) {
-                const cntBadge = document.getElementById('cnt-facilities');
-                try {
-                    const res = await fetch('/api/v1/threats/enemy-facilities');
-                    const data = await res.json();
-                    const list = data.facilities || [];
-                    if (cntBadge) cntBadge.textContent = list.length;
-                    list.forEach(f => {
-                        const isLaunch = f.type === 'launch_site';
-                        const isFactory = f.type === 'factory';
-                        const color = isLaunch ? '#ef4444' : (isFactory ? '#f97316' : '#06b6d4');
-                        const iconSymbol = isLaunch ? '🚀' : (isFactory ? '🏭' : '📡');
-                        
-                        const m = L.circleMarker([f.lat, f.lon], {
-                            radius: isLaunch ? 8 : 7,
-                            fillColor: color,
-                            color: '#ffffff',
-                            weight: 2,
-                            fillOpacity: 0.9
-                        });
-
-                        if (isLaunch) {
-                            L.circle([f.lat, f.lon], {
-                                radius: 35000,
-                                color: color,
-                                weight: 1,
-                                fillOpacity: 0.08,
-                                dashArray: '4, 4'
-                            }).addTo(enemyFacilitiesLayer);
-                        }
-
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:240px; color:#1e293b;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <span style="font-weight:800; color:${color}; font-size:11px; text-transform:uppercase;">${iconSymbol} ${f.type.replace('_', ' ')}</span>
-                                    <span style="font-size:9px; background:rgba(239,68,68,0.15); color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:800;">${f.threat_level}</span>
-                                </div>
-                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:4px;">${f.name}</div>
-                                <div style="font-size:11px; color:#475569; margin-bottom:6px;"><strong>Сектор:</strong> ${f.sector}</div>
-                                <div style="background:#f8fafc; border-left:3px solid ${color}; padding:6px 8px; font-size:11px; color:#334155; border-radius:0 4px 4px 0; margin-bottom:6px;">
-                                    ${f.dossier}
-                                </div>
-                                <div style="color:#94a3b8; font-size:10px;">Координати: ${f.lat.toFixed(4)}, ${f.lon.toFixed(4)}</div>
-                            </div>
-                        `);
-                        m.addTo(enemyFacilitiesLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load enemy facilities:', e);
-                    if (cntBadge) cntBadge.textContent = '!';
-                }
-            }
-        });
-
         toggleLayerRow('row-tot-telecom', totTelecomLayer, async (on) => {
             if (on && totTelecomLayer.getLayers().length === 0) {
                 try {
@@ -2591,192 +2463,6 @@
             }
         });
 
-        toggleLayerRow('row-acoustic-sensors', acousticSensorsLayer, async (on) => {
-            if (on) {
-                acousticSensorsLayer.clearLayers();
-                try {
-                    const res = await fetch('/api/v1/radar/acoustic-tracks');
-                    const data = await res.json();
-                    const hits = data.hits || [];
-                    const cntBadge = document.getElementById('cnt-acoustic');
-                    if (cntBadge) cntBadge.textContent = hits.length;
-                    hits.forEach(h => {
-                        L.circle([h.lat, h.lng], {
-                            radius: 3200,
-                            color: '#10b981',
-                            fillColor: '#10b981',
-                            fillOpacity: 0.12,
-                            weight: 1.5,
-                            dashArray: '3, 4'
-                        }).addTo(acousticSensorsLayer);
-
-                        const m = L.circleMarker([h.lat, h.lng], {
-                            radius: 6,
-                            fillColor: '#10b981',
-                            color: '#ffffff',
-                            weight: 2,
-                            fillOpacity: 0.95
-                        });
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; color:#0f172a; min-width:200px;">
-                                <div style="font-weight:800; color:#059669; margin-bottom:3px;">🎙️ ${h.sensor_id}</div>
-                                <div>Джерело: <strong>${h.source}</strong></div>
-                                <div>Частота: <strong>${h.frequency_hz} Гц (MD550)</strong></div>
-                                <div>SNR: <strong>${h.snr_db} dB</strong> | Довіра: <strong>${h.confidence}%</strong></div>
-                            </div>
-                        `);
-                        m.addTo(acousticSensorsLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load acoustic hits:', e);
-                }
-            }
-        });
-
-        toggleLayerRow('row-maritime-ais', maritimeAisLayer, async (on) => {
-            if (on) {
-                maritimeAisLayer.clearLayers();
-                try {
-                    const res = await fetch('/api/v1/radar/maritime-intel');
-                    const data = await res.json();
-                    latestMaritimeStatus = data;
-                    const carriers = data.carriers || [];
-                    const cntBadge = document.getElementById('cnt-maritime');
-                    if (cntBadge) cntBadge.textContent = `${data.carriers_at_sea_count || 0} ВМС`;
-
-                    carriers.forEach(c => {
-                        const isSea = c.status === 'PATROL_AT_SEA' || c.status === 'SUBMERGED_COMBAT_DUTY';
-                        const col = isSea ? '#ef4444' : '#64748b';
-
-                        if (isSea) {
-                            L.circle([c.lat, c.lng], {
-                                radius: 120000,
-                                color: '#ef4444',
-                                fillColor: '#ef4444',
-                                fillOpacity: 0.06,
-                                weight: 1.5,
-                                dashArray: '6, 6'
-                            }).addTo(maritimeAisLayer);
-                        }
-
-                        const shipIcon = L.divIcon({
-                            className: 'custom-ship-marker',
-                            html: `<div style="background:${col}; color:#fff; font-size:14px; width:28px; height:28px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${col};">⚓</div>`,
-                            iconSize: [28, 28],
-                            iconAnchor: [14, 14]
-                        });
-
-                        const m = L.marker([c.lat, c.lng], { icon: shipIcon });
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; color:#0f172a; min-width:230px;">
-                                <div style="font-weight:800; color:#dc2626; margin-bottom:3px; font-size:13px;">⚓ ${c.name}</div>
-                                <div>Проєкт: <strong>${c.project}</strong> (Борт ${c.pennant})</div>
-                                <div>Озброєння: <strong style="color:#b91c1c;">${c.vls_cells}x ${c.missile_type}</strong></div>
-                                <div>Статус: <strong>${c.status_label}</strong></div>
-                                <div>Сектор: <strong>${c.sector}</strong></div>
-                                <div>До Одеси: <strong>~${c.distance_to_odesa_km} км</strong></div>
-                            </div>
-                        `);
-                        m.addTo(maritimeAisLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load maritime intel:', e);
-                }
-            }
-        });
-
-        toggleLayerRow('row-terrain-los', terrainLosLayer, async (on) => {
-            if (on) {
-                terrainLosLayer.clearLayers();
-                const radarNodes = [
-                    { name: 'РЛС Північ-1 (Київ)', lat: 50.4501, lng: 30.5234, hKm: 88.0 },
-                    { name: 'РЛС Схід-4 (Дніпро)', lat: 48.4647, lng: 35.0462, hKm: 82.0 },
-                    { name: 'РЛС Південь-3 (Одеса)', lat: 46.4825, lng: 30.7233, hKm: 76.0 },
-                    { name: 'РЛС Запоріжжя-5', lat: 47.8388, lng: 35.1396, hKm: 78.0 },
-                    { name: 'РЛС Поділля-6 (Умань)', lat: 48.7500, lng: 30.2200, hKm: 92.0 },
-                    { name: 'РЛС Слобожанщина (Харків)', lat: 49.9935, lng: 36.2304, hKm: 85.0 }
-                ];
-                radarNodes.forEach(rn => {
-                    L.circle([rn.lat, rn.lng], {
-                        radius: rn.hKm * 1000,
-                        color: '#06b6d4',
-                        fillColor: '#06b6d4',
-                        fillOpacity: 0.04,
-                        weight: 1.2,
-                        dashArray: '4, 6'
-                    }).addTo(terrainLosLayer);
-
-                    L.circleMarker([rn.lat, rn.lng], {
-                        radius: 5,
-                        fillColor: '#06b6d4',
-                        color: '#ffffff',
-                        weight: 2,
-                        fillOpacity: 0.9
-                    }).bindPopup(`<strong>📡 ${rn.name}</strong><br>Радіогоризонт цілі на 60м: ~${rn.hKm} км`).addTo(terrainLosLayer);
-                });
-
-                const canyons = [
-                    { name: 'Дніпровський каньйон', pts: [[51.30, 30.50], [50.50, 30.55], [50.15, 30.75], [49.75, 31.46], [49.44, 32.06], [49.06, 33.42], [48.51, 34.61], [48.46, 35.04], [47.83, 35.14], [47.56, 34.39], [46.63, 32.61]], col: '#eab308' },
-                    { name: 'Русло р. Десна', pts: [[52.01, 33.27], [51.80, 32.50], [51.49, 31.29], [50.95, 30.88], [50.55, 30.60]], col: '#f59e0b' },
-                    { name: 'Русло р. Південний Буг', pts: [[49.42, 26.98], [49.23, 28.47], [48.04, 30.85], [46.97, 31.99]], col: '#eab308' },
-                    { name: 'Дністровський каньйон', pts: [[49.12, 24.73], [48.64, 25.73], [48.45, 27.79]], col: '#d97706' }
-                ];
-                canyons.forEach(c => {
-                    L.polyline(c.pts, {
-                        color: c.col,
-                        weight: 4,
-                        opacity: 0.7,
-                        dashArray: '8, 6'
-                    }).bindPopup(`<strong>⛰️ ${c.name}</strong><br>Зона тактичного маскування рельєфом (глибина 65-120м)`).addTo(terrainLosLayer);
-                });
-            }
-        });
-
-        toggleLayerRow('row-sigint-emitters', sigintEmittersLayer, async (on) => {
-            if (on) {
-                sigintEmittersLayer.clearLayers();
-                try {
-                    const res = await fetch('/api/v1/radar/sigint-emitters');
-                    const data = await res.json();
-                    const emitters = data.emitters || [];
-                    const cntBadge = document.getElementById('cnt-sigint');
-                    if (cntBadge) cntBadge.textContent = emitters.length;
-
-                    emitters.forEach(em => {
-                        const col = em.type === 'CRPA_JAMMER' || em.type === 'GNSS_SPOOF' ? '#ef4444' : '#f97316';
-                        L.circle([em.lat, em.lng], {
-                            radius: (em.radius_km || 25) * 1000,
-                            color: col,
-                            fillColor: col,
-                            fillOpacity: 0.10,
-                            weight: 1.5,
-                            dashArray: '3, 5'
-                        }).addTo(sigintEmittersLayer);
-
-                        const sigIcon = L.divIcon({
-                            className: 'custom-sigint-marker',
-                            html: `<div style="background:${col}; color:#fff; font-size:12px; width:26px; height:26px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 8px ${col};">⚡</div>`,
-                            iconSize: [26, 26],
-                            iconAnchor: [13, 13]
-                        });
-
-                        const m = L.marker([em.lat, em.lng], { icon: sigIcon });
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; color:#0f172a; min-width:220px;">
-                                <div style="font-weight:800; color:#c2410c; margin-bottom:3px;">📡 ${em.label}</div>
-                                <div>Частота: <strong>${em.frequency_mhz} МГц</strong></div>
-                                <div>Потужність: <strong>${em.power_dbm} dBm</strong></div>
-                                <div>Джерело: <strong>${em.source}</strong></div>
-                                <div style="font-size:10.5px; color:#b91c1c; margin-top:3px;">⚠️ ${em.tactical_advisory}</div>
-                            </div>
-                        `);
-                        m.addTo(sigintEmittersLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load SIGINT emitters:', e);
-                }
-            }
-        });
 
         toggleLayerRow('row-clustering', null, (on) => {
             isClusteringEnabled = on;
@@ -2795,153 +2481,6 @@
             renderTimeline(selectedHours);
         });
 
-        toggleLayerRow('row-wez', wezLayer, async (on) => {
-            if (on && wezLayer.getLayers().length === 0) {
-                try {
-                    const res = await fetch('/api/v1/threats/wez-envelopes');
-                    const data = await res.json();
-                    (data.features || []).forEach(f => {
-                        const [lon, lat] = f.geometry.coordinates;
-                        const p = f.properties;
-
-                        if (p.radar_radius_m) {
-                            L.circle([lat, lon], {
-                                radius: p.radar_radius_m,
-                                color: '#facc15',
-                                weight: 1.5,
-                                dashArray: '6, 6',
-                                fillColor: '#facc15',
-                                fillOpacity: 0.04
-                            }).bindTooltip(`РЛС виявлення: ${p.system_name} (~${Math.round(p.radar_radius_m/1000)} км)`, {sticky: true}).addTo(wezLayer);
-                        }
-
-                        if (p.kill_radius_m) {
-                            L.circle([lat, lon], {
-                                radius: p.kill_radius_m,
-                                color: p.color || '#ef4444',
-                                weight: 2,
-                                fillColor: p.color || '#ef4444',
-                                fillOpacity: 0.14
-                            }).bindTooltip(`Зона вогню: ${p.system_name} (${Math.round(p.kill_radius_m/1000)} км)`, {sticky: true}).addTo(wezLayer);
-                        }
-
-                        const m = L.circleMarker([lat, lon], {
-                            radius: 7,
-                            fillColor: p.color || '#ef4444',
-                            color: '#ffffff',
-                            weight: 2,
-                            fillOpacity: 0.95
-                        });
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:230px; color:#1e293b;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <span style="font-weight:800; color:${p.color}; font-size:11px; text-transform:uppercase;">🛡️ ${p.category} • ${p.system_type}</span>
-                                    <span style="font-size:9px; background:rgba(239,68,68,0.15); color:#dc2626; padding:1px 5px; border-radius:4px; font-weight:800;">${p.confidence}% Довіра</span>
-                                </div>
-                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:3px;">${p.name}</div>
-                                <div style="font-size:11px; color:#475569; margin-bottom:3px;"><strong>Підрозділ:</strong> ${p.unit}</div>
-                                <div style="font-size:11px; color:#334155; margin-bottom:4px;"><strong>Зона вогню:</strong> до ${Math.round(p.kill_radius_m/1000)} км | <strong>Висота:</strong> до ${p.max_altitude_km} км</div>
-                                <div style="background:#f8fafc; border-left:3px solid ${p.color}; padding:4px 6px; font-size:10px; color:#64748b;">Джерело: ${p.source}</div>
-                            </div>
-                        `);
-                        m.addTo(wezLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load WEZ envelopes:', e);
-                }
-            }
-        });
-
-        toggleLayerRow('row-cctv', cctvLayer, async (on) => {
-            if (on && cctvLayer.getLayers().length === 0) {
-                try {
-                    const res = await fetch('/api/v1/recon/cctv-cameras');
-                    const data = await res.json();
-                    (data.nodes || []).forEach(node => {
-                        const isActive = node.status === 'ACTIVE_STREAM';
-                        const color = isActive ? '#06b6d4' : '#64748b';
-                        const m = L.circleMarker([node.lat, node.lon], {
-                            radius: 6,
-                            fillColor: color,
-                            color: '#ffffff',
-                            weight: 2,
-                            fillOpacity: 0.9
-                        });
-                        m.bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; min-width:220px; color:#1e293b;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                    <span style="font-weight:800; color:${color}; font-size:11px;">📹 ${node.type}</span>
-                                    <span style="font-size:9px; background:${isActive ? 'rgba(6,182,212,0.15)' : 'rgba(100,116,139,0.15)'}; color:${color}; padding:1px 5px; border-radius:4px; font-weight:800;">${node.status}</span>
-                                </div>
-                                <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:2px;">${node.name}</div>
-                                <div style="font-size:11px; color:#475569; margin-bottom:3px;">📍 ${node.city} • ${node.provider}</div>
-                                <div style="background:#f8fafc; border-left:3px solid ${color}; padding:4px 6px; font-size:10.5px; color:#334155; margin-bottom:6px;">
-                                    ${node.dossier}
-                                </div>
-                                <div style="font-size:10px; color:#64748b;">IP/Порт: ${node.ip}:${node.port} • BDA: ${node.verified_bda ? 'ПІДТВЕРДЖЕНО' : 'ОЧІКУВАННЯ'}</div>
-                            </div>
-                        `);
-                        m.addTo(cctvLayer);
-                    });
-                } catch(e) {
-                    console.warn('Failed to load CCTV nodes:', e);
-                }
-            }
-        });
-
-        toggleLayerRow('row-lob', lobLayer, async (on) => {
-            if (on && lobLayer.getLayers().length === 0) {
-                try {
-                    const res = await fetch('/api/v1/geoint/lob-triangulate', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            bearings: [
-                                {lat: 46.40640, lon: 32.63750, azimuth: 250, observer: "КП Гладківка (ТОТ)"},
-                                {lat: 46.43500, lon: 32.58000, azimuth: 165, observer: "Пост спостереження Степове"}
-                            ]
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.status === 'success') {
-                        (data.rays || []).forEach(r => {
-                            L.polyline([r.start, r.end], {
-                                color: '#38bdf8',
-                                weight: 2,
-                                dashArray: '5, 5',
-                                opacity: 0.8
-                            }).bindTooltip(`${r.observer} (Az ${r.azimuth}°)`).addTo(lobLayer);
-
-                            L.circleMarker(r.start, {
-                                radius: 5,
-                                fillColor: '#38bdf8',
-                                color: '#fff',
-                                weight: 1.5,
-                                fillOpacity: 1
-                            }).bindPopup(`<b>${r.observer}</b><br>Азимут засічки: ${r.azimuth}°`).addTo(lobLayer);
-                        });
-
-                        const t = data.target;
-                        L.circle([t.lat, t.lon], {
-                            radius: data.cep_radius_m || 30,
-                            color: '#f43f5e',
-                            fillColor: '#f43f5e',
-                            fillOpacity: 0.25,
-                            weight: 2
-                        }).bindPopup(`
-                            <div style="font-family:sans-serif; font-size:12px; color:#1e293b;">
-                                <div style="font-weight:800; color:#e11d48; font-size:11px;">🎯 ТРІАНГУЛЬОВАНА ЦІЛЬ (LOB WGS-84)</div>
-                                <div style="font-size:12px; margin:3px 0;"><strong>Координати:</strong> ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
-                                <div style="font-size:11px; color:#475569;"><strong>Похибка (CEP):</strong> ±${data.cep_radius_m} м</div>
-                                <div style="font-size:10px; color:#059669; font-weight:700;">Довіра засічки: ${data.confidence}%</div>
-                            </div>
-                        `).addTo(lobLayer);
-                    }
-                } catch(e) {
-                    console.warn('Failed to load LOB triangulation:', e);
-                }
-            }
-        });
 
         // ─── Profiles (ОПЕРАТИВНИЙ / АНАЛІТИЧНИЙ / НАВІГАЦІЯ / ЧИСТА КАРТА) ───
         const profileBtns = {
@@ -2976,7 +2515,6 @@
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
                 setRow('row-thermal', false);
-                setRow('row-enemy-facilities', false);
             } else if (prof === 'analyt') {
                 setBasemap('dark');
                 setRow('row-drones', true);
@@ -2991,7 +2529,6 @@
                 setRow('row-infra', true);
                 setRow('row-shelters', false);
                 setRow('row-thermal', true);
-                setRow('row-enemy-facilities', true);
             } else if (prof === 'nav') {
                 setBasemap('standard');
                 setRow('row-drones', false);
@@ -3006,7 +2543,6 @@
                 setRow('row-infra', true);
                 setRow('row-shelters', true);
                 setRow('row-thermal', false);
-                setRow('row-enemy-facilities', false);
             } else if (prof === 'clean') {
                 setBasemap('dark');
                 setRow('row-drones', false);
@@ -3021,7 +2557,6 @@
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
                 setRow('row-thermal', false);
-                setRow('row-enemy-facilities', false);
             }
         }
 
@@ -3085,11 +2620,6 @@
                     threatText.textContent = `${cfg.title}: Радіолокаційний простір чистий (R < 160 км)`;
                     if (threatAction) threatAction.textContent = 'OK ✓';
                 }
-            } else if (latestMaritimeStatus && latestMaritimeStatus.carriers_at_sea_count > 0) {
-                threatBanner.classList.add('threat-inbound');
-                if (threatTag) threatTag.textContent = '⚓ ЧОРНЕ МОРЕ';
-                threatText.textContent = `ВМС РФ: ${latestMaritimeStatus.carriers_at_sea_count} носіїв у морі (залп до ${latestMaritimeStatus.total_salvo_potential} «Калібрів»)`;
-                if (threatAction) threatAction.textContent = 'Флот ➔';
             } else {
                 threatBanner.classList.add('threat-all-clear');
                 if (threatTag) threatTag.textContent = '🟢 НЕБО ЧИСТЕ';

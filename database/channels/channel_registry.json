@@ -296,6 +296,11 @@
       "username": "our_odessa",
       "title": "Наша Одеса / Радар пусків",
       "tier": 2
+    },
+    {
+      "username": "delta_odesa",
+      "title": "Дельта Одеса / Оперативний Радар",
+      "tier": 1
     }
   ],
   "mykolaiv": [

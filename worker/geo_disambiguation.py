@@ -292,6 +292,7 @@ CHANNEL_OBLAST_MAP = {
     "pvp_poltava": "poltava",
     "lviv_typical": "lviv",
     "lviv_radar": "lviv",
+    "delta_odesa": "odesa",
     "khersonskaoda": "kherson",
     "vinnytsiaoda": "vinnytsia",
     "poltavskaoda": "poltava",
@@ -347,23 +348,37 @@ def detect_channel_oblast(channel_handle: str) -> Optional[str]:
 
 
 CIVILIAN_NOISE_PHRASES = [
+    # Road, municipal, utilities
     "дорожніх робіт", "дорожні роботи", "ремонт доріг", "ремонтуватимуть",
     "прибирання листя", "прибирання доріг", "зливові каналізації", "зливова каналізація",
     "комунальні служби", "водоканал", "водопостачання", "зупинився рух тролейбусів",
-    "зупинився рух трамваїв", "ускладнення руху", "колесовідбійник", "струменевий ремонт",
-    "графік відключень", "планові відключення", "комунальники", "дрібного сміття",
-    "прочищатимуть зливові", "механізоване прибирання", "міні-дтп"
+    "зупинився рух трамваїв", "трамвайної колії", "ремонт трамвайн", "ускладнення руху",
+    "колесовідбійник", "струменевий ремонт", "графік відключень", "планові відключення",
+    "комунальники", "дрібного сміття", "прочищатимуть зливові", "механізоване прибирання",
+    "міні-дтп", "дтп", "зіткнулися", "мотоцикліст", "легковик", "наїзд на пішохода",
+    # Judicial, corruption, call-centers, administrative scandals
+    "кол-центр", "колцентр", "генпрокурор", "офіс генпрокурора", "огп", "набу", "сап",
+    "хабар", "суддя", "ухвала суду", "розкрадання", "депутат", "політик", "вибори",
+    # Police operations without combat kinetic actions
+    "принімал", "затримали шахра", "поліція викрила", "рейд тцк", "бійка", "крадіжк",
+    # Weather forecasts and civil lifestyle
+    "прогноз погоди", "синоптик", "пориви вітру", "ожеледиця", "температура повітря",
+    "штормове попередження", "похолодання", "заморозки", "курс долар", "курс валют",
+    "гороскоп", "футбол", "чемпіонат", "концерт"
 ]
 
 MILITARY_THREAT_KEYWORDS = [
-    "вибух", "приліт", "влучан", "збит", "ппо", "пуск", "баліст", "крилат", "ракет",
-    "шахед", "бпла", "дрон", "каб", "авіа", "артобстріл", "повітрян", "тривог", "детонац", "уламк",
-    "обстріл", "артилері", "рідні жертв", "постраждал"
+    "вибух", "приліт", "влучан", "збит", "збили", "ппо", "пуск", "баліст", "крилат", "ракет",
+    "шахед", "бпла", "дрон", "каб", "умпк", "авіа", "артобстріл", "повітрян", "тривог", "відбій",
+    "детонац", "уламк", "обстріл", "артилері", "постраждал", "руйнуван", "мопед", "герань",
+    "ланцет", "зала", "zala", "суперкам", "supercam", "орлан", "реактив", "калібр", "іскандер",
+    "кинджал", "х-101", "х-59", "х-69", "х-22", "стратегіч", "ту-95", "ту-22", "міг-31",
+    "вектор ціл", "рух ціл", "рух бпла", "курс на", "летить на", "помічено ціль", "дорозвідк"
 ]
 
 def is_civilian_non_threat_noise(text: str) -> bool:
     """
-    Identifies civilian municipal maintenance, road repairs, traffic announcements,
+    Identifies civilian municipal maintenance, corruption, domestic crime, traffic,
     and domestic utility news that have no tactical or military air defense significance.
     """
     if not text:
@@ -372,8 +387,27 @@ def is_civilian_non_threat_noise(text: str) -> bool:
     has_noise = any(p in t_lower for p in CIVILIAN_NOISE_PHRASES)
     if not has_noise:
         return False
+    # If noise word is present, only permit if strong unambiguous kinetic attack terms appear
+    strong_threat_terms = ["збит", "збили", "приліт", "влучан", "вибух", "шахед", "ракет", "каб", "падіння уламк"]
+    has_strong_threat = any(k in t_lower for k in strong_threat_terms)
+    return has_noise and not has_strong_threat
+
+
+def is_tactical_threat_candidate(text: str) -> bool:
+    """
+    Strict C4ISR Gating: Evaluates if a raw message has legitimate tactical or military
+    air defense significance. Fast-rejects general news, corruption, court hearings,
+    call centers, domestic crime, and civilian traffic.
+    """
+    if not text:
+        return False
+    t_lower = text.lower()
+
+    if is_civilian_non_threat_noise(t_lower):
+        return False
+
     has_threat = any(k in t_lower for k in MILITARY_THREAT_KEYWORDS)
-    return has_noise and not has_threat
+    return has_threat
 
 
 def is_explicitly_kyiv_context(text: str) -> bool:
