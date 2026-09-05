@@ -13,7 +13,9 @@ Specification & Contract Compliance:
 import datetime
 import hmac
 import io
+import logging
 import os
+import re
 import xml.etree.ElementTree as ET
 import zipfile
 from typing import Optional
@@ -23,6 +25,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.models import DetectedEvent, SessionLocal
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/cot", tags=["tactical_cot"])
 
@@ -95,12 +99,92 @@ def verify_tactical_token(request: Request, token: Optional[str] = Query(None)):
             status_code=503,
             detail="Tactical CoT feed unavailable: TACTICAL_API_TOKEN is not configured on server",
         )
-    provided_token = token or request.headers.get("X-Tactical-Token")
+    auth_header = request.headers.get("Authorization")
+    bearer_token = None
+    if auth_header and auth_header.startswith("Bearer "):
+        bearer_token = auth_header[7:].strip()
+    provided_token = token or bearer_token or request.headers.get("X-Tactical-Token")
     if not provided_token or not hmac.compare_digest(provided_token, expected_token):
         raise HTTPException(
             status_code=401,
             detail="Unauthorized: invalid or missing tactical authentication token",
         )
+    return True
+
+
+def validate_cot_event_element(elem: ET.Element) -> bool:
+    """Strictly validates a single CoT <event> against Cursor on Target 2.0 (Event.xsd) schema rules.
+    
+    Validates:
+    - Root tag is 'event' with version='2.0'
+    - Required attributes: uid, type, time, start, stale, how
+    - Time format: strict ISO-8601 with trailing 'Z'
+    - start <= stale temporal order
+    - Mandatory <point> child with valid lat [-90, 90], lon [-180, 180], hae, ce >= 0, le >= 0
+    - Mandatory <detail> child with <contact callsign="..." />
+    """
+    if elem.tag != "event":
+        return False
+    
+    attrib = elem.attrib
+    required_attrs = ("version", "uid", "type", "how", "time", "start", "stale")
+    for attr in required_attrs:
+        if not attrib.get(attr):
+            logger.warning(f"CoT XSD validation error: missing required attribute '{attr}'")
+            return False
+            
+    if attrib["version"] != "2.0":
+        logger.warning(f"CoT XSD validation error: version must be '2.0', got '{attrib['version']}'")
+        return False
+
+    # Timestamp format check
+    iso_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$")
+    for t_attr in ("time", "start", "stale"):
+        val = attrib.get(t_attr, "")
+        if not iso_pattern.match(val):
+            logger.warning(f"CoT XSD validation error: attribute '{t_attr}' has invalid ISO-8601 format '{val}'")
+            return False
+            
+    if attrib["stale"] < attrib["start"]:
+        logger.warning("CoT XSD validation error: stale timestamp is before start timestamp")
+        return False
+
+    # <point> check
+    point = elem.find("point")
+    if point is None:
+        logger.warning("CoT XSD validation error: missing <point> element")
+        return False
+
+    try:
+        lat = float(point.attrib.get("lat", ""))
+        lon = float(point.attrib.get("lon", ""))
+        float(point.attrib.get("hae", "0.0"))
+        ce = float(point.attrib.get("ce", "9999999.0"))
+        le = float(point.attrib.get("le", "9999999.0"))
+    except (ValueError, TypeError) as pe:
+        logger.warning(f"CoT XSD validation error: numeric conversion error in <point>: {pe}")
+        return False
+
+    if not (-90.0 <= lat <= 90.0):
+        logger.warning(f"CoT XSD validation error: latitude out of bounds: {lat}")
+        return False
+    if not (-180.0 <= lon <= 180.0):
+        logger.warning(f"CoT XSD validation error: longitude out of bounds: {lon}")
+        return False
+    if ce < 0.0 or le < 0.0:
+        logger.warning(f"CoT XSD validation error: negative error radius (ce={ce}, le={le})")
+        return False
+
+    # <detail>/<contact> check
+    detail = elem.find("detail")
+    if detail is None:
+        logger.warning("CoT XSD validation error: missing <detail> element")
+        return False
+    contact = detail.find("contact")
+    if contact is None or not contact.attrib.get("callsign"):
+        logger.warning("CoT XSD validation error: missing or empty <contact callsign=...>")
+        return False
+
     return True
 
 
@@ -168,8 +252,12 @@ def generate_cot_xml(events) -> str:
         uid = e.incident_id or f"INC-{e.detected_at.strftime('%Y%m%d%H%M')}-{e.id}"
         if uid in seen_uids:
             continue
-        seen_uids.add(uid)
-        root.append(build_cot_event_element(e))
+        elem = build_cot_event_element(e)
+        if validate_cot_event_element(elem):
+            seen_uids.add(uid)
+            root.append(elem)
+        else:
+            logger.warning(f"Skipping CoT event with UID {uid}: failed XSD validation")
     return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
 

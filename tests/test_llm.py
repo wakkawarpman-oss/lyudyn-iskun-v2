@@ -36,3 +36,49 @@ def test_rule_based_fallback():
     assert res["is_kyiv_region"] == True
     assert res["event_type"] == "radar_track"
     assert res["is_radar_track"] == True
+
+
+def test_ollama_fallback_routing():
+    """Verify that when Groq returns 429/error, routing automatically falls back to local Ollama."""
+    from unittest.mock import patch, MagicMock
+    from worker.llm_engine import _route_text_llm
+
+    mock_groq_resp = MagicMock()
+    mock_groq_resp.status_code = 429
+
+    mock_ollama_res = {
+        "is_kyiv_region": True,
+        "is_confirmed_incident": True,
+        "is_radar_track": False,
+        "event_type": "explosion",
+        "location": "Бровари",
+        "osm_query": "Бровари",
+        "casualties": False,
+        "damage_level": "none",
+        "short_summary": "Вибух у Броварах"
+    }
+
+    with patch("worker.llm_engine._call_groq_text", return_value=mock_groq_resp), \
+         patch("worker.llm_engine._call_ollama_text", return_value=mock_ollama_res) as mock_ollama:
+        result = _route_text_llm("Вибух у Броварах", "sys prompt")
+        assert mock_ollama.called
+        assert result["location"] == "Бровари"
+        assert result["event_type"] == "explosion"
+
+
+def test_call_ollama_text_parsing():
+    """Verify that _call_ollama_text parses Ollama json output correctly."""
+    from unittest.mock import patch, MagicMock
+    from worker.llm_engine import _call_ollama_text
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "response": '{"is_kyiv_region": true, "location": "Поділ", "event_type": "fire"}'
+    }
+
+    with patch("requests.post", return_value=mock_resp):
+        res = _call_ollama_text("Пожежа на Подолі", "sys prompt")
+        assert res["is_kyiv_region"] is True
+        assert res["location"] == "Поділ"
+        assert res["event_type"] == "fire"

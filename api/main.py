@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 import logging
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request, Response, HTTPException, Query
 
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
@@ -83,6 +83,19 @@ app = FastAPI(
     version="3.2.0",
 )
 app.include_router(cot_router)
+
+
+@app.middleware("http")
+async def add_tactical_cache_control_headers(request: Request, call_next):
+    response: Response = await call_next(request)
+    path = request.url.path
+    # Eliminate mobile webview caching on root, HTML and live radar endpoints
+    if path == "/" or path.endswith(".html") or path.startswith("/api/v1/radar") or path.startswith("/api/stats"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 
 def get_db():
     db = SessionLocal()

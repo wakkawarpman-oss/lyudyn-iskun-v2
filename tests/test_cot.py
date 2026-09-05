@@ -191,6 +191,37 @@ def test_verify_tactical_token_security():
     with patch.dict("os.environ", {"TACTICAL_API_TOKEN": "secret-tac-token-123"}):
         assert verify_tactical_token(mock_request_hdr, token=None) is True
 
+    # 5. Authorized via Authorization: Bearer <token> -> True
+    mock_request_bearer = MagicMock()
+    mock_request_bearer.headers.get.side_effect = lambda h: "Bearer secret-tac-token-123" if h == "Authorization" else None
+    with patch.dict("os.environ", {"TACTICAL_API_TOKEN": "secret-tac-token-123"}):
+        assert verify_tactical_token(mock_request_bearer, token=None) is True
+
+
+def test_cot_xsd_validation():
+    """Verify strict Cursor on Target 2.0 schema validation."""
+    from api.cot import validate_cot_event_element
+
+    # 1. Valid event
+    ev = MockEvent(lat=50.4501, lon=30.5234)
+    valid_elem = build_cot_event_element(ev)
+    assert validate_cot_event_element(valid_elem) is True
+
+    # 2. Corrupt lat/lon out of range
+    ev_bad_lat = MockEvent(lat=999.0, lon=30.5234)
+    bad_lat_elem = build_cot_event_element(ev_bad_lat)
+    assert validate_cot_event_element(bad_lat_elem) is False
+
+    # 3. Missing required attribute (e.g. type)
+    del valid_elem.attrib["type"]
+    assert validate_cot_event_element(valid_elem) is False
+
+    # 4. Inverted temporal order (stale < start)
+    ev_inverted = MockEvent()
+    inv_elem = build_cot_event_element(ev_inverted)
+    inv_elem.attrib["stale"] = "2020-01-01T00:00:00Z"
+    assert validate_cot_event_element(inv_elem) is False
+
 
 def test_get_cot_feed_and_zip_endpoints():
     """Verify endpoint handlers return proper XML and ZIP content."""

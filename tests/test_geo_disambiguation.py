@@ -264,3 +264,37 @@ def test_real_military_air_defense_retains_priority():
     assert parsed.get("is_kyiv_region") is True
     assert parsed.get("is_radar_track") is True or parsed.get("event_type") in ["radar_track", "air_defense"]
 
+
+def test_validate_tactical_coordinates():
+    """Verify coordinate calibration and anti-inversion guards."""
+    from worker.geo_disambiguation import validate_tactical_coordinates
+
+    # 1. Valid Kyiv Metro
+    ok, err = validate_tactical_coordinates(50.4501, 30.5234, is_kyiv_metro=True)
+    assert ok is True
+    assert err is None
+
+    # 2. Valid Kyiv Oblast (Bila Tserkva)
+    ok, err = validate_tactical_coordinates(49.7967, 30.1317, is_kyiv_metro=False)
+    assert ok is True
+    assert err is None
+
+    # Bila Tserkva is outside Kyiv City Metro bounds
+    ok_metro, err_metro = validate_tactical_coordinates(49.7967, 30.1317, is_kyiv_metro=True)
+    assert ok_metro is False
+    assert "outside_kyiv_metro_bounds" in err_metro
+
+    # 3. Inverted Lat/Lon (e.g. Lon=50.4501 > 40)
+    ok_inv, err_inv = validate_tactical_coordinates(30.5234, 50.4501)
+    assert ok_inv is False
+    assert "inverted_or_out_of_ukraine_bounds" in err_inv
+
+    # 4. Out of bounds (e.g. Indian Ocean)
+    ok_out, err_out = validate_tactical_coordinates(12.3456, 78.9101)
+    assert ok_out is False
+
+    # 5. Missing / None coordinates
+    ok_none, err_none = validate_tactical_coordinates(None, 30.5)
+    assert ok_none is False
+    assert err_none == "missing_coordinates"
+

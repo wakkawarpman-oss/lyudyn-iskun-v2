@@ -13,6 +13,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 logger = logging.getLogger(__name__)
 
@@ -280,26 +282,72 @@ def _call_openai_text(text: str, sys_prompt: str) -> requests.Response:
     }
     return requests.post(OPENAI_URL, headers=headers, json=data, timeout=15)
 
+def _call_ollama_text(text: str, sys_prompt: str, model: str = None) -> dict:
+    """Offline / Local LLM fallback via Ollama (OPSEC Tier 1).
+    Ensures zero cloud leakage and offline execution during blackouts.
+    """
+    model_name = model or OLLAMA_MODEL
+    url = OLLAMA_URL
+    payload = {
+        "model": model_name,
+        "prompt": f"{sys_prompt}\n\nТекст повідомлення:\n{text[:1500]}\nПоверни ТІЛЬКИ валідний JSON:",
+        "format": "json",
+        "stream": False,
+        "options": {
+            "temperature": 0.1,
+            "num_predict": 512
+        }
+    }
+    try:
+        resp = requests.post(url, json=payload, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            raw_content = data.get("response") or ""
+            if not raw_content and "choices" in data:
+                raw_content = data["choices"][0]["message"]["content"]
+            if raw_content:
+                parsed = clean_and_validate_json_response(raw_content)
+                if parsed:
+                    return parsed
+    except Exception as e:
+        logger.debug(f"Ollama local inference unavailable: {e}")
+    return {}
+
 def _route_text_llm(text: str, sys_prompt: str) -> dict:
     if not text:
         return {}
     
-    resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.8-27b")
-    if resp.status_code in (429, 503, 500) and OPENAI_API_KEY:
+    resp = None
+    try:
+        resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.8-27b")
+    except Exception as e:
+        logger.warning(f"Groq API connection error: {e}")
+
+    if resp is not None and resp.status_code == 200:
+        return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
+
+    # OPSEC Tier 1 Offline Fallback: Local Ollama LLM
+    if resp is None or resp.status_code in (429, 503, 500, 504):
+        logger.info("Attempting local Ollama LLM fallback...")
+        ollama_data = _call_ollama_text(text, sys_prompt)
+        if ollama_data:
+            return ollama_data
+
+    # Cloud secondary fallback if OpenAI key exists
+    if resp is not None and resp.status_code in (429, 503, 500) and OPENAI_API_KEY:
         logger.warning(f"Groq API returned {resp.status_code}. Switching to OpenAI fallback...")
         resp = _call_openai_text(text, sys_prompt)
-    elif resp.status_code != 200:
+        if resp.status_code == 200:
+            return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
+
+    # Fallback to secondary Groq model if not rate-limited
+    if resp is not None and resp.status_code not in (429, 401, 200):
         logger.warning(f"Groq API error {resp.status_code}. Switching to Qwen 3.6 fallback...")
         resp = _call_groq_text(text, sys_prompt, model="qwen/qwen3.6-27b")
-        if resp.status_code != 200:
-            logger.warning(f"Groq API error {resp.status_code}. Switching to Compound Mini fallback...")
-            resp = _call_groq_text(text, sys_prompt, model="groq/compound-mini")
+        if resp.status_code == 200:
+            return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
 
-        
-    if resp.status_code != 200:
-        return rule_based_fallback_parser(text)
-        
-    return clean_and_validate_json_response(resp.json()["choices"][0]["message"]["content"])
+    return rule_based_fallback_parser(text)
 
 def process_with_llm(text: str, media_path: str = None) -> dict:
     llm_data = {}
