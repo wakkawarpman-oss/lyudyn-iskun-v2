@@ -26,7 +26,7 @@ from api.security.authz import (
     log_security_event,
 )
 
-def is_tactical_authorized(request: Optional[Request] = None, token: Optional[str] = None) -> bool:
+def is_tactical_authorized(request: Optional[Request] = None, token: Optional[str] = None, db: Optional[Session] = None) -> bool:
     """
     Validates whether the request is authorized for the restricted operational / military contour.
     Strictly enforces platform segmentation:
@@ -40,6 +40,7 @@ def is_tactical_authorized(request: Optional[Request] = None, token: Optional[st
         user=user,
         resource_type="tactical_events",
         requested_sector="all",
+        db_session=db,
         redis_client=redis_client
     )
 
@@ -54,7 +55,8 @@ def is_tactical_authorized(request: Optional[Request] = None, token: Optional[st
             resource_type="tactical_events",
             decision=decision,
             reason=reason,
-            client_ip=client_ip
+            client_ip=client_ip,
+            db_session=db
         )
     except Exception as e:
         logger.debug(f"Audit log fallback: {e}")
@@ -494,13 +496,14 @@ def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session 
 def get_radar_drones(
     request: Request = None,
     oblast: Optional[str] = None,
-    token: Optional[str] = Query(None)
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
 ):
     from worker.osint.neptun_radar import get_live_radar_threats
     from worker.osint.launch_triangulation import estimate_launch_origin, project_forward_substation_threats
     from worker.geo_extractors.poi_matcher import POI_DATABASE
 
-    is_authorized = is_tactical_authorized(request, token)
+    is_authorized = is_tactical_authorized(request, token, db=db)
     threats_data = get_live_radar_threats(oblast=oblast)
     drones = threats_data.get("drones", [])
     inbound_drones = threats_data.get("inbound_drones", [])
@@ -550,9 +553,10 @@ def get_enemy_facilities():
 @app.get("/api/v1/threats/active-alerts")
 def get_active_substation_threats(
     request: Request = None,
-    token: Optional[str] = Query(None)
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
 ):
-    if not is_tactical_authorized(request, token):
+    if not is_tactical_authorized(request, token, db=db):
         return {
             "status": "restricted",
             "contour": "civilian",
@@ -592,11 +596,12 @@ def get_radar_aviation_intel(force_refresh: bool = False):
 @app.get("/api/v1/radar/acoustic-tracks")
 def get_radar_acoustic_tracks(
     request: Request = None,
-    token: Optional[str] = Query(None)
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
 ):
     from worker.osint.acoustic_gateway import get_active_acoustic_hits
     hits = get_active_acoustic_hits()
-    is_authorized = is_tactical_authorized(request, token)
+    is_authorized = is_tactical_authorized(request, token, db=db)
     if not is_authorized:
         sanitized_hits = [
             {
@@ -657,8 +662,13 @@ class SigintHitPayload(BaseModel):
     tactical_advisory: str = ""
 
 @app.post("/api/v1/telemetry/sigint-hit")
-def post_sigint_hit(payload: SigintHitPayload, request: Request = None, token: Optional[str] = Query(None)):
-    if not is_tactical_authorized(request, token):
+def post_sigint_hit(
+    payload: SigintHitPayload,
+    request: Request = None,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    if not is_tactical_authorized(request, token, db=db):
         raise HTTPException(status_code=403, detail="Operational authorization required for SIGINT ingestion")
     from worker.osint.sigint_bus import record_sigint_hit
     hit = record_sigint_hit(

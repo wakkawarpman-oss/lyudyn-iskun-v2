@@ -98,7 +98,7 @@ def verify_restricted_access_policy(
             logger.debug(f"Redis approval check exception: {e}")
 
     # 4. Check PostgreSQL database access_approvals table if db_session is provided
-    if db_session:
+    if db_session and hasattr(db_session, "query"):
         try:
             from database.models import AccessApproval
             now = datetime.datetime.utcnow()
@@ -137,7 +137,7 @@ def log_security_event(
         f"Decision: {decision} ({reason}) | IP: {client_ip}"
     )
 
-    if db_session:
+    if db_session and hasattr(db_session, "add"):
         try:
             from database.models import SecurityAuditTrail
             audit_entry = SecurityAuditTrail(
