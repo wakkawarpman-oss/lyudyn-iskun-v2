@@ -195,6 +195,8 @@ def get_db():
 
 @app.get("/api/events")
 def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depends(get_db)):
+    if hours <= 0:
+        return []
     cache_key = f"api:events:{hours}:{oblast or 'all'}"
     cached = get_cached(cache_key)
     if cached:
@@ -472,6 +474,8 @@ def get_map_shelters(db: Session = Depends(get_db)):
 
 @app.get("/api/geoint/zones")
 def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session = Depends(get_db)):
+    if hours <= 0:
+        return []
     from worker.osint.geoint_engine import geoint_engine
     threshold = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
     query = db.query(

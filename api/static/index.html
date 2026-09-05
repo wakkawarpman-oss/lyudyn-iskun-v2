@@ -306,6 +306,68 @@
         .map-replay-mode {
             box-shadow: inset 0 0 0 4px rgba(245, 158, 11, 0.85) !important;
         }
+        /* Time Horizon Switch & Live Only Controls */
+        .horizon-switch-box {
+            display: flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 2px;
+            gap: 2px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+        }
+        .hz-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 1.5px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .hz-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .hz-btn.active {
+            background: rgba(0, 229, 255, 0.25) !important;
+            border: 1px solid var(--accent-cyan) !important;
+            color: #00e5ff !important;
+        }
+        .hz-btn-live {
+            color: #ef4444 !important;
+            font-weight: 800 !important;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .hz-btn-live .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            display: inline-block;
+            box-shadow: 0 0 6px #ef4444;
+        }
+        .hz-btn-live.active {
+            background: rgba(239, 68, 68, 0.25) !important;
+            border: 1px solid #ef4444 !important;
+            color: #ff5252 !important;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        }
+        .hz-btn-live.active .live-dot {
+            background: #ff5252;
+            animation: pulse-dot 1.2s infinite;
+        }
+        @keyframes pulse-dot {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 8px #ff5252; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
         .feed-filter-pill {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-dim);
@@ -1321,11 +1383,12 @@
             <span id="cockpit-aviation-tag" style="display:none; background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;"></span>
         </div>
         <div class="threat-banner-right" style="font-size: 11px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
-            <div class="horizon-switch-box" style="display:flex; align-items:center; background:rgba(15,23,42,0.85); border:1px solid var(--border-dim); border-radius:6px; padding:2px; gap:2px; font-family:var(--font-mono); font-size:10px;">
-                <button type="button" class="hz-btn" onclick="setTimeHorizon(6, this)" title="Показати події за останні 6 годин" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">6г</button>
-                <button type="button" class="hz-btn" onclick="setTimeHorizon(12, this)" title="Показати події за останні 12 годин" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">12г</button>
-                <button type="button" class="hz-btn active" onclick="setTimeHorizon(24, this)" title="Показати події за добу" style="background:rgba(0,229,255,0.25); border:1px solid var(--accent-cyan); color:#00e5ff; padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">24г</button>
-                <button type="button" class="hz-btn" onclick="setTimeHorizon(72, this)" title="Показати події за 3 доби" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">3д</button>
+            <div class="horizon-switch-box">
+                <button type="button" class="hz-btn hz-btn-live" data-hours="0" onclick="setTimeHorizon(0, this)" title="Режим тільки LIVE: прибрати всю історію подій, показувати лише активні повітряні загрози в реальному часі"><span class="live-dot"></span>LIVE</button>
+                <button type="button" class="hz-btn" data-hours="6" onclick="setTimeHorizon(6, this)" title="Показати події за останні 6 годин">6г</button>
+                <button type="button" class="hz-btn" data-hours="12" onclick="setTimeHorizon(12, this)" title="Показати події за останні 12 годин">12г</button>
+                <button type="button" class="hz-btn active" data-hours="24" onclick="setTimeHorizon(24, this)" title="Показати події за добу">24г</button>
+                <button type="button" class="hz-btn" data-hours="72" onclick="setTimeHorizon(72, this)" title="Показати події за 3 доби">3д</button>
             </div>
             <span id="threat-banner-action">Радар онлайн</span>
         </div>
@@ -2048,28 +2111,29 @@
         let activeDrones = [];
         let rawEvents = [];
         let rawZones = [];
-        let selectedHours = parseInt(localStorage.getItem('c4isr_selected_hours')) || 24;
+        const storedHours = localStorage.getItem('c4isr_selected_hours');
+        let selectedHours = (storedHours !== null && !isNaN(parseInt(storedHours))) ? parseInt(storedHours) : 24;
 
         function setTimeHorizon(hrs, btn) {
             selectedHours = hrs;
             localStorage.setItem('c4isr_selected_hours', hrs);
             document.querySelectorAll('.hz-btn').forEach(b => {
                 b.classList.remove('active');
-                b.style.background = 'transparent';
-                b.style.border = 'none';
-                b.style.color = 'var(--text-muted)';
             });
             const targetBtn = btn || document.querySelector(`.hz-btn[data-hours="${hrs}"]`) || document.querySelector(`.hz-btn[onclick*="${hrs}"]`);
             if (targetBtn) {
                 targetBtn.classList.add('active');
-                targetBtn.style.background = 'rgba(0,229,255,0.25)';
-                targetBtn.style.border = '1px solid var(--accent-cyan)';
-                targetBtn.style.color = '#00e5ff';
             }
             const slider = document.getElementById('timeline-slider');
             if (slider) slider.value = hrs;
             const lbl = document.getElementById('timeline-time-lbl');
-            if (lbl) lbl.textContent = `${hrs} год`;
+            if (lbl) {
+                lbl.textContent = (hrs === 0) ? '🔴 LIVE ONLY (Без історії)' : `${hrs} год`;
+            }
+            const threatActionEl = document.getElementById('threat-banner-action');
+            if (threatActionEl) {
+                threatActionEl.textContent = (hrs === 0) ? '🔴 Тільки LIVE' : 'Радар онлайн';
+            }
             renderTimeline(selectedHours);
             renderDrawerFeed();
         }
@@ -3095,6 +3159,19 @@
             discreteEventsGroup.clearLayers();
             zonesLayer.clearLayers();
 
+            if (hours === 0) {
+                // LIVE ONLY mode: History is completely removed from tactical map!
+                const cntEventsEl = document.getElementById('cnt-events');
+                const cntAirdefenseEl = document.getElementById('cnt-airdefense');
+                const peekEvents = document.getElementById('peek-events');
+                const peekZones = document.getElementById('peek-zones');
+                if (cntEventsEl) cntEventsEl.textContent = '0';
+                if (cntAirdefenseEl) cntAirdefenseEl.textContent = '0';
+                if (peekEvents) peekEvents.textContent = '🔴 LIVE ONLY';
+                if (peekZones) peekZones.textContent = 'Без історії';
+                return;
+            }
+
             const cutoff = Date.now() - (hours * 3600 * 1000);
 
             // Blast Zones
@@ -3774,17 +3851,61 @@
             const feed = document.getElementById('drawer-event-feed');
             if (!feed) return;
 
+            if (selectedHours === 0) {
+                // In LIVE ONLY mode, historical events are removed!
+                const activeThreats = (activeDrones || []).concat(typeof activeInboundDrones !== 'undefined' ? activeInboundDrones : []);
+                const elAll = document.getElementById('feed-cnt-all');
+                const elStrike = document.getElementById('feed-cnt-strike');
+                const elPresents = document.getElementById('feed-cnt-presents');
+                const elDrone = document.getElementById('feed-cnt-drone');
+                if (elAll) elAll.textContent = activeThreats.length;
+                if (elStrike) elStrike.textContent = '0';
+                if (elPresents) elPresents.textContent = '0';
+                if (elDrone) elDrone.textContent = activeThreats.length;
+
+                if (activeThreats.length === 0) {
+                    feed.innerHTML = `
+                        <div style="text-align:center; padding:32px 16px; color:var(--text-secondary); font-size:12px;">
+                            <div style="font-size:24px; margin-bottom:8px;">🟢</div>
+                            <div style="font-weight:800; color:#10b981; font-size:13px; margin-bottom:4px;">РЕЖИМ LIVE ONLY: НЕБО ЧИСТЕ</div>
+                            <div style="color:var(--text-muted); font-size:11px;">Історію подій приховано. Активних повітряних цілей у реальному часі не зафіксовано.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                feed.innerHTML = activeThreats.map(d => {
+                    const spd = Math.round(d.speed_kmh || 185);
+                    const hdg = Math.round(d.heading || 0);
+                    return `
+                        <div class="feed-item-card" onclick="map.flyTo([${d.lat}, ${d.lng}], 13, {duration:0.8}); overviewDrawer.classList.remove('open');">
+                            <div class="feed-card-left">
+                                <span class="feed-time" style="color:#ef4444; font-weight:800;">🔴 В ПОВІТРІ: ~${spd} км/год</span>
+                                <span class="feed-loc">${d.label || 'Ударний БпЛА'} | Курс: ${hdg}°</span>
+                            </div>
+                            <span class="feed-tag" style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171;">
+                                РЛС LIVE
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+                return;
+            }
+
+            const cutoff = Date.now() - (selectedHours * 3600 * 1000);
+            const timeFiltered = rawEvents.filter(e => new Date(e.detected_at).getTime() >= cutoff);
+
             // Update filter counts
-            const cAll = rawEvents.length;
-            const cStrike = rawEvents.filter(e => {
+            const cAll = timeFiltered.length;
+            const cStrike = timeFiltered.filter(e => {
                 const t = (e.event_type || '').toLowerCase();
                 return t.includes('strike') || t.includes('влуч') || t.includes('вибух');
             }).length;
-            const cPresents = rawEvents.filter(e => {
+            const cPresents = timeFiltered.filter(e => {
                 const t = (e.event_type || '').toLowerCase();
                 return t.includes('presents') || t.includes('ппо') || t.includes('збит');
             }).length;
-            const cDrone = rawEvents.filter(e => {
+            const cDrone = timeFiltered.filter(e => {
                 const t = (e.event_type || '').toLowerCase();
                 return t.includes('drone') || t.includes('шахед') || t.includes('бпла');
             }).length;
@@ -3798,26 +3919,26 @@
             if (elPresents) elPresents.textContent = cPresents;
             if (elDrone) elDrone.textContent = cDrone;
 
-            let filtered = rawEvents;
+            let filtered = timeFiltered;
             if (currentFeedFilter === 'strike') {
-                filtered = rawEvents.filter(e => {
+                filtered = timeFiltered.filter(e => {
                     const t = (e.event_type || '').toLowerCase();
                     return t.includes('strike') || t.includes('влуч') || t.includes('вибух');
                 });
             } else if (currentFeedFilter === 'presents') {
-                filtered = rawEvents.filter(e => {
+                filtered = timeFiltered.filter(e => {
                     const t = (e.event_type || '').toLowerCase();
                     return t.includes('presents') || t.includes('ппо') || t.includes('збит');
                 });
             } else if (currentFeedFilter === 'drone') {
-                filtered = rawEvents.filter(e => {
+                filtered = timeFiltered.filter(e => {
                     const t = (e.event_type || '').toLowerCase();
                     return t.includes('drone') || t.includes('шахед') || t.includes('бпла');
                 });
             }
 
             if (filtered.length === 0) {
-                feed.innerHTML = `<div style="text-align:center; padding:24px 12px; color:var(--text-secondary); font-size:12px;">Подій обраної категорії не зафіксовано</div>`;
+                feed.innerHTML = `<div style="text-align:center; padding:24px 12px; color:var(--text-secondary); font-size:12px;">Подій обраної категорії не зафіксовано (${selectedHours}г)</div>`;
                 return;
             }
 
@@ -4107,6 +4228,10 @@
         });
 
         function filterEventsByHours(hrs) {
+            if (hrs === 0) {
+                renderTimeline(0);
+                return;
+            }
             const cutoff = Date.now() - hrs * 3600 * 1000;
             const filteredEvents = rawEvents.filter(e => new Date(e.detected_at).getTime() >= cutoff);
             

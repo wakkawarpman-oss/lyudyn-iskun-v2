@@ -31,3 +31,8 @@ def test_dashboard_url_fallback(monkeypatch):
     url = get_dashboard_url()
     assert url != "http://127.0.0.1"
     assert "136.113.156.17" in url
+
+def test_live_only_zero_hours():
+    from api.main import get_events, get_danger_zones
+    assert get_events(hours=0) == []
+    assert get_danger_zones(hours=0) == []
