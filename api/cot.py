@@ -233,6 +233,11 @@ def build_cot_event_element(e) -> ET.Element:
     remarks_text = (
         f"Загроза: {sig}/100 | Довіра: {conf}/100 | Консенсус: {src_cnt} дж. | ОКІНТ-ПРО C4ISR"
     )
+
+    if e.event_type == "radar_track":
+        ET.SubElement(detail, "ew", jammer="5.8GHz", crpa="Kometa-M-16", advice="USE_900MHZ_OR_FIBER")
+        remarks_text += " | EW: 5.8GHz VTX JAMMER (USE 900MHz/FIBER) | CRPA: KOMETA-M-16"
+
     remarks_elem = ET.SubElement(detail, "remarks")
     remarks_elem.text = remarks_text
 

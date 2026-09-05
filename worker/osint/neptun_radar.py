@@ -301,6 +301,51 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
         except Exception as e_kf:
             logger.debug(f"Kalman track fusion fallback: {e_kf}")
 
+        # Tactical EW & Signature Profile
+        ew_profile = {
+            "vtx_5_8_jamming": True,
+            "jammer_power_w": 3.5,
+            "crpa_antenna": "Комета-М (16-променева CRPA)",
+            "crpa_resistant": True,
+            "telemetry_link": "1.4 GHz Mesh / Iridium L-band",
+            "tactical_directive": "⚠️ УВАГА: Активний 5.8 GHz VTX глушник. Перейдіть на 900 MHz / 1.2-1.3 GHz або оптоволокно!",
+        }
+
+        # Wind Vector & Aerodynamic Ground Drift
+        weather_vector_data = None
+        try:
+            from worker.osint.weather_vector import get_closest_sector_wind, compute_wind_drift
+            sec_wind = get_closest_sector_wind(float(lat), float(lng))
+            wind_calc = compute_wind_drift(
+                heading_deg=heading_val,
+                air_speed_kmh=speed_val,
+                wind_deg=sec_wind.get("wind_direction_deg", 0.0),
+                wind_speed_kmh=sec_wind.get("wind_speed_kmh", 0.0)
+            )
+            weather_vector_data = {
+                "sector": sec_wind.get("name"),
+                "wind_speed_kmh": sec_wind.get("wind_speed_kmh"),
+                "wind_dir_deg": sec_wind.get("wind_direction_deg"),
+                "drift_angle_deg": wind_calc.get("drift_angle_deg"),
+                "ground_speed_kmh": wind_calc.get("ground_speed_kmh"),
+                "speed_delta_kmh": wind_calc.get("speed_delta_kmh"),
+            }
+        except Exception as e_w:
+            logger.debug(f"Weather drift calc fallback: {e_w}")
+
+        # Acoustic Sensor Corroboration (Sky Fortress / Zvook)
+        acoustic_corrob = False
+        acoustic_count = 0
+        acoustic_sensors = []
+        try:
+            from worker.osint.acoustic_gateway import corroborate_drone_with_acoustics
+            ac_res = corroborate_drone_with_acoustics(float(lat), float(lng))
+            acoustic_corrob = ac_res.get("corroborated", False)
+            acoustic_count = ac_res.get("sensor_count", 0)
+            acoustic_sensors = ac_res.get("sensors", [])
+        except Exception as e_ac:
+            logger.debug(f"Acoustic corroboration check error: {e_ac}")
+
         drone_obj = {
             "id": track_id,
             "label": label,
@@ -326,6 +371,11 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "trail": trail,
             "waypoints": waypoints,
             "eta_cone": eta_cone_data,
+            "ew_profile": ew_profile,
+            "weather_vector": weather_vector_data,
+            "acoustic_corroborated": acoustic_corrob,
+            "acoustic_sensors_count": acoustic_count,
+            "corroborating_sensors": acoustic_sensors,
         }
         drones.append(drone_obj)
 

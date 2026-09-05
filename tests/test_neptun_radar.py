@@ -80,12 +80,13 @@ def test_get_live_radar_threats_success():
     mock_resp.read.return_value = json.dumps(mock_response_data).encode("utf-8")
     mock_resp.__enter__.return_value = mock_resp
 
-    with patch("urllib.request.urlopen", return_value=mock_resp), \
-         patch("redis.Redis.from_url") as mock_redis_cls:
+    mock_r = MagicMock()
+    mock_r.get.return_value = None
+    mock_redis_mod = MagicMock()
+    mock_redis_mod.Redis.from_url.return_value = mock_r
 
-        mock_r = MagicMock()
-        mock_r.get.return_value = None
-        mock_redis_cls.return_value = mock_r
+    with patch("urllib.request.urlopen", return_value=mock_resp), \
+         patch("worker.osint.neptun_radar.redis", mock_redis_mod):
 
         result = get_live_radar_threats(force_refresh=True)
 
@@ -104,12 +105,13 @@ def test_get_live_radar_threats_success():
 
 
 def test_get_live_radar_threats_network_failure():
-    with patch("urllib.request.urlopen", side_effect=Exception("Network error")), \
-         patch("redis.Redis.from_url") as mock_redis_cls:
+    mock_r = MagicMock()
+    mock_r.get.return_value = None
+    mock_redis_mod = MagicMock()
+    mock_redis_mod.Redis.from_url.return_value = mock_r
 
-        mock_r = MagicMock()
-        mock_r.get.return_value = None
-        mock_redis_cls.return_value = mock_r
+    with patch("urllib.request.urlopen", side_effect=Exception("Network error")), \
+         patch("worker.osint.neptun_radar.redis", mock_redis_mod):
 
         result = get_live_radar_threats(force_refresh=True)
 

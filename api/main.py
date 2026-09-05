@@ -503,6 +503,47 @@ def get_radar_ew_interference():
     from worker.sensors.sentinel_rfi import get_live_ew_interference
     return get_live_ew_interference()
 
+@app.get("/api/v1/weather/wind-vectors")
+def get_weather_wind_vectors(force_refresh: bool = False):
+    from worker.osint.weather_vector import get_all_sector_winds
+    return get_all_sector_winds(force_refresh=force_refresh)
+
+@app.get("/api/v1/radar/aviation-intel")
+def get_radar_aviation_intel(force_refresh: bool = False):
+    from worker.osint.adsb_intel import get_aviation_intel_summary
+    return get_aviation_intel_summary(force_refresh=force_refresh)
+
+@app.get("/api/v1/radar/acoustic-tracks")
+def get_radar_acoustic_tracks():
+    from worker.osint.acoustic_gateway import get_active_acoustic_hits
+    hits = get_active_acoustic_hits()
+    return {"hits": hits, "count": len(hits)}
+
+class AcousticHitPayload(BaseModel):
+    lat: float
+    lng: float
+    sensor_id: str
+    azimuth: Optional[float] = None
+    snr_db: float = 18.5
+    source: str = "Sky Fortress (Небесна Фортеця)"
+    confidence: int = 88
+    frequency_hz: float = 142.0
+
+@app.post("/api/v1/telemetry/acoustic-hit")
+def post_acoustic_hit(payload: AcousticHitPayload):
+    from worker.osint.acoustic_gateway import record_acoustic_hit
+    hit = record_acoustic_hit(
+        lat=payload.lat,
+        lng=payload.lng,
+        sensor_id=payload.sensor_id,
+        azimuth=payload.azimuth,
+        snr_db=payload.snr_db,
+        source=payload.source,
+        confidence=payload.confidence,
+        drone_frequency_hz=payload.frequency_hz,
+    )
+    return {"status": "ok", "hit": hit}
+
 @app.get("/api/v1/alert/status")
 def get_live_alert_status(oblast: Optional[str] = None):
     from bot.alert_monitor import get_current_kyiv_alert_status
