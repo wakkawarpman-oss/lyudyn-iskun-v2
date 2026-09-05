@@ -276,75 +276,108 @@
     let startX, startY;
 
     function resize() {
-      width = canvas.parentElement.clientWidth;
-      height = canvas.parentElement.clientHeight;
+      const parent = canvas.parentElement;
+      width = parent ? parent.clientWidth : window.innerWidth;
+      height = parent ? parent.clientHeight : window.innerHeight;
+      if (!width || width <= 0) width = window.innerWidth || 1200;
+      if (!height || height <= 0) height = window.innerHeight || 800;
+
       canvas.width = width * window.devicePixelRatio;
       canvas.height = height * window.devicePixelRatio;
       canvas.style.width = width + 'px';
       canvas.style.height = height + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // Initialize random positions
-    NODES.forEach((n, i) => {
-      const angle = (i / NODES.length) * Math.PI * 2;
-      const radius = 220 + Math.random() * 220;
-      n.x = width / 2 + Math.cos(angle) * radius;
-      n.y = height / 2 + Math.sin(angle) * radius;
+    // Domain constellation centers for intuitive clustering
+    const domainCenters = {
+      sensor: { x: 0.22, y: 0.32 },
+      intel: { x: 0.38, y: 0.72 },
+      pipeline: { x: 0.52, y: 0.42 },
+      recon: { x: 0.76, y: 0.72 },
+      devops: { x: 0.82, y: 0.32 }
+    };
+
+    // Initialize positions based on domain centers
+    NODES.forEach((n) => {
+      const ratio = domainCenters[n.domain] || { x: 0.5, y: 0.5 };
+      n.x = width * ratio.x + (Math.random() - 0.5) * 140;
+      n.y = height * ratio.y + (Math.random() - 0.5) * 140;
       n.vx = 0;
       n.vy = 0;
     });
     panX = 0;
     panY = 0;
 
-    // Simulation loop
+    // Simulation loop with mathematically stable force-directed physics
     function updatePhysics() {
-      // Repulsion between all nodes
+      // 1. Repulsion between all nodes (Coulomb force)
       for (let i = 0; i < NODES.length; i++) {
+        const a = NODES[i];
         for (let j = i + 1; j < NODES.length; j++) {
-          const a = NODES[i];
           const b = NODES[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          if (dist < 320) {
-            const force = (320 - dist) / dist * 0.45;
-            a.vx -= dx * force * 0.05;
-            a.vy -= dy * force * 0.05;
-            b.vx += dx * force * 0.05;
-            b.vy += dy * force * 0.05;
+          const dist = Math.hypot(dx, dy) || 1.0;
+          if (dist < 240) {
+            const repelForce = (240 - dist) / dist * 0.45;
+            const fx = (dx / dist) * repelForce * 1.2;
+            const fy = (dy / dist) * repelForce * 1.2;
+            a.vx -= fx;
+            a.vy -= fy;
+            b.vx += fx;
+            b.vy += fy;
           }
         }
       }
 
-      // Attraction along edges
+      // 2. Attraction along edges (Hooke's law with unit direction vector)
       EDGES.forEach(e => {
         const a = NODES.find(n => n.id === e.source);
         const b = NODES.find(n => n.id === e.target);
         if (a && b) {
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const targetDist = 110;
-          const force = (dist - targetDist) * 0.003;
-          a.vx += dx * force;
-          a.vy += dy * force;
-          b.vx -= dx * force;
-          b.vy -= dy * force;
+          const dist = Math.hypot(dx, dy) || 1.0;
+          const targetDist = 110.0;
+          const springForce = (dist - targetDist) * 0.006;
+          const fx = (dx / dist) * springForce;
+          const fy = (dy / dist) * springForce;
+          a.vx += fx;
+          a.vy += fy;
+          b.vx -= fx;
+          b.vy -= fy;
         }
       });
 
-      // Center gravity & velocity dampening
+      // 3. Domain gravitation, velocity dampening & safety clamping
       NODES.forEach(n => {
         if (n !== dragNode) {
-          n.vx += (width / 2 - n.x) * 0.0006;
-          n.vy += (height / 2 - n.y) * 0.0006;
+          const ratio = domainCenters[n.domain] || { x: 0.5, y: 0.5 };
+          const homeX = width * ratio.x;
+          const homeY = height * ratio.y;
+          n.vx += (homeX - n.x) * 0.003;
+          n.vy += (homeY - n.y) * 0.003;
+          n.vx *= 0.84;
+          n.vy *= 0.84;
+
+          const speed = Math.hypot(n.vx, n.vy);
+          if (speed > 10.0) {
+            n.vx = (n.vx / speed) * 10.0;
+            n.vy = (n.vy / speed) * 10.0;
+          }
           n.x += n.vx;
           n.y += n.vy;
-          n.vx *= 0.86;
-          n.vy *= 0.86;
+
+          if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) {
+            n.x = homeX + (Math.random() - 0.5) * 80;
+            n.y = homeY + (Math.random() - 0.5) * 80;
+            n.vx = 0;
+            n.vy = 0;
+          }
         }
       });
     }

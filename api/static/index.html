@@ -3692,6 +3692,10 @@
             if (graphModal) {
                 graphModal.classList.add('open');
                 switchGraphMode(mode);
+                setTimeout(() => {
+                    const iframe = document.getElementById('graph-iframe');
+                    try { iframe?.contentWindow?.dispatchEvent(new Event('resize')); } catch(e) {}
+                }, 150);
             }
         }
         function closeGraphModal() {
@@ -3706,8 +3710,12 @@
             const extLink = document.getElementById('btn-graph-external');
 
             if (mode === 'osint') {
-                if (iframe && !iframe.src.endsWith('/graph_analysis.html')) {
-                    iframe.src = '/graph_analysis.html';
+                if (iframe) {
+                    if (!iframe.src.endsWith('/graph_analysis.html')) {
+                        iframe.src = '/graph_analysis.html';
+                    } else {
+                        try { iframe.contentWindow?.dispatchEvent(new Event('resize')); } catch(e) {}
+                    }
                 }
                 if (extLink) extLink.href = '/graph_analysis.html';
                 if (tabOsint) {
