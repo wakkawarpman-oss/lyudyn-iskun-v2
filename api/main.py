@@ -1075,17 +1075,33 @@ def trigger_break_glass_emergency_access(
 
     import uuid
     import json
-    from database.models import AccessApproval
+    from database.models import AccessApproval, AccessRequest
 
     hours = min(payload.hours or 4, 4)
     now = datetime.datetime.utcnow()
     until = now + datetime.timedelta(hours=hours)
     appr_id = f"bg_{uuid.uuid4().hex[:8]}"
+    req_id = f"req_{appr_id}"
     op_id = f"break_glass_{payload.operator_callsign}"
+
+    req_row = AccessRequest(
+        request_id=req_id,
+        user_id=op_id,
+        user_email=f"{payload.operator_callsign}@emergency.local",
+        requested_resource="tactical_events",
+        target_sector="all",
+        justification=payload.justification,
+        status="APPROVED",
+        requested_at=now,
+        decided_at=now,
+        decided_by="BREAK_GLASS_EMERGENCY_OVERRIDE",
+        decision_reason=f"Emergency Break Glass triggered: {payload.justification}"
+    )
+    db.add(req_row)
 
     appr_row = AccessApproval(
         approval_id=appr_id,
-        request_id=f"break_glass_{payload.operator_callsign}",
+        request_id=req_id,
         user_id=op_id,
         resource_type="tactical_events",
         geo_scope="all",
