@@ -153,6 +153,8 @@ class TacticalDroneTrackSchema(BaseModel):
     terrain_masking: dict | None = None
     sigint_corroboration: dict | None = None
     bayesian_confidence: dict | None = None
+    military_unit: dict | None = None
+    nearest_launch_site: dict | None = None
 
 
 class AcousticHitSchema(BaseModel):

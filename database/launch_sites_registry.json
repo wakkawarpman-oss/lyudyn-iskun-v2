@@ -1,0 +1,101 @@
+[
+  {
+    "site_id": "site_01",
+    "name": "Кашан, Іран — завод Shahed",
+    "category": "PRODUCTION_FACILITY",
+    "latitude": 33.9853,
+    "longitude": 51.7118,
+    "attribution": "Степовой А.В., Глухов Є.В. — EXIF фото серпень 2022",
+    "source": "EXIF GPS"
+  },
+  {
+    "site_id": "site_02",
+    "name": "Цимбулово, Курська обл. — позиція 35535",
+    "category": "LAUNCH_SITE",
+    "latitude": 53.3656,
+    "longitude": 35.7974,
+    "attribution": "Воробйов О.М. (Сармат) — CDR BTS 13.04.2025",
+    "source": "CDR BTS GEOINT"
+  },
+  {
+    "site_id": "site_03",
+    "name": "Невстановлена позиція ЛНР",
+    "category": "LAUNCH_SITE",
+    "latitude": 52.849,
+    "longitude": 34.486,
+    "attribution": "Витік 2 КНМ ЛНР",
+    "source": "Витік"
+  },
+  {
+    "site_id": "site_04",
+    "name": "Аеродром Гвардійське, Крим",
+    "category": "AIRBASE",
+    "latitude": 45.1167,
+    "longitude": 33.9833,
+    "attribution": "Петренко І.В. (Шаман) — VK геотег",
+    "source": "VK геотег"
+  },
+  {
+    "site_id": "site_05",
+    "name": "Євпаторія — С-400 позиція",
+    "category": "AIR_DEFENSE_RADAR",
+    "latitude": 45.2,
+    "longitude": 33.37,
+    "attribution": "Злам 4-ї армії ВПС і ППО 2024",
+    "source": "Злам серверів 4 Армії"
+  },
+  {
+    "site_id": "site_06",
+    "name": "Феолент — С-400 позиція",
+    "category": "AIR_DEFENSE_RADAR",
+    "latitude": 44.49,
+    "longitude": 33.62,
+    "attribution": "Злам 4-ї армії ВПС і ППО 2024",
+    "source": "Злам серверів 4 Армії"
+  },
+  {
+    "site_id": "site_07",
+    "name": "Бельбек — С-400/Бук позиція",
+    "category": "AIR_DEFENSE_RADAR",
+    "latitude": 44.69,
+    "longitude": 33.58,
+    "attribution": "Злам 4-ї армії ВПС і ППО 2024",
+    "source": "Злам серверів 4 Армії"
+  },
+  {
+    "site_id": "site_chauda",
+    "name": "Мис Чауда (Крим) — Основний пусковий полігон Shahed",
+    "category": "LAUNCH_SITE",
+    "latitude": 45.0042,
+    "longitude": 35.8344,
+    "attribution": "Південний вектор ударів (Одещина, Миколаївщина, Дніпро)",
+    "source": "Повітряні Сили ЗСУ / OSINT"
+  },
+  {
+    "site_id": "site_primorsko_akhtarsk",
+    "name": "Приморсько-Ахтарськ (Краснодарський край) — Аеродром 960 АП",
+    "category": "AIRBASE_LAUNCH_SITE",
+    "latitude": 46.05,
+    "longitude": 38.25,
+    "attribution": "Східний вектор ударів Shahed / Су-25",
+    "source": "Повітряні Сили ЗСУ / OSINT"
+  },
+  {
+    "site_id": "site_yeysk",
+    "name": "Єйськ (Краснодарський край) — 859-й ЦБП морської авіації",
+    "category": "AIRBASE_LAUNCH_SITE",
+    "latitude": 46.68,
+    "longitude": 38.23,
+    "attribution": "Пуски БпЛА Shahed-136/Герань-2",
+    "source": "Повітряні Сили ЗСУ / OSINT"
+  },
+  {
+    "site_id": "site_khalino_kursk",
+    "name": "Курськ (Халіно) — 14-й гв. винищувальний авіаполк",
+    "category": "AIRBASE_LAUNCH_SITE",
+    "latitude": 51.75,
+    "longitude": 36.3,
+    "attribution": "Північний вектор пусків (Сумщина, Чернігівщина, Київщина)",
+    "source": "Повітряні Сили ЗСУ / OSINT"
+  }
+]

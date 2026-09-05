@@ -1,0 +1,200 @@
+[
+  {
+    "unit_id": "в/ч 20924",
+    "name": "924-й ДЦ БпЛА",
+    "location": "Коломна МО",
+    "activity": "Навчання операторів Герань-2/Шахед; відрядження Іран 2022",
+    "threat_vector": "Гол. оператор Герань-2 в Україні",
+    "source": "Злив 2023; Слідство.Інфо; EXIF Кашан",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 55055",
+    "name": "2-й КНМ ЛНР",
+    "location": "ЛНР",
+    "activity": "Фронтові оператори Орлан-10 2014-2022; розрахунок борт 10253",
+    "threat_vector": "Розвідка переднього краю",
+    "source": "Акт списання; розрахункові листки 2015; InformNapalm",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 35535",
+    "name": "448-ма ракетна бригада",
+    "location": "Курськ",
+    "activity": "ОТРК Іскандер-М; підтверджений удар 13.04.2025 Суми",
+    "threat_vector": "Ракетні удари по Україні",
+    "source": "Мегазлив 2024; CDR BTS 13.04.2025",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 92154",
+    "name": "ССО «Сенеж»",
+    "location": "Солнечногорськ МО",
+    "activity": "ІТ/РЕБ/кібероперації; підготовка спецсил",
+    "threat_vector": "Кіберопер./РЕБ підтримка",
+    "source": "InformNapalm «Особові справи ССО» 2022",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 46451",
+    "name": "37-й змішаний авіаполк",
+    "location": "Гвардійське, Крим",
+    "activity": "Бойова авіація Су-25/Су-27; Крим з 2014",
+    "threat_vector": "Авіаудари по Україні",
+    "source": "InformNapalm «Льотчики-вбивці» 2023",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 75387",
+    "name": "960-й ШАП",
+    "location": "Крим (Саки?)",
+    "activity": "Штурмова авіація Су-25СМ; Сирія 2015 → Україна 2022+",
+    "threat_vector": "Авіаудари по Україні",
+    "source": "InformNapalm 11.2015",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 21208",
+    "name": "3-тя бригада СпП ГРУ",
+    "location": "Тольятті",
+    "activity": "Розвідувально-диверсійні групи; Донбас",
+    "threat_vector": "Диверсійні операції",
+    "source": "Dossier Center 2023; перехоплення Telegram",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "ТОВ «Альбатрос»",
+    "name": "—",
+    "location": "ОЕЗ Алабуга, Єлабуга",
+    "activity": "Виробник Герань-2 (Шахед-136); санкції OFAC грудень 2023",
+    "threat_vector": "Виробництво зброї",
+    "source": "AlabugaLeaks 04.2024",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "Делегація Тегеран 2023",
+    "name": "—",
+    "location": "Тегеран",
+    "activity": "Посередники постачання БпЛА Іран→РФ 2023",
+    "threat_vector": "Постачання зброї/обхід санкцій",
+    "source": "AlabugaLeaks 04.2024",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 74854",
+    "name": "14-та ОБрСпП ГРУ",
+    "location": "Хабаровськ",
+    "activity": "Спецопер.: Крим 2014, Україна 2022+; 37+ ліквідованих",
+    "threat_vector": "СпН операції / Крим / Скрипалі",
+    "source": "Wikipedia; МО РФ некрологи; Bellingcat",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 03121",
+    "name": "31-ша дивізія ППО",
+    "location": "Севастополь",
+    "activity": "С-400 Євпаторія/Феолент/Бельбек; злам 2024",
+    "threat_vector": "ППО Крим",
+    "source": "Злам 4-ї армії ВПС і ППО 2024",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 03333",
+    "name": "112-та ракетна бригада",
+    "location": "—",
+    "activity": "Іскандер-М; злам серверів квітень 2025",
+    "threat_vector": "Ракетні удари",
+    "source": "Злам в/ч 03333 квітень 2025",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 12676",
+    "name": "126-та окрема бригада берегової оборони",
+    "location": "Перевальне, Крим",
+    "activity": "Узбережжя Крим",
+    "threat_vector": "Берегова оборона Крим",
+    "source": "Витоки 2024",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "ОЕЗ «Алабуга»",
+    "name": "«Dolphin 632»",
+    "location": "Єлабуга, Татарстан",
+    "activity": "Виробництво Герань-2 кодова назва Dolphin 632",
+    "threat_vector": "Виробництво БпЛА",
+    "source": "AlabugaLeaks 04.2024; санкції OFAC",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "924-й Держ. центр БпЛА",
+    "name": "Коломна",
+    "location": "Навчання операторів; 4-тижневі курси",
+    "activity": "ВБС",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "в/ч 35592",
+    "name": "448-ма ракетна бригада",
+    "location": "Курськ",
+    "activity": "Мобільні пускові розрахунки КамАЗ-43118",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "центр_перспективних_бпла",
+    "name": "Центр перспективних БпЛА",
+    "location": "м. Коломна",
+    "activity": "R&D, тестування нових модифікацій \\'abГерань-2\\'bb/\\'abГерань-3\\'bb",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "LIKELY"
+  },
+  {
+    "unit_id": "169_навчальний_центр",
+    "name": "169-й навчальний центр",
+    "location": "Челябінська обл.",
+    "activity": "Зв'язок та РЕБ",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "центр_рубікон",
+    "name": "\\'abРубікон\\'bb (Центр перспективних безпілотних технологій)",
+    "location": "РФ",
+    "activity": "Головний центр розробки/випробувань/інтеграції нових модифікацій БпЛА, прямий резерв ВГК",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "VERIFIED"
+  },
+  {
+    "unit_id": "50_обрспс_варяг",
+    "name": "50-та окрема бригада БпС \\'abВаряг\\'bb",
+    "location": "Запоріжжя / Херсонщина",
+    "activity": "Бойове застосування; входить до ВБС рф, прямий резерв ВГК (аналог \\'abРубікону\\'bb)",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "LIKELY"
+  },
+  {
+    "unit_id": "34_обрмп_борисфен",
+    "name": "34-та бригада морської піхоти \\'abБорисфен\\'bb",
+    "location": "н/д",
+    "activity": "Заявлена (unverified) в контексті командування Пулінцем",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "UNVERIFIED"
+  },
+  {
+    "unit_id": "квір_кудс_джанкой",
+    "name": "Іранські інструктори КВІР (\\'abКудс\\'bb)",
+    "location": "Крим: полігон \\'abЧорноморський\\'bb, аеродром Джанкой",
+    "activity": "До 30 осіб постійно; право вето на пуск (пароль для запуску двигуна), навчання розрахунків",
+    "threat_vector": "Shahed / Geran / FPV Strike & Recon",
+    "source": "AlabugaLeaks / ВЧ ШХД",
+    "status": "VERIFIED"
+  }
+]

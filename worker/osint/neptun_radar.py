@@ -362,6 +362,16 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
         except Exception as e_sig:
             logger.debug(f"SIGINT corroboration fallback: {e_sig}")
 
+        # Military Unit Attribution & Nearest Launch Site Anchor
+        military_unit_data = None
+        launch_site_anchor = None
+        try:
+            from worker.osint.military_units import find_military_unit, find_nearest_launch_site
+            military_unit_data = find_military_unit(m.get("text") or "")
+            launch_site_anchor = find_nearest_launch_site(float(lat), float(lng), max_dist_km=600.0)
+        except Exception as e_mu:
+            logger.debug(f"Military unit attribution fallback: {e_mu}")
+
         # Bayesian Belief Network (BBN) Threat Confidence
         bayesian_confidence = None
         try:
@@ -415,6 +425,8 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "terrain_masking": terrain_los_data,
             "sigint_corroboration": sigint_corrob_data,
             "bayesian_confidence": bayesian_confidence,
+            "military_unit": military_unit_data,
+            "nearest_launch_site": launch_site_anchor,
         }
         try:
             from worker.schemas import TacticalDroneTrackSchema
