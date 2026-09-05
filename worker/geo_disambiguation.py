@@ -274,6 +274,22 @@ CHANNEL_OBLAST_MAP = {
     "info_zp": "zaporizhzhia",
     "synegubov": "kharkiv",
     "ihor_terekhov": "kharkiv",
+    "kharkiv_life": "kharkiv",
+    "kharkov_radar": "kharkiv",
+    "odessa_typical": "odesa",
+    "our_odessa": "odesa",
+    "dnepr_live": "dnipropetrovsk",
+    "hyevuy_dnepr": "dnipropetrovsk",
+    "zaporozhye_city": "zaporizhzhia",
+    "zp_radar": "zaporizhzhia",
+    "novostiniko": "mykolaiv",
+    "nikolaev_live": "mykolaiv",
+    "sumy_radar": "sumy",
+    "sumy_glavnoe": "sumy",
+    "poltava_alerts": "poltava",
+    "pvp_poltava": "poltava",
+    "lviv_typical": "lviv",
+    "lviv_radar": "lviv",
     "khersonskaoda": "kherson",
     "vinnytsiaoda": "vinnytsia",
     "poltavskaoda": "poltava",
@@ -420,14 +436,17 @@ def disambiguate_toponym(
 def validate_tactical_coordinates(
     lat: Optional[float],
     lon: Optional[float],
+    oblast: Optional[str] = None,
     is_kyiv_metro: bool = False
 ) -> Tuple[bool, Optional[str]]:
     """Validates coordinates against tactical geospatial bounds and inverted axis errors.
     
     Guards against:
-    - Inverted coordinates: (Lon, Lat) swapped, e.g. Lon > 40 or Lat < 40
-    - Kyiv Metropolitan bounds: [50.2000, 50.6000] N, [30.2000, 30.8500] E
-    - Kyiv Oblast bounds: [49.1500, 51.5500] N, [29.2000, 32.2000] E
+    - Missing coordinates or invalid numeric formats
+    - Inverted coordinates: (Lon, Lat) swapped, e.g. Lon > 40.5 or Lat < 44.0
+    - Kyiv Metropolitan bounds: [50.2000, 50.6000] N, [30.2000, 30.8500] E (when is_kyiv_metro=True)
+    - Kyiv Oblast bounds: [49.1500, 51.5500] N, [29.2000, 32.2000] E (when oblast in ['kyiv_oblast', 'kyiv_region'])
+    - National Ukrainian sovereign bounds: [44.0000, 52.5000] N, [22.0000, 40.5000] E (default across all regions)
     
     Returns (is_valid, error_reason).
     """
@@ -440,8 +459,8 @@ def validate_tactical_coordinates(
     except (ValueError, TypeError):
         return False, "invalid_numeric_format"
 
-    # Inverted coordinate guard (Lon/Lat swapped or invalid Ukrainian projection)
-    if f_lon > 40.0 or f_lat < 40.0 or f_lat > 60.0:
+    # Inverted coordinate guard (Lon/Lat swapped or outside Ukrainian sovereign territory)
+    if f_lon > 40.5 or f_lat < 44.0 or f_lat > 52.5 or f_lon < 22.0:
         return False, f"inverted_or_out_of_ukraine_bounds (lat={f_lat}, lon={f_lon})"
 
     # Kyiv Metropolitan Bounds check
@@ -450,8 +469,10 @@ def validate_tactical_coordinates(
             return False, f"outside_kyiv_metro_bounds (lat={f_lat}, lon={f_lon})"
         return True, None
 
-    # Kyiv Oblast Bounds check
-    if not (49.1500 <= f_lat <= 51.5500 and 29.2000 <= f_lon <= 32.2000):
-        return False, f"outside_kyiv_oblast_bounds (lat={f_lat}, lon={f_lon})"
+    # Kyiv Oblast Bounds check (when explicitly requested)
+    if oblast in ["kyiv_oblast", "kyiv_region"]:
+        if not (49.1500 <= f_lat <= 51.5500 and 29.2000 <= f_lon <= 32.2000):
+            return False, f"outside_kyiv_oblast_bounds (lat={f_lat}, lon={f_lon})"
+        return True, None
 
     return True, None

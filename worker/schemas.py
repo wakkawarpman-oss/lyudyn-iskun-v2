@@ -22,11 +22,12 @@ class DamageLevelEnum(str, Enum):
 
 class ParsedEventSchema(BaseModel):
     is_kyiv_region: bool = Field(default=False, description="Чи стосується повідомлення Києва або Київської області")
+    target_oblast: str = Field(default="all", description="Код області (наприклад: kharkiv, odesa, dnipropetrovsk, zaporizhzhia, mykolaiv, lviv, sumy, poltava, kyiv_city, kyiv_oblast...)")
     is_confirmed_incident: bool = Field(default=False, description="Чи є подія підтвердженим фактом вибуху/прильоту/пожежі")
     is_radar_track: bool = Field(default=False, description="Чи є це радарним відстеженням руху БпЛА/ракети")
     event_type: EventTypeEnum = Field(default=EventTypeEnum.GENERAL_ALERT, description="Тип події")
-    location: str = Field(default="Київ та область", description="Назва міста/району/вулиці")
-    osm_query: str = Field(default="Київ", description="Точний запит для OpenStreetMap")
+    location: str = Field(default="Україна", description="Назва міста/району/вулиці")
+    osm_query: str = Field(default="Україна", description="Точний запит для OpenStreetMap")
     casualties: bool = Field(default=False, description="Наявність жертв або поранених")
     damage_level: DamageLevelEnum = Field(default=DamageLevelEnum.NONE, description="Рівень руйнувань")
     short_summary: str = Field(default="Оперативна інформація", description="Стислий факт без оціночних суджень")

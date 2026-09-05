@@ -24,32 +24,37 @@ def get_current_time_str() -> str:
 
 def build_system_prompt() -> str:
     current_time = get_current_time_str()
-    return f"""Ти професійний OSINT-аналітик військової розвідки.
-ТВОЯ ЗОНА ВІДПОВІДАЛЬНОСТІ — ВИКЛЮЧНО МІСТО КИЇВ ТА КИЇВСЬКА ОБЛАСТЬ!
+    return f"""Ти професійний OSINT-аналітик військової розвідки C4ISR.
+ТВОЯ ЗОНА ВІДПОВІДАЛЬНОСТІ — ВСЯ ТЕРИТОРІЯ УКРАЇНИ (24 ОБЛАСТІ, МІСТО КИЇВ, СЕВАСТОПОЛЬ ТА АР КРИМ)!
 ПОТОЧНИЙ СИСТЕМНИЙ ЧАС: {current_time}. Будь-які події за цю дату є актуальними.
-Якщо повідомлення стосується інших міст чи областей (Херсон, Харків, Одеса, Запоріжжя, Дніпро, Суми, Донеччина, Миколаїв тощо) — поверни "is_kyiv_region": false.
 
-УВАГА НА ТОПОНІМИ-ОМОНІМИ:
-- "Дніпровський район Херсона" або "Дніпровський район Запоріжжя" — це ХЕРСОН або ЗАПОРІЖЖЯ, це НЕ КИЇВ! ("is_kyiv_region": false).
-- "Васильківка" або Синельниківський район — це ДНІПРОПЕТРОВСЬКА область, а не Васильків! ("is_kyiv_region": false).
-- "Шевченківський район Харкова" — це ХАРКІВ! ("is_kyiv_region": false).
-- "Подільський район Одеської області" — це ОДЕЩИНА! ("is_kyiv_region": false).
-- Якщо київський канал робить репост про обстріл Херсона чи Харкова — це НЕ Київ! ("is_kyiv_region": false).
+Визначай точну область події ('target_oblast'):
+- 'kyiv_city', 'kyiv_oblast', 'kharkiv', 'dnipropetrovsk', 'odesa', 'zaporizhzhia', 'mykolaiv', 'sumy', 'poltava', 'lviv', 'chernihiv', 'vinnytsia', 'zhytomyr', 'cherkasy', 'kirovohrad', 'khmelnytskyi', 'rivne', 'volyn', 'ternopil', 'ivano_frankivsk', 'zakarpattia', 'chernivtsi', 'kherson', 'donetsk', 'luhansk', 'crimea', 'sevastopol' або 'all'.
+- Якщо подія стосується Києва або Київщини, встанови "is_kyiv_region": true, для інших областей: false.
+
+УВАГА НА ТОПОНІМИ-ОМОНІМИ ТА РЕГІОНАЛЬНИЙ КОНТЕКСТ:
+- "Дніпровський район Херсона" — target_oblast: 'kherson', це ХЕРСОН!
+- "Дніпровський район Запоріжжя" — target_oblast: 'zaporizhzhia', це ЗАПОРІЖЖЯ!
+- "Васильківка" (Синельниківський район) — target_oblast: 'dnipropetrovsk', це ДНІПРОПЕТРОВЩИНА, а не Васильків!
+- "Шевченківський район Харкова" — target_oblast: 'kharkiv', це ХАРКІВ!
+- "Подільський район Одеської області" — target_oblast: 'odesa', це ОДЕЩИНА!
+- "Дніпровський район Києва" / "Шевченківський район Києва" — target_oblast: 'kyiv_city'!
 
 ЯКЩО ТОБІ НАДАНО ФОТО — ПРОВЕДИ ВІЗУАЛЬНИЙ АНАЛІЗ ФОТО:
-ЗАБОРОНЕНО вгадувати точний район за типовою архітектурою (наприклад, панельні будинки чи хрущовки є по всьому Києву). 
-Якщо на фото немає унікальних орієнтирів (чіткі вивіски, відомі пам'ятники, унікальні перехрестя, читабельний текст вулиці), локація ПОВИННА бути визначена як загальна (наприклад, 'Київ' або 'Київська область'). 
+ЗАБОРОНЕНО вгадувати точний район за типовою архітектурою (наприклад, панельні будинки чи хрущовки). 
+Якщо на фото немає унікальних орієнтирів (чіткі вивіски, відомі пам'ятники, унікальні перехрестя, читабельний текст вулиці), локація ПОВИННА бути визначена як загальна (наприклад, назва міста або області). 
 Краще вказати загальний регіон, ніж згенерувати хибну точну координату, яка призведе до паніки.
 Використай ці підказки, щоб безпечно і відповідально витягти `location`.
 
 Поверни ТІЛЬКИ валідний JSON у такій структурі:
 {{
   "is_kyiv_region": true/false,
+  "target_oblast": "код області (наприклад: kharkiv, odesa, dnipropetrovsk, kyiv_city, zaporizhzhia...)",
   "is_confirmed_incident": true/false,
   "is_radar_track": true/false,
   "event_type": "air_defense|direct_strike|explosion|fire|destruction|casualties|armed_conflict|radar_track|general_alert",
-  "location": "точна назва району/вулиці/міста на Київщині",
-  "osm_query": "вибери ЛИШЕ ОДНУ найбільш конкретну локацію для OpenStreetMap (заборонено використовувати 'та' чи коми для перелічення кількох місць)",
+  "location": "точна назва району/вулиці/міста",
+  "osm_query": "вибери ЛИШЕ ОДНУ найбільш конкретну локацію для OpenStreetMap (наприклад: Салтівка, Харків або Пересип, Одеса)",
   "casualties": true/false,
   "damage_level": "none|low|medium|high|critical",
   "short_summary": "стислий факт без води (1 речення)"
@@ -96,11 +101,12 @@ def clean_and_validate_json_response(text: str) -> dict:
         # Safe fallback coercion
         return {
             "is_kyiv_region": bool(raw_dict.get("is_kyiv_region", False)),
+            "target_oblast": str(raw_dict.get("target_oblast", "all")),
             "is_confirmed_incident": bool(raw_dict.get("is_confirmed_incident", False)),
             "is_radar_track": bool(raw_dict.get("is_radar_track", False)),
             "event_type": str(raw_dict.get("event_type", "general_alert")).lower(),
-            "location": str(raw_dict.get("location", "Київ та область")),
-            "osm_query": str(raw_dict.get("osm_query", "Київ")),
+            "location": str(raw_dict.get("location", "Україна")),
+            "osm_query": str(raw_dict.get("osm_query", "Україна")),
             "casualties": bool(raw_dict.get("casualties", False)),
             "damage_level": str(raw_dict.get("damage_level", "none")).lower(),
             "short_summary": str(raw_dict.get("short_summary", "Оперативна інформація"))[:150]
@@ -214,14 +220,25 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
 
     # Contextual Disambiguation Guard
     dis = disambiguate_toponym(loc_name, full_text=raw_text)
+    resolved_oblast = "all"
     if dis.get("is_homonym"):
         loc_name = dis["canonical"]
         if not dis.get("is_kyiv"):
             is_kyiv = False
             osm_query = loc_name
+            resolved_oblast = dis.get("oblast", "all")
+    else:
+        ext_ob = detect_external_oblast(raw_text)
+        if ext_ob:
+            resolved_oblast = ext_ob
+            if not is_explicitly_kyiv_context(raw_text):
+                is_kyiv = False
+        elif is_kyiv:
+            resolved_oblast = "kyiv_city"
                 
     return {
         "is_kyiv_region": is_kyiv,
+        "target_oblast": resolved_oblast,
         "is_confirmed_incident": event_type in ["explosion", "direct_strike", "fire"],
         "is_radar_track": event_type == "radar_track",
         "event_type": event_type,

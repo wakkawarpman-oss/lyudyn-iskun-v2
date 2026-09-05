@@ -75,6 +75,36 @@ exif_extractor = EXIFExtractor()
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.from_url(REDIS_URL)
 
+OBLAST_ALERT_METADATA = {
+    "kyiv_city": {"name": "м. Київ", "location": "Київ", "query": "Київ, Україна", "lat": 50.4501, "lon": 30.5234},
+    "kyiv_oblast": {"name": "Київська область", "location": "Київська область", "query": "Київська область, Україна", "lat": 50.3500, "lon": 30.2000},
+    "dnipropetrovsk": {"name": "Дніпропетровська область", "location": "Дніпро та область", "query": "Дніпро, Україна", "lat": 48.4647, "lon": 35.0462},
+    "zaporizhzhia": {"name": "Запорізька область", "location": "Запоріжжя та область", "query": "Запоріжжя, Україна", "lat": 47.8388, "lon": 35.1396},
+    "kharkiv": {"name": "Харківська область", "location": "Харків та область", "query": "Харків, Україна", "lat": 49.9935, "lon": 36.2304},
+    "odesa": {"name": "Одеська область", "location": "Одеса та область", "query": "Одеса, Україна", "lat": 46.4825, "lon": 30.7233},
+    "mykolaiv": {"name": "Миколаївська область", "location": "Миколаїв та область", "query": "Миколаїв, Україна", "lat": 46.9750, "lon": 31.9946},
+    "sumy": {"name": "Сумська область", "location": "Суми та область", "query": "Суми, Україна", "lat": 50.9077, "lon": 34.7981},
+    "poltava": {"name": "Полтавська область", "location": "Полтава та область", "query": "Полтава, Україна", "lat": 49.5883, "lon": 34.5514},
+    "lviv": {"name": "Львівська область", "location": "Львів та область", "query": "Львів, Україна", "lat": 49.8397, "lon": 24.0297},
+    "chernihiv": {"name": "Чернігівська область", "location": "Чернігів та область", "query": "Чернігів, Україна", "lat": 51.4982, "lon": 31.2893},
+    "vinnytsia": {"name": "Вінницька область", "location": "Вінниця та область", "query": "Вінниця, Україна", "lat": 49.2331, "lon": 28.4682},
+    "zhytomyr": {"name": "Житомирська область", "location": "Житомир та область", "query": "Житомир, Україна", "lat": 50.2547, "lon": 28.6587},
+    "cherkasy": {"name": "Черкаська область", "location": "Черкаси та область", "query": "Черкаси, Україна", "lat": 49.4444, "lon": 32.0598},
+    "kirovohrad": {"name": "Кіровоградська область", "location": "Кропивницький та область", "query": "Кропивницький, Україна", "lat": 48.5079, "lon": 32.2623},
+    "khmelnytskyi": {"name": "Хмельницька область", "location": "Хмельницький та область", "query": "Хмельницький, Україна", "lat": 49.4230, "lon": 26.9871},
+    "rivne": {"name": "Рівненська область", "location": "Рівне та область", "query": "Рівне, Україна", "lat": 50.6199, "lon": 26.2516},
+    "volyn": {"name": "Волинська область", "location": "Луцьк та область", "query": "Луцьк, Україна", "lat": 50.7472, "lon": 25.3254},
+    "ternopil": {"name": "Тернопільська область", "location": "Тернопіль та область", "query": "Тернопіль, Україна", "lat": 49.5535, "lon": 25.5948},
+    "ivano_frankivsk": {"name": "Івано-Франківська область", "location": "Івано-Франківськ та область", "query": "Івано-Франківськ, Україна", "lat": 48.9226, "lon": 24.7111},
+    "zakarpattia": {"name": "Закарпатська область", "location": "Ужгород та Закарпаття", "query": "Ужгород, Україна", "lat": 48.6208, "lon": 22.2879},
+    "chernivtsi": {"name": "Чернівецька область", "location": "Чернівці та область", "query": "Чернівці, Україна", "lat": 48.2921, "lon": 25.9358},
+    "kherson": {"name": "Херсонська область", "location": "Херсон та область", "query": "Херсон, Україна", "lat": 46.6354, "lon": 32.6169},
+    "donetsk": {"name": "Донецька область", "location": "Донеччина", "query": "Краматорськ, Україна", "lat": 48.7390, "lon": 37.5838},
+    "luhansk": {"name": "Луганська область", "location": "Луганщина", "query": "Сєвєродонецьк, Україна", "lat": 48.9480, "lon": 38.4917},
+    "crimea": {"name": "АР Крим", "location": "Крим", "query": "Сімферополь, Україна", "lat": 44.9521, "lon": 34.1024},
+    "sevastopol": {"name": "м. Севастополь", "location": "Севастополь", "query": "Севастополь, Україна", "lat": 44.6167, "lon": 33.5254},
+}
+
 import hashlib
 import threading
 
@@ -184,13 +214,8 @@ def pipeline_extract(self, payload_str):
         return {"skip": True, "reason": "civilian_noise"}
 
     channel_clean = payload.get("channel", "").lstrip("@").lower()
-    ch_native_oblast = detect_channel_oblast(channel_clean)
+    ch_native_oblast = detect_channel_oblast(channel_clean) or payload.get("oblast")
     has_kyiv_context = is_explicitly_kyiv_context(text)
-
-    # Channel origin guard: if channel is from Rivne, Lviv, Kherson etc., and text does not explicitly mention Kyiv, drop it!
-    if ch_native_oblast and ch_native_oblast not in ["kyiv_city", "kyiv_oblast"]:
-        if not has_kyiv_context:
-            return {"skip": True, "reason": "not_kyiv", "non_kyiv_oblast": ch_native_oblast}
 
     # Record message forward relationship (Telerecon Forward Graph)
     fwd_from = payload.get("fwd_from")
@@ -258,27 +283,41 @@ def pipeline_extract(self, payload_str):
     t_lower = text.lower()
     ext_oblast = detect_external_oblast(text)
 
-    # Fast-exit for explicit non-Kyiv regional news reposts before making expensive LLM calls
-    if ext_oblast and not has_kyiv_context:
-        return {"skip": True, "reason": "not_kyiv", "non_kyiv_oblast": ext_oblast}
+    # Determine target oblast for multi-region processing across Ukraine
+    target_oblast = "all"
+    if ext_oblast:
+        target_oblast = ext_oblast
+    elif ch_native_oblast and ch_native_oblast not in ["all", "national"]:
+        target_oblast = ch_native_oblast
+    elif has_kyiv_context:
+        target_oblast = "kyiv_city"
+    payload["target_oblast"] = target_oblast
 
     is_generic_alert = any(w in t_lower for w in ["увага! повітряна тривога", "відбій повітряної тривоги", "руйнувань та потерпілих немає", "ракетна небезпека", "загроза балістики"])
     if is_generic_alert and len(text) < 150 and not media_path:
+        meta = OBLAST_ALERT_METADATA.get(target_oblast) or OBLAST_ALERT_METADATA.get("kyiv_oblast")
         llm_data = {
-            "is_kyiv_region": True,
+            "target_oblast": target_oblast,
+            "is_kyiv_region": target_oblast in ["kyiv_city", "kyiv_oblast"],
             "is_confirmed_incident": True,
             "is_radar_track": False,
             "event_type": "general_alert",
-            "location": "Київська область",
-            "osm_query": "Київська область, Україна",
+            "location": meta["location"],
+            "osm_query": meta["query"],
             "short_summary": text[:100]
         }
+        if meta.get("lat") and meta.get("lon") and not geom_wkt:
+            geom_wkt = f"POINT({meta['lon']} {meta['lat']})"
+            osint_location = f"Alert: {meta['location']}"
     else:
         llm_data = process_with_llm(text, media_path)
+        if not llm_data.get("target_oblast") or llm_data.get("target_oblast") == "all":
+            llm_data["target_oblast"] = target_oblast
 
     if llm_data.get("event_type") == "civilian_noise":
         return {"skip": True, "reason": "civilian_noise"}
 
+    target_ob = llm_data.get("target_oblast") or payload.get("target_oblast") or target_oblast or "all"
     is_kyiv_region = llm_data.get("is_kyiv_region", False)
     
     # Pure Kyiv-only channels that primarily post about Kyiv / Kyiv region
@@ -287,15 +326,17 @@ def pipeline_extract(self, payload_str):
         "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map",
         "dsns_kyiv_region", "kyiv24", "kievinfo_kyiv", "kiev_info", "kievinfo"
     ]
-    if channel_clean in pure_kyiv_channels:
+    if channel_clean in pure_kyiv_channels or target_ob in ["kyiv_city", "kyiv_oblast"]:
         is_kyiv_region = True
         
-    if not is_kyiv_region:
-        return {"skip": True, "reason": "not_kyiv"}
+    # Accept incidents across all 27 regions of Ukraine
+    is_valid_ukraine = (target_ob in OBLAST_ALERT_METADATA) or is_kyiv_region or (target_ob in ["all", "national"])
+    if not is_valid_ukraine:
+        return {"skip": True, "reason": "not_ukraine"}
 
     is_confirmed = llm_data.get("is_confirmed_incident", False)
     is_radar = llm_data.get("is_radar_track", False)
-    is_alert = llm_data.get("event_type") in ["general_alert", "alert", "explosion", "direct_strike", "fire", "radar_track"]
+    is_alert = llm_data.get("event_type") in ["general_alert", "alert", "explosion", "direct_strike", "fire", "radar_track", "air_defense"]
     if not is_confirmed and not is_radar and not is_alert:
         return {"skip": True, "reason": "not_confirmed"}
 
@@ -373,11 +414,12 @@ def pipeline_geocode(self, data):
 
     # Tier 5: Canonical Toponym Fallback (Settlement ±2000m, Region ±10000m)
     if not geom_wkt:
-        raw_location = llm_data.get("location") or "Київ та область"
+        raw_location = llm_data.get("location") or "Україна"
+        target_ob = payload.get("target_oblast") or llm_data.get("target_oblast") or payload.get("oblast")
         canonical_name, lat, lon, is_fallback = resolve_canonical_toponym(
             raw_location,
             full_text=text,
-            channel_oblast=payload.get("oblast")
+            channel_oblast=target_ob
         )
         llm_data["location"] = canonical_name
         is_fallback_geo = is_fallback
@@ -386,7 +428,10 @@ def pipeline_geocode(self, data):
             precision_tier = "settlement" if not is_fallback_geo else "region"
             precision_radius_m = 2000 if not is_fallback_geo else 10000
         else:
-            geom_wkt = cached_geocode(f"{canonical_name}, Київська область, Україна")
+            ob_meta = OBLAST_ALERT_METADATA.get(target_ob)
+            target_ob_title = ob_meta["name"] if ob_meta else "Україна"
+            geo_query = f"{canonical_name}, {target_ob_title}, Україна" if target_ob_title != "Україна" else f"{canonical_name}, Україна"
+            geom_wkt = cached_geocode(geo_query)
             precision_tier = "settlement" if geom_wkt else "region"
             precision_radius_m = 2000 if geom_wkt else 10000
 
@@ -479,11 +524,17 @@ def pipeline_cluster_and_save(self, data):
     conf_score = calculate_confidence_score([channel], is_official_src, has_media)
 
     # Dynamic Admiralty fact confidence scoring
-    lat_val, lon_val = 50.4501, 30.5234
+    target_ob = payload.get("target_oblast") or llm_data.get("target_oblast") or "kyiv_city"
+    default_meta = OBLAST_ALERT_METADATA.get(target_ob) or OBLAST_ALERT_METADATA.get("kyiv_city")
+    lat_val, lon_val = default_meta["lat"], default_meta["lon"]
     if geom_wkt and "POINT(" in geom_wkt:
         try:
             raw_c = geom_wkt.replace("POINT(", "").replace(")", "").strip().split()
-            lon_val, lat_val = float(raw_c[0]), float(raw_c[1])
+            cand_lon, cand_lat = float(raw_c[0]), float(raw_c[1])
+            from worker.geo_disambiguation import validate_tactical_coordinates
+            ok, _ = validate_tactical_coordinates(cand_lat, cand_lon, oblast=target_ob)
+            if ok:
+                lon_val, lat_val = cand_lon, cand_lat
         except Exception:
             pass
 

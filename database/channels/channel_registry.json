@@ -91,6 +91,16 @@
       "username": "dp_trevoga",
       "title": "Дніпро Тривога",
       "tier": 2
+    },
+    {
+      "username": "dnepr_live",
+      "title": "Дніпро Live",
+      "tier": 2
+    },
+    {
+      "username": "hyevuy_dnepr",
+      "title": "Х**вый Днепр / Оперативний",
+      "tier": 2
     }
   ],
   "zaporizhzhia": [
@@ -132,6 +142,16 @@
     {
       "username": "etozp",
       "title": "Це Запоріжжя",
+      "tier": 2
+    },
+    {
+      "username": "zaporozhye_city",
+      "title": "Запоріжжя Новини / Оперативний",
+      "tier": 2
+    },
+    {
+      "username": "zp_radar",
+      "title": "Запоріжжя Радар КАБів",
       "tier": 2
     }
   ],
@@ -239,6 +259,16 @@
       "username": "suspilnekharkiv",
       "title": "Суспільне Харків",
       "tier": 2
+    },
+    {
+      "username": "kharkiv_life",
+      "title": "Харьков Life / ХЛ",
+      "tier": 2
+    },
+    {
+      "username": "kharkov_radar",
+      "title": "Оперативний Харків Радар",
+      "tier": 2
     }
   ],
   "odesa": [
@@ -255,6 +285,16 @@
     {
       "username": "suspilneodesa",
       "title": "Суспільне Одеса",
+      "tier": 2
+    },
+    {
+      "username": "odessa_typical",
+      "title": "Одесса INFO / Типова Одеса",
+      "tier": 2
+    },
+    {
+      "username": "our_odessa",
+      "title": "Наша Одеса / Радар пусків",
       "tier": 2
     }
   ],
@@ -273,6 +313,16 @@
       "username": "suspilnemykolaiv",
       "title": "Суспільне Миколаїв",
       "tier": 2
+    },
+    {
+      "username": "novostiniko",
+      "title": "Новости Николаева / НикВести",
+      "tier": 2
+    },
+    {
+      "username": "nikolaev_live",
+      "title": "Николаев INFO",
+      "tier": 2
     }
   ],
   "poltava": [
@@ -285,6 +335,16 @@
       "username": "suspilnepoltava",
       "title": "Суспільне Полтава",
       "tier": 2
+    },
+    {
+      "username": "poltava_alerts",
+      "title": "Полтава Сирена / Радар",
+      "tier": 2
+    },
+    {
+      "username": "pvp_poltava",
+      "title": "ПВП Полтава",
+      "tier": 2
     }
   ],
   "sumy": [
@@ -296,6 +356,16 @@
     {
       "username": "suspilnesumy",
       "title": "Суспільне Суми",
+      "tier": 2
+    },
+    {
+      "username": "sumy_radar",
+      "title": "Суми Радар / Тривога Сумщина",
+      "tier": 2
+    },
+    {
+      "username": "sumy_glavnoe",
+      "title": "Суми Головне",
       "tier": 2
     }
   ],
@@ -416,6 +486,16 @@
     {
       "username": "suspilnelviv",
       "title": "Суспільне Львів",
+      "tier": 2
+    },
+    {
+      "username": "lviv_typical",
+      "title": "Типовий Львів",
+      "tier": 2
+    },
+    {
+      "username": "lviv_radar",
+      "title": "Львів Радар Захід",
       "tier": 2
     }
   ],
