@@ -549,15 +549,34 @@ def pipeline_cluster_and_save(self, data):
             )
             cluster_match = query.order_by(DetectedEvent.detected_at.desc()).first()
 
-        # Guard: Prevent cross-district collision (e.g. Pechersk vs Dniprovsky)
+        # Guard: Prevent cross-district collision (e.g. Pechersk vs Dniprovsky, Peresyp vs Khadzhybei)
         if cluster_match:
             def _get_district_token(s: str) -> Optional[str]:
                 if not s:
                     return None
                 s_low = s.lower()
                 for token in [
+                    # Kyiv
                     "голосіїв", "дарниц", "деснян", "дніпров", "оболон",
-                    "печерськ", "поділ", "святошин", "солом'ян", "соломян", "шевченків"
+                    "печерськ", "поділ", "святошин", "солом'ян", "соломян", "шевченків",
+                    # Odesa
+                    "пересип", "суворовськ", "поскот", "котовськ", "хаджибей", "малиновськ",
+                    "черемушк", "слобідк", "приморськ", "таїров", "таиров", "аркаді",
+                    # Dnipro
+                    "соборн", "перемог", "топол", "чечелів", "південмаш", "парус",
+                    "самарськ", "придніпров", "амур", "анд", "індустріальн",
+                    # Zaporizhzhia
+                    "вознесенів", "бородін", "кічкас", "космос", "піски", "бабурк", "хортиц",
+                    # Kharkiv
+                    "салтів", "салтов", "павлове пол", "олексіїв", "холодна гор", "хтз", "роган",
+                    # Lviv
+                    "сихів", "рясн", "левандівк", "личаків", "галицьк",
+                    # Mykolaiv
+                    "варварів", "солян", "намив", "водопій", "корабельн",
+                    # Sumy
+                    "ковпаків", "курськ", "зарічн", "хіммістеч", "баси",
+                    # Poltava
+                    "половк", "левад", "алмазн", "сади"
                 ]:
                     if token in s_low:
                         return token

@@ -4872,6 +4872,22 @@
 
         function handleDeepLinks() {
             const params = new URLSearchParams(window.location.search);
+            const pCity = (params.get('city') || '').toLowerCase();
+            const CITY_COORDS = {
+                'kyiv': [50.4501, 30.5234, 11],
+                'dnipro': [48.4647, 35.0462, 11],
+                'zaporizhzhia': [47.8388, 35.1396, 11],
+                'kharkiv': [49.9935, 36.2304, 11],
+                'lviv': [49.8397, 24.0297, 11],
+                'mykolaiv': [46.9750, 31.9946, 11],
+                'sumy': [50.9077, 34.7981, 12],
+                'odesa': [46.4825, 30.7233, 11],
+                'poltava': [49.5883, 34.5514, 12]
+            };
+            if (pCity && CITY_COORDS[pCity]) {
+                const [cLat, cLon, cZoom] = CITY_COORDS[pCity];
+                map.setView([cLat, cLon], cZoom);
+            }
             const pLat = parseFloat(params.get('lat'));
             const pLon = parseFloat(params.get('lon'));
             const pZoom = parseInt(params.get('zoom'), 10);

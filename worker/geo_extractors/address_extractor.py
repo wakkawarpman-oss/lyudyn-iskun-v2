@@ -137,14 +137,30 @@ class AddressExtractor:
             except ValueError:
                 pass
 
-        # 3. Detect city
+        # 3. Detect city and district
         text_lower = text.lower()
         detected_city = default_city
+        detected_district = None
         city_coords = None
         for key, (canon_city, c_lat, c_lon) in UKRAINE_CITIES.items():
             if key in text_lower:
                 detected_city = canon_city
                 city_coords = (c_lat, c_lon)
+                break
+
+        # Check district / microdistrict mentions
+        from worker.geo_extractors.address_parser import CITY_DISTRICTS_MAP
+        for root, (dist_name, c_name) in CITY_DISTRICTS_MAP.items():
+            if root in text_lower:
+                if detected_city and detected_city != c_name:
+                    continue
+                detected_district = dist_name
+                if not detected_city:
+                    detected_city = c_name
+                    for uk_key, (u_city, u_lat, u_lon) in UKRAINE_CITIES.items():
+                        if u_city == c_name:
+                            city_coords = (u_lat, u_lon)
+                            break
                 break
 
         # 4. Full address
@@ -169,7 +185,7 @@ class AddressExtractor:
                 city=detected_city,
                 street=cleaned_street,
                 building=building,
-                district=None,
+                district=detected_district,
                 latitude=lat,
                 longitude=lon,
                 confidence=0.90 if detected_city else 0.75,
@@ -184,7 +200,7 @@ class AddressExtractor:
                 city=detected_city,
                 street=None,
                 building=None,
-                district=None,
+                district=detected_district,
                 latitude=city_coords[0],
                 longitude=city_coords[1],
                 confidence=0.65,
