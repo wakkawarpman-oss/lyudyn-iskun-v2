@@ -177,8 +177,42 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
 
         speed_val = float(m.get("speed_kmh") or m.get("computed_speed_kmh") or (185.0 if category == "drone" else 0))
 
+        # Kalman Track Fusion and ETA Uncertainty Cone
+        track_id = str(m.get("id") or m.get("track_id") or f"{lat:.4f}_{lng:.4f}")
+        now_ts = datetime.datetime.utcnow().timestamp()
+        eta_cone_data = None
+        try:
+            from worker.track_fusion import KalmanTrackFilter
+            kf = KalmanTrackFilter(q_accel=8.0)
+            initial_mps = speed_val / 3.6 if speed_val > 0 else 45.0
+            state, hist = kf.init_track(
+                track_id, lat, lng, now_ts,
+                source_type="radar",
+                initial_heading_deg=heading_val if heading_val > 0 else None,
+                initial_speed_mps=initial_mps
+            )
+            if len(trail) >= 2:
+                step_dt = 15.0
+                start_t = now_ts - len(trail) * step_dt
+                state, hist = kf.init_track(
+                    track_id, trail[0][0], trail[0][1], start_t,
+                    source_type="radar",
+                    initial_heading_deg=heading_val if heading_val > 0 else None,
+                    initial_speed_mps=initial_mps
+                )
+                for idx, pt in enumerate(trail[1:], start=1):
+                    obs_t = start_t + idx * step_dt
+                    state = kf.add_measurement(state, hist, lat=pt[0], lon=pt[1], t=obs_t, source_type="radar", source_id="neptun")
+                state = kf.add_measurement(state, hist, lat=lat, lon=lng, t=now_ts, source_type="radar", source_id="neptun")
+                speed_val = round(state.speed_kmh, 1)
+                heading_val = round(state.heading_deg, 1)
+
+            eta_cone_data = kf.eta_cone(state, KYIV_LAT, KYIV_LON)
+        except Exception as e_kf:
+            logger.debug(f"Kalman track fusion fallback: {e_kf}")
+
         drone_obj = {
-            "id": str(m.get("id") or m.get("track_id") or f"{lat:.4f}_{lng:.4f}"),
+            "id": track_id,
             "label": label,
             "category": category,
             "color": color,
@@ -200,6 +234,7 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "is_zaporizhzhia_threat": "zaporizhzhia" in relevant_obs,
             "relevant_oblasts": relevant_obs,
             "trail": trail,
+            "eta_cone": eta_cone_data,
         }
         drones.append(drone_obj)
 

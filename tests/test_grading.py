@@ -108,3 +108,56 @@ def test_map_channel_to_admiralty():
     rel_tg, cred_tg = map_channel_to_admiralty("kievreal1", has_media=True)
     assert rel_tg == Reliability.C
     assert cred_tg == Credibility.CONFIRMED
+
+
+def test_pipeline_cluster_and_save_integrates_grading(monkeypatch):
+    from worker.tasks import pipeline_cluster_and_save
+    import json
+
+    class FakeSession:
+        def __init__(self):
+            self.added = []
+        def query(self, *a, **kw):
+            return self
+        def filter(self, *a, **kw):
+            return self
+        def order_by(self, *a, **kw):
+            return self
+        def first(self):
+            return None
+        def add(self, obj):
+            self.added.append(obj)
+        def commit(self):
+            pass
+        def execute(self, *a, **kw):
+            pass
+        def close(self):
+            pass
+
+    fake_session = FakeSession()
+    monkeypatch.setattr("worker.tasks.SessionLocal", lambda: fake_session)
+
+    test_data = {
+        "payload": {
+            "channel": "test_grading_ch",
+            "message_id": 999901,
+            "text": "Вибух у Дарницькому районі Києва",
+            "has_media": True,
+            "date": "2026-09-04T12:00:00"
+        },
+        "payload_str": json.dumps({"channel": "test_grading_ch", "message_id": 999901}),
+        "llm_data": {
+            "event_type": "explosion",
+            "location": "Київ, Дарницький район",
+            "short_summary": "Вибух у Дарницькому районі Києва"
+        },
+        "geom_wkt": "POINT(30.6500 50.4100)",
+        "precision_tier": "district",
+        "precision_radius_m": 1500
+    }
+
+    pipeline_cluster_and_save(test_data)
+    assert len(fake_session.added) == 1
+    ev = fake_session.added[0]
+    assert ev.confidence_score >= 50
+    assert ev.source_weight is not None

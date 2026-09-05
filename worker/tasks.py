@@ -124,6 +124,37 @@ from celery import chain
 
 @shared_task(name="worker.tasks.process_message", bind=True)
 def process_message(self, payload_str):
+    # Fast exit for invalid or empty payloads
+    try:
+        payload = json.loads(payload_str)
+    except Exception:
+        return {"skip": True, "reason": "invalid_json"}
+
+    text = payload.get("text", "")
+    media_path = payload.get("media_path")
+    if not text and not media_path:
+        return {"skip": True, "reason": "empty"}
+
+    channel = payload.get("channel", "")
+    message_id = payload.get("message_id")
+
+    # Fast Redis deduplication check
+    if channel and message_id is not None and redis_client:
+        try:
+            if redis_client.get(f"processed_msg:{channel}:{message_id}"):
+                return {"skip": True, "reason": "already_processed"}
+        except Exception:
+            pass
+
+    from worker.geo_disambiguation import is_civilian_non_threat_noise
+    if is_civilian_non_threat_noise(text):
+        if channel and message_id is not None and redis_client:
+            try:
+                redis_client.setex(f"processed_msg:{channel}:{message_id}", 86400, "1")
+            except Exception:
+                pass
+        return {"skip": True, "reason": "civilian_noise"}
+
     # Entry point for the pipeline
     workflow = chain(
         pipeline_extract.s(payload_str),
@@ -175,12 +206,24 @@ def pipeline_extract(self, payload_str):
     channel = payload.get("channel", "")
     message_id = payload.get("message_id")
     if channel and message_id is not None:
+        dedup_key = f"processed_msg:{channel}:{message_id}"
+        if redis_client:
+            try:
+                if redis_client.get(dedup_key):
+                    return {"skip": True, "reason": "already_processed"}
+            except Exception:
+                pass
         db = SessionLocal()
         try:
             if db.query(DetectedEvent.id).filter(
                 DetectedEvent.source_channel == channel,
                 DetectedEvent.message_id == message_id
             ).first():
+                if redis_client:
+                    try:
+                        redis_client.setex(dedup_key, 86400 * 3, "1")
+                    except Exception:
+                        pass
                 return {"skip": True, "reason": "already_processed"}
         finally:
             db.close()
@@ -387,17 +430,75 @@ def pipeline_cluster_and_save(self, data):
     event_type = llm_data.get("event_type", "general_alert")
     location = llm_data.get("location") or "Київ та область"
     
+    from worker.grading import (
+        Reliability, Credibility, IntelFact,
+        fact_confidence, SourceReputation, fuse_epicenter, _grade
+    )
+
+    def _get_reputation(ch: str) -> SourceReputation:
+        if redis_client:
+            try:
+                raw_rep = redis_client.get(f"source_rep:{ch}")
+                if raw_rep:
+                    return SourceReputation.from_dict(json.loads(raw_rep))
+            except Exception:
+                pass
+        return SourceReputation(alpha=2.0, beta=2.0)
+
+    def _save_reputation(ch: str, rep: SourceReputation):
+        if redis_client:
+            try:
+                redis_client.set(f"source_rep:{ch}", json.dumps(rep.to_dict()), ex=86400 * 30)
+            except Exception:
+                pass
+
     source_meta = get_source_metadata(channel_clean)
     is_official_src = source_meta["type"] in ["OFFICIAL", "MILITARY"]
     source_tier = source_meta["tier"]
-    source_weight = source_meta["base_weight"]
+    has_media = payload.get("has_media", False)
+
+    tier_map = {
+        "S": Reliability.A,
+        "A": Reliability.A if is_official_src else Reliability.B,
+        "B": Reliability.B,
+        "C": Reliability.C,
+        "D": Reliability.D
+    }
+    rel = tier_map.get(source_tier, Reliability.E)
+    cred = Credibility.CONFIRMED if (has_media and is_official_src) else (
+        Credibility.PROBABLY_TRUE if (has_media or is_official_src) else Credibility.POSSIBLY_TRUE
+    )
+
+    src_rep = _get_reputation(channel_clean)
+    source_weight = round(src_rep.reputation(), 3)
     
     final_location_text = f"{location} | 🔍 {osint_location}" if osint_location else location
     final_message_text = llm_data.get("short_summary") or text[:2000]
 
-    has_media = payload.get("has_media", False)
     sig_score = calculate_significance_score(event_type, has_media, text, is_panic=is_panic)
     conf_score = calculate_confidence_score([channel], is_official_src, has_media)
+
+    # Dynamic Admiralty fact confidence scoring
+    lat_val, lon_val = 50.4501, 30.5234
+    if geom_wkt and "POINT(" in geom_wkt:
+        try:
+            raw_c = geom_wkt.replace("POINT(", "").replace(")", "").strip().split()
+            lon_val, lat_val = float(raw_c[0]), float(raw_c[1])
+        except Exception:
+            pass
+
+    fact = IntelFact(
+        source_id=channel_clean,
+        reliability=rel,
+        credibility=cred,
+        lat=lat_val,
+        lon=lon_val,
+        cep_m=float(data.get("precision_radius_m", 2000)),
+        observed_at=msg_date,
+        topic=event_type
+    )
+    dynamic_conf = int(round(fact_confidence(fact, src_rep.reputation()) * 100))
+    conf_score = max(conf_score, dynamic_conf)
     res_score = compute_composite_resonance(sig_score, conf_score)
 
     db = SessionLocal()
@@ -498,12 +599,49 @@ def pipeline_cluster_and_save(self, data):
                 cluster_match.significance_score,
                 cluster_match.confidence_score
             )
+
+            # Multi-source epicenter fusion with contradiction detection
+            if cluster_match.geom is not None and geom_wkt and "POINT(" in geom_wkt:
+                try:
+                    from geoalchemy2.shape import to_shape
+                    ex_pt = to_shape(cluster_match.geom)
+                    ex_channel = (cluster_match.source_channel or "unknown").lower().lstrip('@')
+                    ex_rep = _get_reputation(ex_channel)
+                    ex_fact = IntelFact(
+                        source_id=ex_channel,
+                        reliability=rel,
+                        credibility=cred,
+                        lat=ex_pt.y,
+                        lon=ex_pt.x,
+                        cep_m=float(cluster_match.geo_radius_m or 2000),
+                        observed_at=cluster_match.detected_at or msg_date,
+                        topic=cluster_match.event_type or event_type
+                    )
+                    reps = {channel_clean: src_rep, ex_channel: ex_rep}
+                    fused = fuse_epicenter([ex_fact, fact], reps)
+                    if fused:
+                        cluster_match.geom = WKTElement(f"POINT({fused['lon']} {fused['lat']})", srid=4326)
+                        fused_conf = int(round(fused["confidence"] * 100))
+                        cluster_match.confidence_score = max(cluster_match.confidence_score or 50, fused_conf)
+                        if fused.get("contradiction"):
+                            cluster_match.verification_status = "POSSIBLE_IPSO"
+                except Exception as e_fuse:
+                    logger.debug(f"Epicenter fusion fallback: {e_fuse}")
+
+            src_rep.update(confirmed=True, when=msg_date)
+            _save_reputation(channel_clean, src_rep)
+
             if cluster_match.confidence_score >= 85:
                 cluster_match.verification_status = "VERIFIED"
             elif cluster_match.is_official:
                 cluster_match.verification_status = "OFFICIAL"
 
             db.commit()
+            if channel and message_id is not None and redis_client:
+                try:
+                    redis_client.setex(f"processed_msg:{channel}:{message_id}", 86400 * 3, "1")
+                except Exception:
+                    pass
             flush_api_caches()
             return
 
@@ -596,6 +734,11 @@ def pipeline_cluster_and_save(self, data):
         )
         db.add(event)
         db.commit()
+        if channel and message_id is not None and redis_client:
+            try:
+                redis_client.setex(f"processed_msg:{channel}:{message_id}", 86400 * 3, "1")
+            except Exception:
+                pass
         flush_api_caches()
     except Exception as e:
         if hasattr(db, "rollback"):

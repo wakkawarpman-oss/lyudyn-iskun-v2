@@ -80,22 +80,57 @@ def extract_forward_source(msg):
     return None
 
 
+LAST_SYNCED_MSG_IDS = {}
+
+async def get_channel_last_id(ch_clean: str) -> int:
+    if ch_clean in LAST_SYNCED_MSG_IDS:
+        return LAST_SYNCED_MSG_IDS[ch_clean]
+    try:
+        r = aioredis.from_url(REDIS_URL)
+        val = await r.get(f"telethon:last_id:{ch_clean}")
+        await r.aclose()
+        if val:
+            last_id = int(val)
+            LAST_SYNCED_MSG_IDS[ch_clean] = last_id
+            return last_id
+    except Exception:
+        pass
+    return LAST_SYNCED_MSG_IDS.get(ch_clean, 0)
+
+async def set_channel_last_id(ch_clean: str, msg_id: int):
+    current = LAST_SYNCED_MSG_IDS.get(ch_clean, 0)
+    if msg_id > current:
+        LAST_SYNCED_MSG_IDS[ch_clean] = msg_id
+        try:
+            r = aioredis.from_url(REDIS_URL)
+            await r.set(f"telethon:last_id:{ch_clean}", msg_id, ex=86400 * 7)
+            await r.aclose()
+        except Exception:
+            pass
+
 async def perform_sync(client, valid_channels):
-    """Fetches the latest messages from the last 24 hours from all target channels."""
+    """Fetches only genuinely new messages from target channels using min_id watermark."""
     threshold_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
     backfilled_count = 0
 
-    print(f"🚀 Performing deep on-demand sync for {len(valid_channels)} channels...")
+    print(f"🚀 Performing targeted sync for {len(valid_channels)} channels...")
     for entity in valid_channels:
         try:
             if isinstance(entity, str):
                 entity = await client.get_entity(entity)
             ch_raw = getattr(entity, 'username', None) or str(entity.id)
             ch_name = resolve_channel_name(ch_raw)
-            recent_msgs = await client.get_messages(entity, limit=10)
-            for msg in recent_msgs:
+            ch_clean = str(ch_name).lstrip("@").lower()
+            last_seen_id = await get_channel_last_id(ch_clean)
+
+            if last_seen_id > 0:
+                recent_msgs = await client.get_messages(entity, min_id=last_seen_id, limit=20)
+            else:
+                recent_msgs = await client.get_messages(entity, limit=5)
+
+            new_msgs = [m for m in recent_msgs if m.id > last_seen_id]
+            for msg in reversed(new_msgs):
                 if msg.date and msg.date >= threshold_dt and (msg.text or msg.media):
-                    ch_clean = str(ch_name).lstrip("@").lower()
                     payload = {
                         "channel": ch_name,
                         "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
@@ -110,11 +145,11 @@ async def perform_sync(client, valid_channels):
                     }
                     celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
                     backfilled_count += 1
-            print(f"  • Synced @{ch_name}")
+                await set_channel_last_id(ch_clean, msg.id)
         except Exception as ex:
             print(f"  ⚠️ Sync warning for {getattr(entity, 'username', 'channel')}: {ex}")
             
-    print(f"✅ On-demand sync finished: {backfilled_count} messages pushed to queue.")
+    print(f"✅ Sync finished: {backfilled_count} new messages pushed to queue.")
     return backfilled_count
 
 
@@ -238,6 +273,7 @@ async def main():
             }
             
             celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
+            await set_channel_last_id(ch_clean, msg.id)
             print(f"⚡ Live event from {payload['channel']} (ID: {msg.id}) -> Celery Worker")
 
     # Initial sync
@@ -261,10 +297,10 @@ async def main():
             
     asyncio.create_task(heartbeat_redis())
     
-    # Background periodic sync every 45s so no messages are ever lost or delayed
+    # Background periodic sync every 300s (5m) as fallback safety net with min_id
     async def periodic_sync():
         while True:
-            await asyncio.sleep(45)
+            await asyncio.sleep(300)
             try:
                 tasks = [perform_sync(c, chs) for c, chs in clients_dict.items()]
                 await asyncio.gather(*tasks)

@@ -27,17 +27,29 @@ class DatabaseBackup:
             db = SessionLocal()
             events = db.query(DetectedEvent).all()
             
+            from geoalchemy2.shape import to_shape
             data = []
             for e in events:
+                lat, lon = None, None
+                if e.geom is not None:
+                    try:
+                        pt = to_shape(e.geom)
+                        lon, lat = pt.x, pt.y
+                    except Exception:
+                        pass
                 data.append({
                     "id": e.id,
                     "channel": e.source_channel,
                     "message_id": e.message_id,
                     "text": e.message_text,
                     "event_type": e.event_type,
-                    "latitude": e.latitude,
-                    "longitude": e.longitude,
+                    "latitude": lat,
+                    "longitude": lon,
                     "resonance_score": e.resonance_score,
+                    "confidence_score": getattr(e, 'confidence_score', 50),
+                    "significance_score": getattr(e, 'significance_score', 50),
+                    "sources_list": getattr(e, 'sources_list', ''),
+                    "verification_status": getattr(e, 'verification_status', 'UNVERIFIED'),
                     "timestamp": e.detected_at.isoformat() if e.detected_at else None
                 })
             db.close()

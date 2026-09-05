@@ -19,9 +19,16 @@ app.conf.update(
     enable_utc=True,
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    result_expires=3600,
+    result_extended=False,
+    task_ignore_result=True,
     task_default_queue='messages',
     task_routes={
-        'worker.tasks.process_message': {'queue': 'messages'}
+        'worker.tasks.process_message': {'queue': 'messages'},
+        'worker.tasks.pipeline_extract': {'queue': 'messages'},
+        'worker.tasks.pipeline_geocode': {'queue': 'messages'},
+        'worker.tasks.pipeline_cluster_and_save': {'queue': 'messages'},
+        'worker.tasks.task_process_llm': {'queue': 'llm_tasks'},
     }
 )
 

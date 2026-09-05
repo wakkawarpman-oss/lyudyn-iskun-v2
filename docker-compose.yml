@@ -1,7 +1,7 @@
 services:
   ai_worker:
     build: .
-    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 50 -Q messages,celery
+    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 40 -Q messages,celery
     depends_on:
     - redis
     - db
@@ -14,6 +14,21 @@ services:
     - ./database:/app/database
     # The image's HEALTHCHECK curls the web_api's HTTP endpoint; this
     # service doesn't serve HTTP and would show as permanently unhealthy.
+    healthcheck:
+      test: ["NONE"]
+  ai_worker_llm:
+    build: .
+    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 10 -Q llm_tasks
+    depends_on:
+    - redis
+    - db
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    volumes:
+    - media_data:/app/media
+    - ./worker:/app/worker
+    - ./database:/app/database
     healthcheck:
       test: ["NONE"]
   bot_ui:
@@ -85,7 +100,7 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: lyudyn-iskun-v2-open_webui-1
     ports:
-    - 3000:8080
+    - 127.0.0.1:3000:8080
     environment:
     - WEBUI_AUTH=False
     - WEBUI_SECRET_KEY=iskun_c4isr_openwebui_key_2026

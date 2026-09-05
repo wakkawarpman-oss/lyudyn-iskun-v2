@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean, Float, Text, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, DateTime, Boolean, Float, Text, UniqueConstraint, Index
 from sqlalchemy.orm import declarative_base, sessionmaker
 from geoalchemy2 import Geometry
 from datetime import datetime
@@ -85,6 +85,10 @@ class DetectedEvent(Base):
 
     # Sightline Critical Infrastructure Proximity
     nearby_infrastructure = Column(String, nullable=True) # E.g. "⚡ ПС 330 кВ «Північна» (87 м)"
+
+    __table_args__ = (
+        Index("ix_detected_events_type_time", "event_type", "detected_at"),
+    )
 
 class BombShelter(Base):
     __tablename__ = "bomb_shelters"

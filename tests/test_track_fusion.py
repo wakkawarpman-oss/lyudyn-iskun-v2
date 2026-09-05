@@ -104,3 +104,42 @@ def test_eta_cone_corridor_and_uncertainty():
     cone_res_west = kf.eta_cone(state, lat_west, lon_west)
     assert cone_res_west is not None
     assert cone_res_west["is_in_corridor"] is False
+
+
+def test_neptun_radar_integrates_kalman_eta_cone(monkeypatch):
+    from worker.osint.neptun_radar import get_live_radar_threats
+    import json
+    from unittest.mock import MagicMock
+
+    mock_neptun_payload = {
+        "markers": [
+            {
+                "id": "drone_test_01",
+                "lat": 50.10,
+                "lng": 30.20,
+                "threat_type": "Shahed",
+                "course_bearing": 25.0,
+                "speed_kmh": 185.0,
+                "positions": [
+                    {"lat": 50.00, "lng": 30.10},
+                    {"lat": 50.05, "lng": 30.15},
+                    {"lat": 50.10, "lng": 30.20}
+                ]
+            }
+        ]
+    }
+
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = json.dumps(mock_neptun_payload).encode("utf-8")
+    mock_resp.__enter__.return_value = mock_resp
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: mock_resp)
+
+    res = get_live_radar_threats(force_refresh=True)
+    assert res["count"] == 1
+    drone = res["drones"][0]
+    assert drone["id"] == "drone_test_01"
+    assert "eta_cone" in drone
+    assert drone["eta_cone"] is not None
+    assert "cone_polygon" in drone["eta_cone"]
+    assert "speed_kmh" in drone
