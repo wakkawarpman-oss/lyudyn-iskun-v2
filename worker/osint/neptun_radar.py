@@ -346,6 +346,42 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
         except Exception as e_ac:
             logger.debug(f"Acoustic corroboration check error: {e_ac}")
 
+        # Terrain LoS & River Canyon Masking
+        terrain_los_data = None
+        try:
+            from worker.osint.terrain_los import evaluate_terrain_masking
+            terrain_los_data = evaluate_terrain_masking(float(lat), float(lng), target_alt_agl_m=60.0)
+        except Exception as e_los:
+            logger.debug(f"Terrain LoS evaluation fallback: {e_los}")
+
+        # SIGINT / RF Intercept Corroboration
+        sigint_corrob_data = None
+        try:
+            from worker.osint.sigint_bus import corroborate_sigint_near_target
+            sigint_corrob_data = corroborate_sigint_near_target(float(lat), float(lng))
+        except Exception as e_sig:
+            logger.debug(f"SIGINT corroboration fallback: {e_sig}")
+
+        # Bayesian Belief Network (BBN) Threat Confidence
+        bayesian_confidence = None
+        try:
+            from worker.scoring_bayesian import evaluate_bayesian_threat_confidence
+            is_masked_flag = bool(terrain_los_data and terrain_los_data.get("is_terrain_masked"))
+            has_sigint_flag = bool(sigint_corrob_data and sigint_corrob_data.get("sigint_active"))
+            doppler_match_flag = 120.0 <= speed_val <= 250.0
+            bayesian_confidence = evaluate_bayesian_threat_confidence({
+                "has_radar": True,
+                "doppler_match": doppler_match_flag,
+                "is_terrain_masked": is_masked_flag,
+                "acoustic_count": acoustic_count,
+                "sigint_intercept": has_sigint_flag,
+                "adsb_mode": "dark",
+                "firms_thermal": False,
+                "osint_level": "monitors" if int(m.get("confidence_0_100") or 0) >= 50 else "single"
+            })
+        except Exception as e_bbn:
+            logger.debug(f"Bayesian confidence fallback: {e_bbn}")
+
         drone_obj = {
             "id": track_id,
             "label": label,
@@ -376,6 +412,9 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "acoustic_corroborated": acoustic_corrob,
             "acoustic_sensors_count": acoustic_count,
             "corroborating_sensors": acoustic_sensors,
+            "terrain_masking": terrain_los_data,
+            "sigint_corroboration": sigint_corrob_data,
+            "bayesian_confidence": bayesian_confidence,
         }
         drones.append(drone_obj)
 

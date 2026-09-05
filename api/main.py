@@ -544,6 +544,40 @@ def post_acoustic_hit(payload: AcousticHitPayload):
     )
     return {"status": "ok", "hit": hit}
 
+@app.get("/api/v1/radar/maritime-intel")
+def get_radar_maritime_intel(force_refresh: bool = False):
+    from worker.osint.maritime_ais import get_maritime_intel
+    return get_maritime_intel(force_refresh=force_refresh)
+
+@app.get("/api/v1/radar/sigint-emitters")
+def get_radar_sigint_emitters():
+    from worker.osint.sigint_bus import get_active_sigint_emitters
+    emitters = get_active_sigint_emitters()
+    return {"emitters": emitters, "count": len(emitters)}
+
+class SigintHitPayload(BaseModel):
+    frequency_mhz: float
+    emitter_type: str = "JAMMER_5_8"
+    lat: float
+    lng: float
+    power_dbm: float = 30.0
+    source: str = "Field SDR Intercept"
+    tactical_advisory: str = ""
+
+@app.post("/api/v1/telemetry/sigint-hit")
+def post_sigint_hit(payload: SigintHitPayload):
+    from worker.osint.sigint_bus import record_sigint_hit
+    hit = record_sigint_hit(
+        frequency_mhz=payload.frequency_mhz,
+        emitter_type=payload.emitter_type,
+        lat=payload.lat,
+        lng=payload.lng,
+        power_dbm=payload.power_dbm,
+        source=payload.source,
+        tactical_advisory=payload.tactical_advisory,
+    )
+    return {"status": "ok", "hit": hit}
+
 @app.get("/api/v1/alert/status")
 def get_live_alert_status(oblast: Optional[str] = None):
     from bot.alert_monitor import get_current_kyiv_alert_status

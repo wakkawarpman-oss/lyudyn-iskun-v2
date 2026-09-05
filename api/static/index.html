@@ -1572,6 +1572,30 @@
                     <span class="layer-counter-tag" id="cnt-acoustic">MIC</span>
                 </div>
 
+                <div class="layer-checkbox-row" id="row-maritime-ais">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>⚓ Носії «Калібрів» AIS (ВМС РФ у Чорному морі)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-maritime">AIS</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-terrain-los">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>⛰️ Радіогоризонт & каньйони маскування</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-terrain">LoS</span>
+                </div>
+
+                <div class="layer-checkbox-row" id="row-sigint-emitters">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box"></div>
+                        <span>📡 SIGINT / РЕР пеленги та завади 5.8 GHz</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-sigint">SDR</span>
+                </div>
+
                 <div class="layer-checkbox-row" id="row-shelters">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box"></div>
@@ -2047,6 +2071,10 @@
         const ewLayer = L.layerGroup();
         const weatherWindLayer = L.layerGroup();
         const acousticSensorsLayer = L.layerGroup();
+        const maritimeAisLayer = L.layerGroup();
+        const terrainLosLayer = L.layerGroup();
+        const sigintEmittersLayer = L.layerGroup();
+        let latestMaritimeStatus = null;
         const droneVectorLayer = L.layerGroup().addTo(map);
         const sunShadowLayer = L.layerGroup().addTo(map);
         let isMilSymbology = false;
@@ -2605,6 +2633,151 @@
             }
         });
 
+        toggleLayerRow('row-maritime-ais', maritimeAisLayer, async (on) => {
+            if (on) {
+                maritimeAisLayer.clearLayers();
+                try {
+                    const res = await fetch('/api/v1/radar/maritime-intel');
+                    const data = await res.json();
+                    latestMaritimeStatus = data;
+                    const carriers = data.carriers || [];
+                    const cntBadge = document.getElementById('cnt-maritime');
+                    if (cntBadge) cntBadge.textContent = `${data.carriers_at_sea_count || 0} ВМС`;
+
+                    carriers.forEach(c => {
+                        const isSea = c.status === 'PATROL_AT_SEA' || c.status === 'SUBMERGED_COMBAT_DUTY';
+                        const col = isSea ? '#ef4444' : '#64748b';
+
+                        if (isSea) {
+                            L.circle([c.lat, c.lng], {
+                                radius: 120000,
+                                color: '#ef4444',
+                                fillColor: '#ef4444',
+                                fillOpacity: 0.06,
+                                weight: 1.5,
+                                dashArray: '6, 6'
+                            }).addTo(maritimeAisLayer);
+                        }
+
+                        const shipIcon = L.divIcon({
+                            className: 'custom-ship-marker',
+                            html: `<div style="background:${col}; color:#fff; font-size:14px; width:28px; height:28px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${col};">⚓</div>`,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 14]
+                        });
+
+                        const m = L.marker([c.lat, c.lng], { icon: shipIcon });
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; color:#0f172a; min-width:230px;">
+                                <div style="font-weight:800; color:#dc2626; margin-bottom:3px; font-size:13px;">⚓ ${c.name}</div>
+                                <div>Проєкт: <strong>${c.project}</strong> (Борт ${c.pennant})</div>
+                                <div>Озброєння: <strong style="color:#b91c1c;">${c.vls_cells}x ${c.missile_type}</strong></div>
+                                <div>Статус: <strong>${c.status_label}</strong></div>
+                                <div>Сектор: <strong>${c.sector}</strong></div>
+                                <div>До Одеси: <strong>~${c.distance_to_odesa_km} км</strong></div>
+                            </div>
+                        `);
+                        m.addTo(maritimeAisLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load maritime intel:', e);
+                }
+            }
+        });
+
+        toggleLayerRow('row-terrain-los', terrainLosLayer, async (on) => {
+            if (on) {
+                terrainLosLayer.clearLayers();
+                const radarNodes = [
+                    { name: 'РЛС Північ-1 (Київ)', lat: 50.4501, lng: 30.5234, hKm: 88.0 },
+                    { name: 'РЛС Схід-4 (Дніпро)', lat: 48.4647, lng: 35.0462, hKm: 82.0 },
+                    { name: 'РЛС Південь-3 (Одеса)', lat: 46.4825, lng: 30.7233, hKm: 76.0 },
+                    { name: 'РЛС Запоріжжя-5', lat: 47.8388, lng: 35.1396, hKm: 78.0 },
+                    { name: 'РЛС Поділля-6 (Умань)', lat: 48.7500, lng: 30.2200, hKm: 92.0 },
+                    { name: 'РЛС Слобожанщина (Харків)', lat: 49.9935, lng: 36.2304, hKm: 85.0 }
+                ];
+                radarNodes.forEach(rn => {
+                    L.circle([rn.lat, rn.lng], {
+                        radius: rn.hKm * 1000,
+                        color: '#06b6d4',
+                        fillColor: '#06b6d4',
+                        fillOpacity: 0.04,
+                        weight: 1.2,
+                        dashArray: '4, 6'
+                    }).addTo(terrainLosLayer);
+
+                    L.circleMarker([rn.lat, rn.lng], {
+                        radius: 5,
+                        fillColor: '#06b6d4',
+                        color: '#ffffff',
+                        weight: 2,
+                        fillOpacity: 0.9
+                    }).bindPopup(`<strong>📡 ${rn.name}</strong><br>Радіогоризонт цілі на 60м: ~${rn.hKm} км`).addTo(terrainLosLayer);
+                });
+
+                const canyons = [
+                    { name: 'Дніпровський каньйон', pts: [[51.30, 30.50], [50.50, 30.55], [50.15, 30.75], [49.75, 31.46], [49.44, 32.06], [49.06, 33.42], [48.51, 34.61], [48.46, 35.04], [47.83, 35.14], [47.56, 34.39], [46.63, 32.61]], col: '#eab308' },
+                    { name: 'Русло р. Десна', pts: [[52.01, 33.27], [51.80, 32.50], [51.49, 31.29], [50.95, 30.88], [50.55, 30.60]], col: '#f59e0b' },
+                    { name: 'Русло р. Південний Буг', pts: [[49.42, 26.98], [49.23, 28.47], [48.04, 30.85], [46.97, 31.99]], col: '#eab308' },
+                    { name: 'Дністровський каньйон', pts: [[49.12, 24.73], [48.64, 25.73], [48.45, 27.79]], col: '#d97706' }
+                ];
+                canyons.forEach(c => {
+                    L.polyline(c.pts, {
+                        color: c.col,
+                        weight: 4,
+                        opacity: 0.7,
+                        dashArray: '8, 6'
+                    }).bindPopup(`<strong>⛰️ ${c.name}</strong><br>Зона тактичного маскування рельєфом (глибина 65-120м)`).addTo(terrainLosLayer);
+                });
+            }
+        });
+
+        toggleLayerRow('row-sigint-emitters', sigintEmittersLayer, async (on) => {
+            if (on) {
+                sigintEmittersLayer.clearLayers();
+                try {
+                    const res = await fetch('/api/v1/radar/sigint-emitters');
+                    const data = await res.json();
+                    const emitters = data.emitters || [];
+                    const cntBadge = document.getElementById('cnt-sigint');
+                    if (cntBadge) cntBadge.textContent = emitters.length;
+
+                    emitters.forEach(em => {
+                        const col = em.type === 'CRPA_JAMMER' || em.type === 'GNSS_SPOOF' ? '#ef4444' : '#f97316';
+                        L.circle([em.lat, em.lng], {
+                            radius: (em.radius_km || 25) * 1000,
+                            color: col,
+                            fillColor: col,
+                            fillOpacity: 0.10,
+                            weight: 1.5,
+                            dashArray: '3, 5'
+                        }).addTo(sigintEmittersLayer);
+
+                        const sigIcon = L.divIcon({
+                            className: 'custom-sigint-marker',
+                            html: `<div style="background:${col}; color:#fff; font-size:12px; width:26px; height:26px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; box-shadow:0 0 8px ${col};">⚡</div>`,
+                            iconSize: [26, 26],
+                            iconAnchor: [13, 13]
+                        });
+
+                        const m = L.marker([em.lat, em.lng], { icon: sigIcon });
+                        m.bindPopup(`
+                            <div style="font-family:sans-serif; font-size:12px; line-height:1.4; color:#0f172a; min-width:220px;">
+                                <div style="font-weight:800; color:#c2410c; margin-bottom:3px;">📡 ${em.label}</div>
+                                <div>Частота: <strong>${em.frequency_mhz} МГц</strong></div>
+                                <div>Потужність: <strong>${em.power_dbm} dBm</strong></div>
+                                <div>Джерело: <strong>${em.source}</strong></div>
+                                <div style="font-size:10.5px; color:#b91c1c; margin-top:3px;">⚠️ ${em.tactical_advisory}</div>
+                            </div>
+                        `);
+                        m.addTo(sigintEmittersLayer);
+                    });
+                } catch(e) {
+                    console.warn('Failed to load SIGINT emitters:', e);
+                }
+            }
+        });
+
         toggleLayerRow('row-clustering', null, (on) => {
             isClusteringEnabled = on;
             if (isClusteringEnabled) {
@@ -2912,6 +3085,11 @@
                     threatText.textContent = `${cfg.title}: Радіолокаційний простір чистий (R < 160 км)`;
                     if (threatAction) threatAction.textContent = 'OK ✓';
                 }
+            } else if (latestMaritimeStatus && latestMaritimeStatus.carriers_at_sea_count > 0) {
+                threatBanner.classList.add('threat-inbound');
+                if (threatTag) threatTag.textContent = '⚓ ЧОРНЕ МОРЕ';
+                threatText.textContent = `ВМС РФ: ${latestMaritimeStatus.carriers_at_sea_count} носіїв у морі (залп до ${latestMaritimeStatus.total_salvo_potential} «Калібрів»)`;
+                if (threatAction) threatAction.textContent = 'Флот ➔';
             } else {
                 threatBanner.classList.add('threat-all-clear');
                 if (threatTag) threatTag.textContent = '🟢 НЕБО ЧИСТЕ';
@@ -3704,6 +3882,56 @@
                 `;
             }
 
+            // Bayesian Belief Network (BBN) Confidence Box
+            let bbnBoxHtml = '';
+            if (d.bayesian_confidence) {
+                const b = d.bayesian_confidence;
+                const bCol = b.category === 'VERIFIED_THREAT' ? '#10b981' : (b.category === 'HIGH_PROBABILITY' ? '#f59e0b' : '#38bdf8');
+                bbnBoxHtml = `
+                    <div style="background:rgba(16,185,129,0.08); border:1px solid ${bCol}; border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:11px; font-weight:800; color:${bCol};">⚖️ БАЄСІВСЬКА ДОВІРА: ${b.confidence_score}%</span>
+                            <span style="font-size:9.5px; color:var(--text-muted);">Ризик FP: &lt;${b.false_positive_rate_pct}%</span>
+                        </div>
+                        <div style="font-size:10.5px; color:#e2e8f0; margin-top:3px;">
+                            ${b.category_label || 'Верифікована загроза'}
+                        </div>
+                        <div style="font-size:9.5px; color:var(--text-muted); margin-top:2px;">
+                            Підтверджено: <strong>${b.active_corroborating_sources_count} незалежними джерелами</strong> | Log-odds: ${b.log_odds}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Terrain Masking / River Canyon Box
+            let terrainMaskHtml = '';
+            if (d.terrain_masking && d.terrain_masking.is_terrain_masked) {
+                const tm = d.terrain_masking;
+                terrainMaskHtml = `
+                    <div style="background:rgba(234,179,8,0.12); border:1px solid #eab308; border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="font-size:11px; font-weight:800; color:#facc15;">⛰️ ТАКТИЧНЕ МАСКУВАННЯ РЕЛЬЄФОМ</div>
+                        <div style="font-size:10.5px; color:#fef08a; margin-top:2px; font-weight:600;">${tm.directive}</div>
+                        <div style="font-size:9.5px; color:var(--text-muted); margin-top:3px;">
+                            ${tm.river_corridor ? `Коридор: ${tm.river_corridor} (~${tm.river_distance_km} км від русла)` : `РЛС: ${tm.nearest_radar} (горизонт: ~${tm.radio_horizon_km} км)`}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // SIGINT / RF Intercept Box
+            let sigintBoxHtml = '';
+            if (d.sigint_corroboration && d.sigint_corroboration.sigint_active) {
+                const sg = d.sigint_corroboration;
+                sigintBoxHtml = `
+                    <div style="background:rgba(239,68,68,0.12); border:1px solid #ef4444; border-radius:10px; padding:8px 12px; margin-bottom:10px;">
+                        <div style="font-size:11px; font-weight:800; color:#f87171;">📡 SIGINT: ЗАФІКСОВАНО РАДІОВИПРОМІНЮВАННЯ</div>
+                        <div style="font-size:10px; color:#fca5a5; margin-top:2px;">
+                            ${sg.emitters.map(e => `<strong>${e.label}</strong> (~${e.distance_km} км)`).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            }
+
             objContent.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="background:rgba(255,0,85,0.2); border:1px solid var(--danger-red); color:#ff4d6d; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;">
@@ -3731,6 +3959,9 @@
                         <div style="font-family:var(--font-mono); font-size:13px; font-weight:800; color:#fff;">~${speed} км/год</div>
                     </div>
                 </div>
+                ${bbnBoxHtml}
+                ${terrainMaskHtml}
+                ${sigintBoxHtml}
                 ${acousticBadgeHtml}
                 ${ewBoxHtml}
                 ${weatherBoxHtml}
@@ -3764,8 +3995,12 @@
             const stale = new Date(Date.now() + 15 * 60 * 1000).toISOString();
             const callsign = `${d.label || 'SHAHED-136'} [${d.place || 'TARGET'}]`;
             const gSpeed = d.weather_vector?.ground_speed_kmh || d.speed_kmh || 185;
-            const remarks = `OKINT-PRO C4ISR. Source: Neptun Radar. EW: 5.8GHz VTX JAMMER (USE 900MHz/FIBER). CRPA: Kometa-M. Wind ground speed: ${gSpeed} km/h`;
-            const cotXml = `<?xml version="1.0" standalone="yes"?>\n<event version="2.0" uid="DRONE-${d.id || Date.now()}" type="a-h-A-M-F-Q" time="${now}" start="${now}" stale="${stale}" how="m-g">\n  <point lat="${d.lat}" lon="${d.lng}" hae="150.0" ce="20.0" le="10.0"/>\n  <detail>\n    <contact callsign="${callsign}"/>\n    <track course="${d.heading || 0}" speed="${Math.round((gSpeed / 3.6) * 10) / 10}"/>\n    <ew jammer="5.8GHz" crpa="Kometa-M-16" advice="USE_900MHZ_OR_FIBER"/>\n    <remarks>${remarks}</remarks>\n  </detail>\n</event>`;
+            const bbnConf = d.bayesian_confidence?.confidence_score || 95;
+            const bbnFpr = d.bayesian_confidence?.false_positive_rate_pct || 1.0;
+            const isMasked = d.terrain_masking?.is_terrain_masked || false;
+            const maskType = d.terrain_masking?.masking_type || 'NONE';
+            const remarks = `OKINT-PRO C4ISR. Source: Neptun Radar. EW: 5.8GHz VTX JAMMER (USE 900MHz/FIBER). CRPA: Kometa-M. Wind ground speed: ${gSpeed} km/h. BBN Conf: ${bbnConf}%. Terrain Masked: ${isMasked} (${maskType})`;
+            const cotXml = `<?xml version="1.0" standalone="yes"?>\n<event version="2.0" uid="DRONE-${d.id || Date.now()}" type="a-h-A-M-F-Q" time="${now}" start="${now}" stale="${stale}" how="m-g">\n  <point lat="${d.lat}" lon="${d.lng}" hae="150.0" ce="20.0" le="10.0"/>\n  <detail>\n    <contact callsign="${callsign}"/>\n    <track course="${d.heading || 0}" speed="${Math.round((gSpeed / 3.6) * 10) / 10}"/>\n    <ew jammer="5.8GHz" crpa="Kometa-M-16" advice="USE_900MHZ_OR_FIBER"/>\n    <bayesian confidence="${bbnConf}" fpr="${bbnFpr}" category="${d.bayesian_confidence?.category || 'VERIFIED'}"/>\n    <terrain masked="${isMasked}" type="${maskType}"/>\n    <remarks>${remarks}</remarks>\n  </detail>\n</event>`;
             const blob = new Blob([cotXml], { type: 'application/xml' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
