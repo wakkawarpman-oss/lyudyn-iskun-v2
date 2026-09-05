@@ -10,6 +10,7 @@ from bot.handlers.common import router as common_router
 
 from bot.handlers.districts import router as districts_router
 from bot.handlers.transport import router as transport_router
+from bot.handlers.hitl import router as hitl_router
 
 router = Router()
 
@@ -19,6 +20,7 @@ router.include_router(alerts_router)
 router.include_router(districts_router)
 router.include_router(transport_router)
 router.include_router(radar_router)
+router.include_router(hitl_router)
 router.include_router(analytics_router)
 router.include_router(osint_router)
 router.include_router(admin_router)

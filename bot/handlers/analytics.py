@@ -215,3 +215,36 @@ Date: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
         document=types.BufferedInputFile(file_bytes.getvalue(), filename=file_bytes.name),
         caption="✅ Верифікований прес-реліз готовий до публікації."
     )
+
+
+@router.message(Command("accuracy"))
+@router.message(Command("metrics"))
+@router.message(F.text == "🎯 Метрики точності")
+async def cmd_accuracy_metrics(message: types.Message):
+    await message.answer("⏳ Збираю телеметрію точності та розрахунки CEP...")
+    db = SessionLocal()
+    try:
+        from worker.telemetry_metrics import get_system_accuracy_telemetry
+        data = get_system_accuracy_telemetry(db, hours=72)
+        
+        hitl = data["hitl"]
+        text = (
+            "🎯 <b>ТЕЛЕМЕТРІЯ ТОЧНОСТІ ТА МЕТРИКИ ЯКОСТІ (72h)</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 <b>Всього подій:</b> <code>{data['total_events']}</code>\n"
+            f"🤝 <b>Мульти-джерельний консенсус:</b> <code>{data['multi_source_consensus_count']}</code> ({data['consensus_rate_pct']}%)\n"
+            f"📐 <b>Середній радіус невизначеності (CEP):</b> <code>{data['mean_cep_radius_m']} м</code>\n"
+            f"🏛️ <b>Офіційно підтверджено:</b> <code>{data['official_verified_count']}</code>\n\n"
+            "👥 <b>Human-in-the-Loop (HITL) Валідація:</b>\n"
+            f"• Всього перевірено оператором: <code>{hitl['total_reviewed']}</code>\n"
+            f"• Підтверджено бойових: <code>{hitl['confirmed_analyst']}</code>\n"
+            f"• Відхилено (фейк/шум): <code>{hitl['rejected_analyst']}</code>\n"
+            f"• Точність консенсусу (Hit-rate): <b>{hitl['analyst_accuracy_pct']}%</b>\n\n"
+            "ℹ️ <i>Команда <b>/hitl</b> відкриває чергу на валідацію.</i>"
+        )
+        await safe_send(message, text, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Accuracy metrics error: {e}")
+        await message.answer(f"❌ Помилка збору метрик: {e}")
+    finally:
+        db.close()

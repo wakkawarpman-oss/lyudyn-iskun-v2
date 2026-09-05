@@ -298,6 +298,19 @@ def get_stats(db: Session = Depends(get_db)):
     set_cached("api:stats", res, ttl=60)
     return res
 
+
+@app.get("/api/stats/accuracy")
+def get_accuracy_metrics(hours: int = 72, db: Session = Depends(get_db)):
+    """Tactical accuracy telemetry: CEP precision, ETA drift, and HITL consensus rates."""
+    from worker.telemetry_metrics import get_system_accuracy_telemetry
+    cache_key = f"api:stats:accuracy:{hours}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+    data = get_system_accuracy_telemetry(db, hours=hours)
+    set_cached(cache_key, data, ttl=60)
+    return data
+
 @app.get("/api/shelters")
 @app.get("/api/v1/shelters")
 def get_map_shelters(db: Session = Depends(get_db)):
