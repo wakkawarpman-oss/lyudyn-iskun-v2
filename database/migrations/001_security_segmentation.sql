@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS audit_sec.security_audit_trail (
     resource_id VARCHAR(128),
     decision VARCHAR(32) NOT NULL,
     reason VARCHAR(128),
-    client_ip INET NOT NULL,
+    client_ip VARCHAR(64) NOT NULL,
     user_agent TEXT,
     request_payload_sha256 VARCHAR(64)
 );
