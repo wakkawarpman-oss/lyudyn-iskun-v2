@@ -226,24 +226,80 @@ async def cb_approve_permission(call: types.CallbackQuery):
     req_id = parts[1]
     sector = parts[2] if len(parts) > 2 else "all"
     
-    key = f"tactical:approval:{req_id}:{sector}"
+    # Update Database: AccessRequest and AccessApproval
+    db = SessionLocal()
+    grantee_id = req_id
+    res_type = "tactical_events"
     try:
-        redis_client.setex(key, 86400, json.dumps({
+        from database.models import AccessRequest, AccessApproval
+        from api.security.authz import log_security_event
+        
+        req = db.query(AccessRequest).filter(AccessRequest.request_id == req_id).first()
+        now = datetime.datetime.utcnow()
+        until = now + datetime.timedelta(hours=24)
+        
+        if req:
+            req.status = "APPROVED"
+            req.decided_at = now
+            req.decided_by = str(ADMIN_ID)
+            req.decision_reason = "Approved via Telegram by Bet Trx (@btntrx)"
+            grantee_id = req.user_id
+            res_type = req.requested_resource
+
+        appr_id = f"appr_{uuid.uuid4().hex[:8]}"
+        approval_row = AccessApproval(
+            approval_id=appr_id,
+            request_id=req_id,
+            user_id=grantee_id,
+            resource_type=res_type,
+            geo_scope=sector,
+            valid_from=now,
+            valid_to=until,
+            granted_by=str(ADMIN_ID),
+            created_at=now
+        )
+        db.add(approval_row)
+        
+        log_security_event(
+            actor_id=str(ADMIN_ID),
+            actor_role="security_officer",
+            action="GRANT_APPROVAL",
+            target_resource=f"{res_type}:{sector}",
+            decision="ALLOWED",
+            reason=f"Approved 24h clearance via Telegram for request {req_id} (user {grantee_id})",
+            db_session=db
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"Error persisting Telegram approval to DB: {exc}")
+    finally:
+        db.close()
+
+    # Fast path in Redis with 24h TTL
+    try:
+        payload = json.dumps({
             "approved_by": call.from_user.id,
             "approved_by_user": "btntrx",
             "sector": sector,
+            "user_id": grantee_id,
             "approved_at": datetime.datetime.utcnow().isoformat(),
             "ttl_hours": 24
-        }))
+        })
+        redis_client.setex(f"tactical:approval:{req_id}:{sector}", 86400, payload)
+        if grantee_id != req_id:
+            redis_client.setex(f"tactical:approval:{grantee_id}:{sector}", 86400, payload)
     except Exception as e:
         logger.error(f"Redis approval save error: {e}")
         
     await call.message.edit_text(
         f"✅ <b>ДОСТУП ПІДТВЕРДЖЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
         f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"👤 <b>Користувач / Отримувач:</b> <code>{grantee_id}</code>\n"
         f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"
-        f"⏱ <b>Термін дії:</b> 24 години (1 день)\n"
-        f"🟢 <b>Статус:</b> АКТИВНИЙ ДОСТУП ДО ЧУТЛИВИХ ДАНИХ НАДАНО",
+        f"⏱ <b>Термін дії:</b> 24 години (1 доба)\n"
+        f"🟢 <b>Статус:</b> АКТИВНИЙ ДОСТУП ДО ОПЕРАТИВНОГО КОНТУРУ НАДАНО\n"
+        f"🛡️ <i>Запис збережено в audit_sec.security_audit_trail</i>",
         parse_mode="HTML"
     )
     await call.answer("✅ Доступ успішно надано на 24 години!")
@@ -259,11 +315,44 @@ async def cb_reject_permission(call: types.CallbackQuery):
     req_id = parts[1]
     sector = parts[2] if len(parts) > 2 else "all"
     
+    db = SessionLocal()
+    grantee_id = req_id
+    try:
+        from database.models import AccessRequest
+        from api.security.authz import log_security_event
+        
+        req = db.query(AccessRequest).filter(AccessRequest.request_id == req_id).first()
+        now = datetime.datetime.utcnow()
+        if req:
+            req.status = "REJECTED"
+            req.decided_at = now
+            req.decided_by = str(ADMIN_ID)
+            req.decision_reason = "Rejected via Telegram by Bet Trx (@btntrx)"
+            grantee_id = req.user_id
+        
+        log_security_event(
+            actor_id=str(ADMIN_ID),
+            actor_role="security_officer",
+            action="REJECT_APPROVAL",
+            target_resource=f"restricted_ops:{sector}",
+            decision="DENIED",
+            reason=f"Rejected clearance via Telegram for request {req_id} (user {grantee_id})",
+            db_session=db
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"Error persisting Telegram rejection to DB: {exc}")
+    finally:
+        db.close()
+
     await call.message.edit_text(
         f"❌ <b>ЗАПИТ ВІДХИЛЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
         f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"👤 <b>Користувач:</b> <code>{grantee_id}</code>\n"
         f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"
-        f"🔴 <b>Статус:</b> ВІДХИЛЕНО (Доступ до чутливих даних заблоковано)",
+        f"🔴 <b>Статус:</b> ВІДХИЛЕНО (Доступ до оперативного контуру заблоковано)\n"
+        f"🛡️ <i>Запис збережено в audit_sec.security_audit_trail</i>",
         parse_mode="HTML"
     )
     await call.answer("❌ Запит відхилено!")

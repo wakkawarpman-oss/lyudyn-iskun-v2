@@ -123,7 +123,7 @@ def log_security_event(
     resource_type: str,
     decision: str,
     reason: str,
-    client_ip: str,
+    client_ip: str = "127.0.0.1",
     resource_id: Optional[str] = None,
     user_agent: Optional[str] = None,
     request_payload_sha256: Optional[str] = None,

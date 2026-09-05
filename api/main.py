@@ -731,7 +731,22 @@ def create_research_replay(
             detail={"error": "ROLE_REQUIRED", "message": "Replay simulation requires analyst_research or admin role"}
         )
     import uuid
+    import json
+    from database.models import SimulationRun
     run_id = f"sim_{uuid.uuid4().hex[:12]}"
+
+    sim = SimulationRun(
+        run_id=run_id,
+        scenario_name=f"Historical Replay Incident #{payload.incident_id}",
+        parameters=json.dumps({"incident_id": payload.incident_id, "speed_factor": payload.speed_factor}),
+        synthetic_targets_count=14,
+        kalman_tuning_metrics=json.dumps({"synthetic_noise_std": 0.05, "speed_factor": payload.speed_factor}),
+        created_by=user.user_id,
+        created_at=datetime.datetime.utcnow()
+    )
+    db.add(sim)
+    db.commit()
+
     return {
         "contour": "research",
         "status": "simulation_initialized",
@@ -769,6 +784,44 @@ class AccessRequestPayload(BaseModel):
     justification: str
     user_email: Optional[str] = "operator@tactical.gov.ua"
 
+def dispatch_telegram_approval_request(req_id: str, user_id: str, email: str, resource: str, sector: str, justification: str):
+    bot_token = os.getenv("BOT_TOKEN")
+    admin_id = os.getenv("ADMIN_ID", "8965828778")
+    if not bot_token or not admin_id:
+        return
+    import requests
+    text = (
+        f"🚨 <b>ЗАПИТ НА ДОСТУП ДО ОПЕРАТИВНОГО КОНТУРУ (RESTRICTED)</b>\n\n"
+        f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"👤 <b>Користувач / ID:</b> <code>{user_id}</code>\n"
+        f"📧 <b>Email:</b> <code>{email}</code>\n"
+        f"🎯 <b>Ресурс / Сектор:</b> <code>{resource}</code> / <code>{sector}</code>\n"
+        f"📝 <b>Обґрунтування:</b> {justification}\n"
+        f"⏳ <b>Термін дії:</b> 24 години (1 доба)\n\n"
+        f"<i>Схваліть або відхиліть запит кнопками нижче:</i>"
+    )
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {"text": "✅ СХВАЛИТИ (24 год)", "callback_data": f"appr_perm:{req_id}:{sector}"},
+                {"text": "❌ ВІДХИЛИТИ", "callback_data": f"rejc_perm:{req_id}:{sector}"}
+            ]
+        ]
+    }
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={
+                "chat_id": admin_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "reply_markup": reply_markup
+            },
+            timeout=4
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to dispatch access request to Telegram bot: {exc}")
+
 @app.post("/api/v1/access/request")
 def submit_access_request(
     payload: AccessRequestPayload,
@@ -794,11 +847,133 @@ def submit_access_request(
     db.add(new_req)
     db.commit()
 
+    # Forward interactive notification with 1-click approve buttons to Bet Trx (@btntrx)
+    dispatch_telegram_approval_request(
+        req_id=req_id,
+        user_id=new_req.user_id,
+        email=payload.user_email or "operator@tactical.gov.ua",
+        resource=payload.requested_resource,
+        sector=payload.target_sector,
+        justification=payload.justification
+    )
+
     return {
         "request_id": req_id,
         "status": "PENDING",
         "message": "Access request forwarded to Security Officer Bet Trx (@btntrx). Valid for 24h once approved.",
         "validity_ttl_hours": 24
+    }
+
+class AccessApprovalPayload(BaseModel):
+    request_id: str
+    decision: str = "APPROVED"
+    hours: int = 24
+    reason: Optional[str] = "Approved by Security Officer Bet Trx"
+
+@app.post("/api/v1/access/approve")
+def decide_access_request(
+    payload: AccessApprovalPayload,
+    request: Request = None,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    if user.role not in [RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "OFFICER_REQUIRED", "message": "Only Security Officer Bet Trx (@btntrx) can approve restricted access"}
+        )
+    
+    import uuid
+    import json
+    from database.models import AccessRequest, AccessApproval
+    from api.security.authz import log_security_event
+    
+    req = db.query(AccessRequest).filter(AccessRequest.request_id == payload.request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Access request not found")
+    
+    now = datetime.datetime.utcnow()
+    hours = min(payload.hours, 24)
+    req.status = payload.decision.upper()
+    req.decided_at = now
+    req.decided_by = user.user_id
+    req.decision_reason = payload.reason
+    
+    if req.status == "APPROVED":
+        appr_id = f"appr_{uuid.uuid4().hex[:8]}"
+        until = now + datetime.timedelta(hours=hours)
+        appr_row = AccessApproval(
+            approval_id=appr_id,
+            request_id=req.request_id,
+            user_id=req.user_id,
+            resource_type=req.requested_resource,
+            geo_scope=req.target_sector,
+            valid_from=now,
+            valid_to=until,
+            granted_by=user.user_id,
+            created_at=now
+        )
+        db.add(appr_row)
+        
+        if redis_client:
+            try:
+                redis_client.setex(
+                    f"tactical:approval:{req.user_id}:{req.target_sector}",
+                    hours * 3600,
+                    json.dumps({
+                        "approved_by": user.user_id,
+                        "approved_by_user": user.username,
+                        "sector": req.target_sector,
+                        "user_id": req.user_id,
+                        "approved_at": now.isoformat(),
+                        "ttl_hours": hours
+                    })
+                )
+                redis_client.setex(
+                    f"tactical:approval:{req.request_id}:{req.target_sector}",
+                    hours * 3600,
+                    json.dumps({
+                        "approved_by": user.user_id,
+                        "approved_by_user": user.username,
+                        "sector": req.target_sector,
+                        "user_id": req.user_id,
+                        "approved_at": now.isoformat(),
+                        "ttl_hours": hours
+                    })
+                )
+            except Exception as r_err:
+                logger.warning(f"Redis cache setex failed in decide_access_request: {r_err}")
+
+        log_security_event(
+            actor_id=user.user_id,
+            actor_role=user.role.value,
+            action="GRANT_APPROVAL",
+            resource_type=f"{req.requested_resource}:{req.target_sector}",
+            decision="ALLOWED",
+            reason=f"Clearance approved for {req.user_id} for {hours}h",
+            client_ip=request.client.host if (request and request.client) else "127.0.0.1",
+            db_session=db
+        )
+    else:
+        log_security_event(
+            actor_id=user.user_id,
+            actor_role=user.role.value,
+            action="REJECT_APPROVAL",
+            resource_type=f"{req.requested_resource}:{req.target_sector}",
+            decision="DENIED",
+            reason=f"Clearance rejected for {req.user_id}",
+            client_ip=request.client.host if (request and request.client) else "127.0.0.1",
+            db_session=db
+        )
+
+    db.commit()
+    return {
+        "request_id": req.request_id,
+        "status": req.status,
+        "decided_by": user.user_id,
+        "validity_hours": hours if req.status == "APPROVED" else 0,
+        "message": f"Request {req.status} successfully by Security Officer."
     }
 
 @app.get("/api/v1/alert/status")
