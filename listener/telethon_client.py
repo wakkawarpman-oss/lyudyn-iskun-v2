@@ -219,72 +219,82 @@ async def main():
         print("No valid channels found. Exiting.", flush=True)
         return
 
-    # Bind all channels to clients. Primary session (Session 1) has full resolving rights
+    # Bind channels to clients using Consistent Hashing:
+    # crc32(channel) % num_sessions deterministically partitions channels across the session pool.
+    import zlib
+    num_sessions = len(clients)
     clients_dict = {client: [] for client in clients}
-    primary_client = clients[0]
 
-    primary_entities = []
     for ch in valid_channels_names:
+        ch_clean = str(ch).lstrip("@").lower().strip()
+        shard_idx = zlib.crc32(ch_clean.encode("utf-8")) % num_sessions
+        target_client = clients[shard_idx]
         try:
-            ent = await primary_client.get_entity(ch)
-            primary_entities.append(ent)
+            ent = await target_client.get_entity(ch)
+            clients_dict[target_client].append(ent)
         except Exception as e:
-            print(f"⚠️ Error resolving {ch} on primary client: {e}", flush=True)
+            print(f"⚠️ Error resolving {ch} on session {shard_idx + 1}: {e}", flush=True)
 
-    print(f"📡 Primary Session bound to {len(primary_entities)} active channels across Ukraine!", flush=True)
-    clients_dict[primary_client] = primary_entities
+    # Register independent NewMessage event handlers on EACH active session in the pool
+    for idx, (client, entities) in enumerate(clients_dict.items()):
+        if not entities:
+            continue
+        print(f"📡 Session {idx+1}/{num_sessions} bound to {len(entities)} channels (Consistent Hash Shard {idx})", flush=True)
 
-    # Register NewMessage handler on primary client
-    if primary_entities:
-        @primary_client.on(events.NewMessage(chats=primary_entities))
-        async def primary_handler(event):
-            msg = event.message
-            media_path = None
-            if getattr(msg, 'photo', None):
-                try:
-                    file_name = f"photo_{msg.id}.jpg"
-                    path = f"/app/media/{file_name}"
-                    await msg.download_media(file=path)
-                    media_path = path
-                except Exception as e:
-                    print(f"Failed to download media: {e}")
-            elif getattr(msg, 'video', None):
-                try:
-                    duration = getattr(msg.file, 'duration', None) or 0
-                    size = getattr(msg.file, 'size', None) or 0
-                    if duration <= MAX_VIDEO_DURATION_S and size <= MAX_VIDEO_SIZE_BYTES:
-                        file_name = f"video_{msg.id}.mp4"
+        def make_handler(session_num: int):
+            async def shard_message_handler(event):
+                msg = event.message
+                media_path = None
+                if getattr(msg, 'photo', None):
+                    try:
+                        file_name = f"photo_{msg.id}.jpg"
                         path = f"/app/media/{file_name}"
                         await msg.download_media(file=path)
                         media_path = path
-                    else:
-                        print(f"Skipping oversized/long video msg {msg.id}: duration={duration}s size={size}B")
-                except Exception as e:
-                    print(f"Failed to download video: {e}")
+                    except Exception as e:
+                        print(f"Failed to download media on session {session_num}: {e}")
+                elif getattr(msg, 'video', None):
+                    try:
+                        duration = getattr(msg.file, 'duration', None) or 0
+                        size = getattr(msg.file, 'size', None) or 0
+                        if duration <= MAX_VIDEO_DURATION_S and size <= MAX_VIDEO_SIZE_BYTES:
+                            file_name = f"video_{msg.id}.mp4"
+                            path = f"/app/media/{file_name}"
+                            await msg.download_media(file=path)
+                            media_path = path
+                        else:
+                            print(f"Skipping oversized/long video msg {msg.id}: duration={duration}s size={size}B")
+                    except Exception as e:
+                        print(f"Failed to download video on session {session_num}: {e}")
 
-            ch_raw = event.chat.username or str(event.chat_id)
-            ch_name = resolve_channel_name(ch_raw)
-            ch_clean = str(ch_name).lstrip("@").lower()
-            payload = {
-                "channel": ch_name,
-                "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
-                "message_id": msg.id,
-                "text": msg.text or "",
-                "date": msg.date.isoformat() if msg.date else None,
-                "views": msg.views or 0,
-                "forwards": msg.forwards or 0,
-                "has_media": bool(msg.media),
-                "media_path": media_path,
-                "fwd_from": extract_forward_source(msg)
-            }
-            
-            celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
-            try:
-                await publish_tg_report(payload)
-            except Exception:
-                pass
-            await set_channel_last_id(ch_clean, msg.id)
-            print(f"⚡ Live event from {payload['channel']} (ID: {msg.id}) -> Celery Worker + NATS")
+                ch_raw = event.chat.username or str(event.chat_id)
+                ch_name = resolve_channel_name(ch_raw)
+                ch_clean = str(ch_name).lstrip("@").lower()
+                payload = {
+                    "channel": ch_name,
+                    "oblast": CHANNEL_OBLAST_MAP.get(ch_clean, "all"),
+                    "message_id": msg.id,
+                    "text": msg.text or "",
+                    "date": msg.date.isoformat() if msg.date else None,
+                    "views": msg.views or 0,
+                    "forwards": msg.forwards or 0,
+                    "has_media": bool(msg.media),
+                    "media_path": media_path,
+                    "fwd_from": extract_forward_source(msg),
+                    "session_shard": session_num
+                }
+                
+                celery_app.send_task('worker.tasks.process_message', args=[json.dumps(payload)])
+                try:
+                    await publish_tg_report(payload)
+                except Exception:
+                    pass
+                await set_channel_last_id(ch_clean, msg.id)
+                print(f"⚡ [Shard {session_num}] Live event from {payload['channel']} (ID: {msg.id}) -> Celery + NATS", flush=True)
+
+            return shard_message_handler
+
+        client.add_event_handler(make_handler(idx + 1), events.NewMessage(chats=entities))
 
     # Initial sync
     sync_tasks = []
@@ -295,12 +305,15 @@ async def main():
     # Start Redis sync command listener in background
     asyncio.create_task(listen_for_sync_commands(clients_dict))
 
-    # Start Redis heartbeat
+    # Start Redis heartbeat with session pool telemetry
     async def heartbeat_redis():
         r = aioredis.from_url(REDIS_URL)
         while True:
             try:
-                await r.set("telethon_last_ping", datetime.datetime.utcnow().isoformat())
+                now_iso = datetime.datetime.utcnow().isoformat()
+                await r.set("telethon_last_ping", now_iso)
+                await r.set("telegram_accounts_healthy", len(clients))
+                await r.set("telegram_accounts_total", len(SESSION_STRINGS))
             except Exception:
                 pass
             await asyncio.sleep(60)

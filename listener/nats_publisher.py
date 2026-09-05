@@ -63,7 +63,8 @@ async def get_jetstream() -> Optional[JetStreamContext]:
                         subjects=STREAM_SUBJECTS,
                         retention=RetentionPolicy.LIMITS,
                         storage=StorageType.FILE,
-                        max_age=86400 * 7,  # 7 days retention
+                        max_age=86400 * 30,  # 30 days (720h) retention
+                        max_msgs=10_000_000,
                         duplicate_window=120.0  # 120s dedup window
                     )
                 )
