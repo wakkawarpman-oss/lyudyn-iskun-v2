@@ -934,6 +934,19 @@
             pointer-events: none;
             z-index: 4;
         }
+        .motion-tick-badge {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            padding: 1px 4px;
+            font-size: 8px;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            color: #f8fafc;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
 
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
             background-color: rgba(2, 132, 199, 0.4) !important;
@@ -1355,31 +1368,74 @@
                 </div>
             </div>
 
-            <!-- ОБ'ЄКТИ -->
-            <div class="section-header-label">🎯 ОБ'ЄКТИ</div>
+            <!-- ОБ'ЄКТИ ТА КЛАСИ ЗАГРОЗ -->
+            <div class="section-header-label">🎯 ПОВІТРЯНІ ЦІЛІ ТА ЗАГРОЗИ (РЛС НЕПТУН)</div>
             <div class="layer-items-list">
-                <div class="layer-checkbox-row checked" id="row-events">
+                <div class="layer-checkbox-row checked" id="row-drones">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box">✓</div>
-                        <span>Події (Влучання, ППО, Вибухи)</span>
+                        <span>🔺 Ударні БпЛА (Shahed / Герань)</span>
                     </div>
-                    <span class="layer-counter-tag" id="cnt-events">24</span>
+                    <span class="layer-counter-tag" id="cnt-drones">0</span>
                 </div>
 
-                <div class="layer-checkbox-row checked" id="row-tracks">
+                <div class="layer-checkbox-row checked" id="row-missiles">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box">✓</div>
-                        <span>Треки (БпЛА Shahed Neptun)</span>
+                        <span>🚀 Крилаті та балістичні ракети</span>
                     </div>
-                    <span class="layer-counter-tag" id="cnt-tracks">10</span>
+                    <span class="layer-counter-tag" id="cnt-missiles">0</span>
+                </div>
+
+                <div class="layer-checkbox-row checked" id="row-kabs">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box">✓</div>
+                        <span>💣 КАБи / Авіабомби (УМПК)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-kabs">0</span>
+                </div>
+
+                <div class="layer-checkbox-row checked" id="row-recon">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box">✓</div>
+                        <span>👁️ Розвід-БпЛА (Zala / Орлан)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-recon">0</span>
                 </div>
 
                 <div class="layer-checkbox-row checked" id="row-headings">
                     <div class="layer-checkbox-left">
                         <div class="custom-check-box">✓</div>
-                        <span>Напрямки та Вектори руху</span>
+                        <span>⚡ Вектори руху (+5/+10/+15 хв)</span>
                     </div>
-                    <span class="layer-counter-tag">LIVE</span>
+                    <span class="layer-counter-tag">PROJ</span>
+                </div>
+
+                <div class="layer-checkbox-row checked" id="row-waypoints">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box">✓</div>
+                        <span>📍 Шлейфи та точки підтвердження</span>
+                    </div>
+                    <span class="layer-counter-tag">TRAIL</span>
+                </div>
+            </div>
+
+            <div class="section-header-label">💥 НАЗЕМНІ ТА КІНЕТИЧНІ ПОДІЇ (OSINT)</div>
+            <div class="layer-items-list">
+                <div class="layer-checkbox-row checked" id="row-events">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box">✓</div>
+                        <span>💥 Вибухи та влучання (OSINT)</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-events">0</span>
+                </div>
+
+                <div class="layer-checkbox-row checked" id="row-airdefense">
+                    <div class="layer-checkbox-left">
+                        <div class="custom-check-box">✓</div>
+                        <span>🛡️ Робота ППО / Перехоплення</span>
+                    </div>
+                    <span class="layer-counter-tag" id="cnt-airdefense">0</span>
                 </div>
 
                 <div class="layer-checkbox-row checked" id="row-zones">
@@ -1890,6 +1946,8 @@
 
         // Operational Layers
         const radarLayer = L.layerGroup().addTo(map);
+        const motionVectorsLayer = L.layerGroup().addTo(map);
+        const trailWaypointsLayer = L.layerGroup().addTo(map);
         const zonesLayer = L.layerGroup().addTo(map);
         const infraLayer = L.layerGroup();
         const airfieldsLayer = L.layerGroup();
@@ -1932,6 +1990,20 @@
         let selectedHours = 24;
         let showHeadings = true;
         let isClusteringEnabled = false;
+
+        // Granular Tactical Filters
+        let filterThreats = {
+            drone: true,
+            missile: true,
+            ballistic: true,
+            kab: true,
+            recon: true,
+            generic: true
+        };
+        let showMotionVectors = true;
+        let showWaypoints = true;
+        let showExplosions = true;
+        let showAirDefense = true;
 
         // ─── 2. ШАРИ Management Engine (SPECIFICATION EXACT) ───
         const layersSheet = document.getElementById('layers-sheet');
@@ -1995,21 +2067,48 @@
             });
         }
 
+        toggleLayerRow('row-drones', null, (on) => {
+            filterThreats.drone = on;
+            fetchRadarDrones();
+        });
+
+        toggleLayerRow('row-missiles', null, (on) => {
+            filterThreats.missile = on;
+            filterThreats.ballistic = on;
+            fetchRadarDrones();
+        });
+
+        toggleLayerRow('row-kabs', null, (on) => {
+            filterThreats.kab = on;
+            fetchRadarDrones();
+        });
+
+        toggleLayerRow('row-recon', null, (on) => {
+            filterThreats.recon = on;
+            fetchRadarDrones();
+        });
+
+        toggleLayerRow('row-headings', motionVectorsLayer, (on) => {
+            showMotionVectors = on;
+            fetchRadarDrones();
+        });
+
+        toggleLayerRow('row-waypoints', trailWaypointsLayer, (on) => {
+            showWaypoints = on;
+            fetchRadarDrones();
+        });
+
         toggleLayerRow('row-events', null, (on) => {
-            if (on) {
-                if (isClusteringEnabled) map.addLayer(clusterGroup); else map.addLayer(discreteEventsGroup);
-            } else {
-                map.removeLayer(clusterGroup);
-                map.removeLayer(discreteEventsGroup);
-            }
+            showExplosions = on;
+            renderTimeline(selectedHours);
+        });
+
+        toggleLayerRow('row-airdefense', null, (on) => {
+            showAirDefense = on;
+            renderTimeline(selectedHours);
         });
 
         toggleLayerRow('row-tracks', radarLayer);
-
-        toggleLayerRow('row-headings', null, (on) => {
-            showHeadings = on;
-            fetchRadarDrones();
-        });
 
         toggleLayerRow('row-zones', zonesLayer);
         toggleLayerRow('row-infra', infraLayer, (on) => {
@@ -2525,9 +2624,14 @@
 
             if (prof === 'oper') {
                 setBasemap('dark');
-                setRow('row-events', true);
-                setRow('row-tracks', true);
+                setRow('row-drones', true);
+                setRow('row-missiles', true);
+                setRow('row-kabs', true);
+                setRow('row-recon', true);
                 setRow('row-headings', true);
+                setRow('row-waypoints', true);
+                setRow('row-events', true);
+                setRow('row-airdefense', true);
                 setRow('row-zones', true);
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
@@ -2535,9 +2639,14 @@
                 setRow('row-enemy-facilities', false);
             } else if (prof === 'analyt') {
                 setBasemap('dark');
-                setRow('row-events', true);
-                setRow('row-tracks', true);
+                setRow('row-drones', true);
+                setRow('row-missiles', true);
+                setRow('row-kabs', true);
+                setRow('row-recon', true);
                 setRow('row-headings', true);
+                setRow('row-waypoints', true);
+                setRow('row-events', true);
+                setRow('row-airdefense', true);
                 setRow('row-zones', true);
                 setRow('row-infra', true);
                 setRow('row-shelters', false);
@@ -2545,9 +2654,14 @@
                 setRow('row-enemy-facilities', true);
             } else if (prof === 'nav') {
                 setBasemap('standard');
-                setRow('row-events', false);
-                setRow('row-tracks', false);
+                setRow('row-drones', false);
+                setRow('row-missiles', false);
+                setRow('row-kabs', false);
+                setRow('row-recon', false);
                 setRow('row-headings', false);
+                setRow('row-waypoints', false);
+                setRow('row-events', false);
+                setRow('row-airdefense', false);
                 setRow('row-zones', false);
                 setRow('row-infra', true);
                 setRow('row-shelters', true);
@@ -2555,9 +2669,14 @@
                 setRow('row-enemy-facilities', false);
             } else if (prof === 'clean') {
                 setBasemap('dark');
-                setRow('row-events', false);
-                setRow('row-tracks', false);
+                setRow('row-drones', false);
+                setRow('row-missiles', false);
+                setRow('row-kabs', false);
+                setRow('row-recon', false);
                 setRow('row-headings', false);
+                setRow('row-waypoints', false);
+                setRow('row-events', false);
+                setRow('row-airdefense', false);
                 setRow('row-zones', false);
                 setRow('row-infra', false);
                 setRow('row-shelters', false);
@@ -2601,8 +2720,113 @@
             }
         }
 
+        function getThreatVisuals(d) {
+            const cat = (d.category || 'generic').toLowerCase();
+            const heading = Math.round(d.heading || 0);
+
+            if (cat === 'drone' || cat === 'shahed') {
+                return {
+                    color: '#ff3366',
+                    glow: 'rgba(255, 51, 102, 0.4)',
+                    label: 'Shahed',
+                    tagIcon: '🔺',
+                    category: 'drone',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="26" height="26" style="filter: drop-shadow(0 0 6px #ff3366);">
+                            <path d="M12 2 L22 21 L16 18 L12 20 L8 18 L2 21 Z" fill="#ff3366" stroke="#ffffff" stroke-width="1.2"/>
+                        </svg>
+                    `
+                };
+            } else if (cat === 'missile' || cat === 'cruise') {
+                return {
+                    color: '#dc2626',
+                    glow: 'rgba(220, 38, 38, 0.5)',
+                    label: 'Крилата Ракета',
+                    tagIcon: '🚀',
+                    category: 'missile',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="28" height="28" style="filter: drop-shadow(0 0 8px #dc2626);">
+                            <path d="M12 1 L14.5 6 L14.5 17 L19 22 L16.5 22 L13.5 19 L12 22 L10.5 19 L7.5 22 L5 22 L9.5 17 L9.5 6 Z" fill="#dc2626" stroke="#ffffff" stroke-width="1.2"/>
+                            <circle cx="12" cy="22" r="1.5" fill="#facc15"/>
+                        </svg>
+                    `
+                };
+            } else if (cat === 'ballistic') {
+                return {
+                    color: '#d946ef',
+                    glow: 'rgba(217, 70, 239, 0.5)',
+                    label: 'Балістика',
+                    tagIcon: '⚡',
+                    category: 'missile',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="28" height="28" style="filter: drop-shadow(0 0 8px #d946ef);">
+                            <path d="M12 1 L15.5 7 L15 17 L19 22 L14 20 L12 23 L10 20 L5 22 L9 17 L8.5 7 Z" fill="#d946ef" stroke="#ffffff" stroke-width="1.2"/>
+                            <circle cx="12" cy="11" r="2" fill="#ffffff"/>
+                        </svg>
+                    `
+                };
+            } else if (cat === 'kab') {
+                return {
+                    color: '#f59e0b',
+                    glow: 'rgba(245, 158, 11, 0.45)',
+                    label: 'КАБ (УМПК)',
+                    tagIcon: '💣',
+                    category: 'kab',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="26" height="26" style="filter: drop-shadow(0 0 7px #f59e0b);">
+                            <path d="M12 2 C13.5 2 14.5 4 14.5 9 L22 12 L22 14 L14.5 13 L14 18 L17 21 L13.5 20.5 L12 22 L10.5 20.5 L7 21 L10 18 L9.5 13 L2 14 L2 12 L9.5 9 C9.5 4 10.5 2 12 2 Z" fill="#f59e0b" stroke="#ffffff" stroke-width="1.2"/>
+                        </svg>
+                    `
+                };
+            } else if (cat === 'recon') {
+                return {
+                    color: '#06b6d4',
+                    glow: 'rgba(6, 182, 212, 0.4)',
+                    label: 'Розвід-БпЛА',
+                    tagIcon: '👁️',
+                    category: 'recon',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="26" height="26" style="filter: drop-shadow(0 0 6px #06b6d4);">
+                            <polygon points="12,2 22,12 12,22 2,12" fill="rgba(6,182,212,0.6)" stroke="#06b6d4" stroke-width="1.8"/>
+                            <circle cx="12" cy="12" r="3.5" fill="#ffffff" stroke="#0891b2" stroke-width="1.5"/>
+                        </svg>
+                    `
+                };
+            } else {
+                return {
+                    color: '#ff9900',
+                    glow: 'rgba(255, 153, 0, 0.4)',
+                    label: 'Ціль',
+                    tagIcon: '⚠️',
+                    category: 'generic',
+                    svg: `
+                        <svg viewBox="0 0 24 24" width="24" height="24" style="filter: drop-shadow(0 0 6px #ff9900);">
+                            <polygon points="12,2 20,20 12,16 4,20" fill="#ff9900" stroke="#ffffff" stroke-width="1.2"/>
+                        </svg>
+                    `
+                };
+            }
+        }
+
+        function projectFutureCoordinates(lat, lng, headingDeg, speedKmh, minutesAhead) {
+            const R = 6371.0;
+            const distKm = (speedKmh * minutesAhead) / 60.0;
+            const radHeading = (headingDeg * Math.PI) / 180.0;
+            const radLat = (lat * Math.PI) / 180.0;
+            const radLng = (lng * Math.PI) / 180.0;
+            const delta = distKm / R;
+
+            const lat2 = Math.asin(Math.sin(radLat) * Math.cos(delta) + Math.cos(radLat) * Math.sin(delta) * Math.cos(radHeading));
+            const lng2 = radLng + Math.atan2(Math.sin(radHeading) * Math.sin(delta) * Math.cos(radLat), Math.cos(delta) - Math.sin(radLat) * Math.sin(lat2));
+
+            return [lat2 * (180.0 / Math.PI), lng2 * (180.0 / Math.PI)];
+        }
+
         const droneMarkerCache = new Map();
         const droneConeCache = new Map();
+        const droneVectorCache = new Map();
+        const droneTrailCache = new Map();
+        const droneWaypointCache = new Map();
 
         async function fetchRadarDrones() {
             try {
@@ -2613,7 +2837,25 @@
                 const drones = data.drones || [];
                 activeDrones = drones;
 
+                // Update category counts
+                let cDrones = 0, cMissiles = 0, cKabs = 0, cRecon = 0;
+                drones.forEach(d => {
+                    const c = (d.category || '').toLowerCase();
+                    if (c === 'drone' || c === 'shahed') cDrones++;
+                    else if (c === 'missile' || c === 'cruise' || c === 'ballistic') cMissiles++;
+                    else if (c === 'kab') cKabs++;
+                    else if (c === 'recon') cRecon++;
+                });
+
+                const cntDronesEl = document.getElementById('cnt-drones');
+                const cntMissilesEl = document.getElementById('cnt-missiles');
+                const cntKabsEl = document.getElementById('cnt-kabs');
+                const cntReconEl = document.getElementById('cnt-recon');
                 const cntTracks = document.getElementById('cnt-tracks');
+                if (cntDronesEl) cntDronesEl.textContent = cDrones;
+                if (cntMissilesEl) cntMissilesEl.textContent = cMissiles;
+                if (cntKabsEl) cntKabsEl.textContent = cKabs;
+                if (cntReconEl) cntReconEl.textContent = cRecon;
                 if (cntTracks) cntTracks.textContent = drones.length;
 
                 updateThreatBanner();
@@ -2622,20 +2864,30 @@
                 drones.forEach(d => {
                     if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
                     const dId = String(d.id || `${d.lat.toFixed(4)}_${d.lng.toFixed(4)}`);
+                    const vis = getThreatVisuals(d);
+
+                    // Filter check
+                    if (vis.category === 'drone' && !filterThreats.drone) return;
+                    if (vis.category === 'missile' && !filterThreats.missile) return;
+                    if (vis.category === 'kab' && !filterThreats.kab) return;
+                    if (vis.category === 'recon' && !filterThreats.recon) return;
+
                     currentIds.add(dId);
                     const heading = Math.round(d.heading || 0);
+                    const speed = Math.round(d.speed_kmh || (vis.category === 'drone' ? 185 : 250));
 
-                    // Render Kalman ETA uncertainty cone polygon
+                    // 1. Render Kalman ETA uncertainty cone polygon
                     if (d.eta_cone && d.eta_cone.cone_polygon && d.eta_cone.cone_polygon.length >= 3) {
                         const coneCoords = d.eta_cone.cone_polygon;
                         if (droneConeCache.has(dId)) {
                             droneConeCache.get(dId).setLatLngs(coneCoords);
+                            droneConeCache.get(dId).setStyle({ color: vis.color, fillColor: vis.color });
                         } else {
                             const conePoly = L.polygon(coneCoords, {
-                                color: d.color || '#ff0055',
+                                color: vis.color,
                                 weight: 1.5,
                                 dashArray: '5, 5',
-                                fillColor: d.color || '#ff0055',
+                                fillColor: vis.color,
                                 fillOpacity: 0.12,
                                 interactive: false
                             }).addTo(radarLayer);
@@ -2643,18 +2895,125 @@
                         }
                     }
 
+                    // 2. Render Motion Vector Projection (+5, +10, +15 min)
+                    if (showMotionVectors && heading > 0 && speed >= 15) {
+                        const p0 = [d.lat, d.lng];
+                        const p5 = projectFutureCoordinates(d.lat, d.lng, heading, speed, 5);
+                        const p10 = projectFutureCoordinates(d.lat, d.lng, heading, speed, 10);
+                        const p15 = projectFutureCoordinates(d.lat, d.lng, heading, speed, 15);
+
+                        if (droneVectorCache.has(dId)) {
+                            const vg = droneVectorCache.get(dId);
+                            motionVectorsLayer.removeLayer(vg);
+                        }
+                        const vGroup = L.layerGroup();
+                        // Dashed forward ray
+                        L.polyline([p0, p5, p10, p15], {
+                            color: vis.color,
+                            weight: 2,
+                            dashArray: '5, 6',
+                            opacity: 0.8
+                        }).addTo(vGroup);
+                        // +5 min milestone
+                        L.circleMarker(p5, {
+                            radius: 3.5,
+                            color: '#ffffff',
+                            weight: 1,
+                            fillColor: vis.color,
+                            fillOpacity: 0.9
+                        }).bindTooltip(`+5 хв (~${Math.round(speed * 5 / 60)} км)`).addTo(vGroup);
+                        // +10 min milestone
+                        L.circleMarker(p10, {
+                            radius: 3.5,
+                            color: '#ffffff',
+                            weight: 1,
+                            fillColor: vis.color,
+                            fillOpacity: 0.9
+                        }).bindTooltip(`+10 хв (~${Math.round(speed * 10 / 60)} км)`).addTo(vGroup);
+                        // +15 min milestone
+                        L.circleMarker(p15, {
+                            radius: 4.5,
+                            color: '#ffffff',
+                            weight: 1.5,
+                            fillColor: vis.color,
+                            fillOpacity: 1
+                        }).bindTooltip(`⚡ Проекція курсу +15 хв (~${Math.round(speed * 15 / 60)} км)`).addTo(vGroup);
+
+                        vGroup.addTo(motionVectorsLayer);
+                        droneVectorCache.set(dId, vGroup);
+                    } else if (droneVectorCache.has(dId)) {
+                        motionVectorsLayer.removeLayer(droneVectorCache.get(dId));
+                        droneVectorCache.delete(dId);
+                    }
+
+                    // 3. Render Flight Trail and Confirmation Waypoints
+                    if (showWaypoints && d.trail && d.trail.length > 0) {
+                        // Trail Polyline
+                        if (droneTrailCache.has(dId)) {
+                            droneTrailCache.get(dId).setLatLngs(d.trail);
+                            droneTrailCache.get(dId).setStyle({ color: vis.color });
+                        } else {
+                            const trLine = L.polyline(d.trail, {
+                                color: vis.color,
+                                weight: 2.5,
+                                opacity: 0.7,
+                                dashArray: '2, 4'
+                            }).addTo(trailWaypointsLayer);
+                            droneTrailCache.set(dId, trLine);
+                        }
+
+                        // Waypoint Breadcrumb Pins
+                        if (droneWaypointCache.has(dId)) {
+                            trailWaypointsLayer.removeLayer(droneWaypointCache.get(dId));
+                        }
+                        const wpGroup = L.layerGroup();
+                        const pts = d.waypoints || d.trail.map((pt, i) => ({ lat: pt[0], lng: pt[1], index: i }));
+                        pts.forEach(wp => {
+                            const wpMarker = L.circleMarker([wp.lat, wp.lng], {
+                                radius: 3.5,
+                                color: '#ffffff',
+                                weight: 1,
+                                fillColor: vis.color,
+                                fillOpacity: 0.95
+                            });
+                            const timeStr = wp.time ? (wp.time.includes('T') ? wp.time.split('T')[1].slice(0, 8) : wp.time) : 'Зафіксовано';
+                            wpMarker.bindTooltip(`
+                                <div style="font-family:var(--font-mono); font-size:11px; padding:3px 6px; color:#f8fafc; line-height:1.4;">
+                                    <strong style="color:${vis.color};">📍 Фіксація #${(wp.index || 0) + 1}</strong><br>
+                                    ⏱️ Час: <strong>${timeStr}</strong><br>
+                                    📡 Джерело: <strong>${wp.source || 'РЛС Нептун'}</strong><br>
+                                    🏎️ Швидкість: ${Math.round(wp.speed_kmh || speed)} км/год
+                                </div>
+                            `, { permanent: false, direction: 'top', offset: [0, -6] });
+                            wpMarker.addTo(wpGroup);
+                        });
+                        wpGroup.addTo(trailWaypointsLayer);
+                        droneWaypointCache.set(dId, wpGroup);
+                    } else {
+                        if (droneTrailCache.has(dId)) {
+                            trailWaypointsLayer.removeLayer(droneTrailCache.get(dId));
+                            droneTrailCache.delete(dId);
+                        }
+                        if (droneWaypointCache.has(dId)) {
+                            trailWaypointsLayer.removeLayer(droneWaypointCache.get(dId));
+                            droneWaypointCache.delete(dId);
+                        }
+                    }
+
+                    // 4. Tactical Target Marker Icon
                     const etaBadge = (d.eta_cone && d.eta_cone.eta_time_str) ? ` · ⏱️ ${d.eta_cone.eta_time_str}` : '';
                     const iconHtml = `
                         <div class="m-drone-container">
-                            <div class="m-drone-ping"></div>
+                            <div class="m-drone-ping" style="border-color:${vis.color}; background:${vis.glow};"></div>
                             ${showHeadings ? `
                             <div class="m-drone-arrow" style="transform: rotate(${heading}deg);">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="#ff0055">
-                                    <path d="M12 2L4 21l8-4 8 4L12 2z"/>
-                                </svg>
-                            </div>` : ''}
-                            <div class="m-drone-dot"></div>
-                            <div class="m-drone-tag">🔴 ${d.place || 'БпЛА'} ${heading ? `${heading}°` : ''}${etaBadge}</div>
+                                ${vis.svg}
+                            </div>` : `
+                            <div class="m-drone-dot" style="background:${vis.color}; box-shadow:0 0 10px ${vis.color};"></div>
+                            `}
+                            <div class="m-drone-tag" style="border-color:${vis.color};">
+                                ${vis.tagIcon} ${vis.label} · ${d.place || 'Ціль'}${heading ? ` ${heading}°` : ''}${etaBadge}
+                            </div>
                         </div>
                     `;
 
@@ -2683,7 +3042,7 @@
                     }
                 });
 
-                // Remove departed markers and cones without full-layer clear
+                // Remove departed markers, cones, vectors, and trails
                 for (const [id, m] of droneMarkerCache.entries()) {
                     if (!currentIds.has(id)) {
                         radarLayer.removeLayer(m);
@@ -2694,6 +3053,24 @@
                     if (!currentIds.has(id)) {
                         radarLayer.removeLayer(poly);
                         droneConeCache.delete(id);
+                    }
+                }
+                for (const [id, vg] of droneVectorCache.entries()) {
+                    if (!currentIds.has(id)) {
+                        motionVectorsLayer.removeLayer(vg);
+                        droneVectorCache.delete(id);
+                    }
+                }
+                for (const [id, tr] of droneTrailCache.entries()) {
+                    if (!currentIds.has(id)) {
+                        trailWaypointsLayer.removeLayer(tr);
+                        droneTrailCache.delete(id);
+                    }
+                }
+                for (const [id, wpg] of droneWaypointCache.entries()) {
+                    if (!currentIds.has(id)) {
+                        trailWaypointsLayer.removeLayer(wpg);
+                        droneWaypointCache.delete(id);
                     }
                 }
             } catch(e) {
@@ -2774,14 +3151,58 @@
                 '-1002053889953': 'operatyvnyi_monitor'
             };
 
+            // Update kinetic counters
+            let cStrikes = 0, cAD = 0;
+            rawEvents.forEach(e => {
+                if (new Date(e.detected_at).getTime() < cutoff) return;
+                const et = (e.event_type || '').toLowerCase();
+                if (et.includes('strike') || et.includes('explosion') || et.includes('destruction') || et.includes('shelling') || et.includes('fire')) cStrikes++;
+                if (et.includes('air_defense') || et.includes('interception')) cAD++;
+            });
+            const cntEventsEl = document.getElementById('cnt-events');
+            const cntAirdefenseEl = document.getElementById('cnt-airdefense');
+            if (cntEventsEl) cntEventsEl.textContent = cStrikes;
+            if (cntAirdefenseEl) cntAirdefenseEl.textContent = cAD;
+
             // Events Rendering
             rawEvents.forEach(e => {
                 if (new Date(e.detected_at).getTime() < cutoff) return;
-                const isStrike = (e.event_type || '').includes('strike') || (e.event_type || '').includes('explosion');
-                const isRadar = (e.event_type || '') === 'radar_track';
-                const emoji = isStrike ? '💥' : (isRadar ? '📡' : '⚠️');
-                const borderColor = isStrike ? '#ef4444' : (isRadar ? '#38bdf8' : '#f59e0b');
-                const bgColor = isStrike ? 'rgba(239, 68, 68, 0.4)' : (isRadar ? 'rgba(56, 189, 248, 0.35)' : 'rgba(245, 158, 11, 0.35)');
+                const et = (e.event_type || '').toLowerCase();
+                const isStrike = et.includes('strike') || et.includes('explosion') || et.includes('destruction');
+                const isAD = et.includes('air_defense') || et.includes('interception');
+                const isFire = et.includes('fire');
+                const isShelling = et.includes('shelling');
+                const isRadar = et === 'radar_track';
+
+                // Filter check
+                if (!showExplosions && (isStrike || isShelling || isFire)) return;
+                if (!showAirDefense && isAD) return;
+
+                let emoji = '⚠️';
+                let borderColor = '#f59e0b';
+                let bgColor = 'rgba(245, 158, 11, 0.35)';
+
+                if (isStrike) {
+                    emoji = '💥';
+                    borderColor = '#ef4444';
+                    bgColor = 'rgba(239, 68, 68, 0.4)';
+                } else if (isAD) {
+                    emoji = '🛡️';
+                    borderColor = '#10b981';
+                    bgColor = 'rgba(16, 185, 129, 0.35)';
+                } else if (isFire) {
+                    emoji = '🔥';
+                    borderColor = '#f97316';
+                    bgColor = 'rgba(249, 115, 22, 0.4)';
+                } else if (isShelling) {
+                    emoji = '💣';
+                    borderColor = '#dc2626';
+                    bgColor = 'rgba(220, 38, 38, 0.4)';
+                } else if (isRadar) {
+                    emoji = '📡';
+                    borderColor = '#38bdf8';
+                    bgColor = 'rgba(56, 189, 248, 0.35)';
+                }
 
                 // Time calculation & formatting
                 let timeStr = '--:--';
@@ -2810,7 +3231,9 @@
                 if (isMilSymbology) {
                     const svgHtml = isStrike
                         ? `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #ef4444);"><polygon points="16,2 30,16 16,30 2,16" fill="rgba(239,68,68,0.35)" stroke="#ef4444" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">💥</text></svg>`
-                        : `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #eab308);"><rect x="3" y="3" width="26" height="26" rx="4" fill="rgba(234,179,8,0.3)" stroke="#eab308" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">⚡</text></svg>`;
+                        : (isAD
+                            ? `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #10b981);"><polygon points="16,2 30,8 30,18 16,30 2,18 2,8" fill="rgba(16,185,129,0.35)" stroke="#10b981" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">🛡️</text></svg>`
+                            : `<svg viewBox="0 0 32 32" width="32" height="32" style="filter:drop-shadow(0 0 6px #eab308);"><rect x="3" y="3" width="26" height="26" rx="4" fill="rgba(234,179,8,0.3)" stroke="#eab308" stroke-width="2.2"/><text x="16" y="20" font-size="12" text-anchor="middle" fill="#fff" font-weight="900">⚡</text></svg>`);
                     icon = L.divIcon({
                         className: '',
                         iconSize: [32, 32],

@@ -68,16 +68,16 @@ def calculate_distance_km(lat1: float, lon1: float, lat2: float = KYIV_LAT, lon2
 def classify_threat(threat_type: str, text: str) -> tuple[str, str, str]:
     """Classifies raw threat text into (label, color_hex, category)."""
     s = f"{threat_type or ''} {text or ''}".lower()
-    if any(k in s for k in ['shahed', 'шахед', 'бпла', 'дрон', 'герань']):
-        return 'БПЛА Shahed', '#ff3366', 'drone'
-    if any(k in s for k in ['крилат', 'калібр', 'х-101', 'ракет', 'раке', 'missile', 'cruise']):
-        return 'Крилата Ракета', '#ff0044', 'missile'
     if any(k in s for k in ['баліст', 'іскандер', 'кинжал', 'кинджал']):
         return 'Балістична Ракета', '#ff00cc', 'ballistic'
     if any(k in s for k in ['каб', 'керована', 'бомб', 'авіабомб']):
         return 'КАБ / Авіабомба', '#ffaa00', 'kab'
+    if any(k in s for k in ['крилат', 'калібр', 'х-101', 'ракет', 'раке', 'missile', 'cruise']):
+        return 'Крилата Ракета', '#ff0044', 'missile'
     if any(k in s for k in ['розвід', 'zala', 'supercam', 'орлан']):
         return 'Розвідувальний БПЛА', '#00bfff', 'recon'
+    if any(k in s for k in ['shahed', 'шахед', 'бпла', 'дрон', 'герань']):
+        return 'БПЛА Shahed', '#ff3366', 'drone'
     return 'Повітряна Ціль', '#ff9900', 'generic'
 
 
@@ -162,13 +162,34 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
                 relevant_obs.append(ob_code)
                 oblast_threat_counts[ob_code] = oblast_threat_counts.get(ob_code, 0) + 1
 
-        # Build trail (last 20 coordinates)
+        # Build trail and structured waypoints (last 20 coordinates)
         raw_positions = m.get("positions") or []
         trail = []
-        if isinstance(raw_positions, list):
-            for p in raw_positions[-20:]:
+        waypoints = []
+        if isinstance(raw_positions, list) and raw_positions:
+            for idx, p in enumerate(raw_positions[-20:]):
                 if isinstance(p, dict) and "lat" in p and "lng" in p:
-                    trail.append([p["lat"], p["lng"]])
+                    p_lat = float(p["lat"])
+                    p_lng = float(p["lng"])
+                    trail.append([p_lat, p_lng])
+                    waypoints.append({
+                        "lat": p_lat,
+                        "lng": p_lng,
+                        "time": p.get("time") or p.get("date") or m.get("date") or "",
+                        "speed_kmh": float(p.get("speed_kmh") or (m.get("speed_kmh") or 185.0)),
+                        "source": p.get("source") or "РЛС Нептун",
+                        "index": idx
+                    })
+        if not trail:
+            trail = [[float(lat), float(lng)]]
+            waypoints = [{
+                "lat": float(lat),
+                "lng": float(lng),
+                "time": m.get("date") or datetime.datetime.utcnow().isoformat() + "Z",
+                "speed_kmh": float(m.get("speed_kmh") or 185.0),
+                "source": "РЛС Нептун",
+                "index": 0
+            }]
 
         heading_val = float(m.get("course_bearing") or 0)
         if heading_val == 0 and len(trail) >= 2:
@@ -234,6 +255,7 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
             "is_zaporizhzhia_threat": "zaporizhzhia" in relevant_obs,
             "relevant_oblasts": relevant_obs,
             "trail": trail,
+            "waypoints": waypoints,
             "eta_cone": eta_cone_data,
         }
         drones.append(drone_obj)
