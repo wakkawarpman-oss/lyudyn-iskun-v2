@@ -8,7 +8,7 @@ from database.models import SessionLocal, DetectedEvent
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID") # e.g. from env
+ADMIN_ID = os.getenv("ADMIN_ID", "8965828778")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 def send_alert(message: str):

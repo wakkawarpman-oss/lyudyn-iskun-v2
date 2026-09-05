@@ -11,7 +11,7 @@ class HealthMonitor:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.alert_cooldown = {}
-        self.admin_id = os.getenv("ADMIN_ID", "123456789")
+        self.admin_id = os.getenv("ADMIN_ID", "8965828778")
         self.redis_client = redis.Redis(host=os.getenv("REDIS_HOST", "redis"), port=6379, db=0, decode_responses=True)
 
     async def run(self):

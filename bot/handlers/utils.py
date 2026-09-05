@@ -13,7 +13,7 @@ from database.models import DetectedEvent
 
 logger = logging.getLogger("bot.handlers")
 
-ADMIN_ID = os.getenv("ADMIN_ID", "123456789")
+ADMIN_ID = os.getenv("ADMIN_ID", "8965828778")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)

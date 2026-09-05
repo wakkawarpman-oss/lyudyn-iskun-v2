@@ -8,7 +8,7 @@ class CriticalAlertSystem:
     def __init__(self, bot: Bot):
         self.bot = bot
         self.sent_alerts = set()
-        self.admin_id = os.getenv("ADMIN_ID", "123456789")
+        self.admin_id = os.getenv("ADMIN_ID", "8965828778")
 
     async def run(self):
         while True:

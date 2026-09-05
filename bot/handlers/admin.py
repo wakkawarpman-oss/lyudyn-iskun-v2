@@ -1,8 +1,12 @@
 import asyncio
+import uuid
+import json
+import datetime
 from aiogram import Router, types, F
 from aiogram.filters import Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from bot.handlers.utils import safe_send, admin_only, logger
+from bot.handlers.utils import safe_send, admin_only, logger, ADMIN_ID, redis_client
 from database.models import SessionLocal, UserApiKey, encrypt_key, decrypt_key
 
 router = Router()
@@ -156,3 +160,111 @@ async def cmd_manual_cleanup(message: types.Message):
         f"• Скинуто кеш мапи та аналітики Redis: 🟢 **Успішно**\n"
         f"• База оптимізована під оперативне 24-годинне вікно."
     )
+
+
+@router.message(Command("security"))
+async def cmd_security_status(message: types.Message):
+    """Reports system security, single administrator binding and approval status."""
+    is_adm = str(message.from_user.id) == str(ADMIN_ID)
+    status_icon = "👑 ГОЛОВНИЙ АДМІНІСТРАТОР" if is_adm else "👤 КОРИСТУВАЧ"
+    
+    active_keys = []
+    try:
+        active_keys = redis_client.keys("tactical:approval:*")
+    except Exception:
+        pass
+
+    text = (
+        f"🛡️ <b>СИСТЕМА БЕЗПЕКИ ТА АВТОРИЗАЦІЇ C4ISR OKINT-PRO</b>\n\n"
+        f"👤 <b>Ваш статус:</b> {status_icon}\n"
+        f"🆔 <b>Ваш ID:</b> <code>{message.from_user.id}</code>\n\n"
+        f"👑 <b>Єдиний уповноважений адміністратор:</b>\n"
+        f"• Ім'я: <b>Bet Trx</b> (@btntrx)\n"
+        f"• Telegram ID: <code>{ADMIN_ID}</code>\n"
+        f"• Рівень доступу: <b>RESTRICTED (Security Officer)</b>\n\n"
+        f"⚙️ <b>Параметри доступу до чутливих даних:</b>\n"
+        f"• Термін дії схвалення: <b>24 години (1 день)</b>\n"
+        f"• Точність координат: <b>100% (Без огрублення/розмиття)</b>\n"
+        f"• Активних схвалених сесій: <b>{len(active_keys)}</b>\n\n"
+        f"<i>Усі сповіщення та запити на підтвердження розширеного функціоналу надсилаються виключно @btntrx.</i>"
+    )
+    await safe_send(message, text)
+
+
+@router.message(Command("test_approval"))
+@admin_only
+async def cmd_test_approval(message: types.Message):
+    """Sends a sample interactive approval request to Bet Trx for testing."""
+    req_id = str(uuid.uuid4())[:8]
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ ПІДТВЕРДИТИ (1 день)", callback_data=f"appr_perm:{req_id}:kyiv_sector"),
+            InlineKeyboardButton(text="❌ ВІДХИЛИТИ", callback_data=f"rejc_perm:{req_id}:kyiv_sector")
+        ]
+    ])
+    
+    await safe_send(
+        message,
+        f"🛡️ <b>ТЕСТОВИЙ ЗАПИТ НА РОЗШИРЕНИЙ ДОСТУП</b>\n\n"
+        f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"👤 <b>Запитувач:</b> Оператор чергової зміни\n"
+        f"🎯 <b>Сектор:</b> <code>kyiv_sector</code>\n"
+        f"📝 <b>Обґрунтування:</b> Тестова перевірка механізму затвердження чутливих даних\n"
+        f"⏳ <b>Термін дії:</b> 24 години (1 день)\n\n"
+        f"<i>Натисніть кнопку нижче для перевірки реакції системи:</i>",
+        reply_markup=kb
+    )
+
+
+@router.callback_query(F.data.startswith("appr_perm:"))
+async def cb_approve_permission(call: types.CallbackQuery):
+    if str(call.from_user.id) != str(ADMIN_ID):
+        await call.answer("⛔ Тільки головний адміністратор @btntrx може підтверджувати доступ!", show_alert=True)
+        return
+        
+    parts = call.data.split(":")
+    req_id = parts[1]
+    sector = parts[2] if len(parts) > 2 else "all"
+    
+    key = f"tactical:approval:{req_id}:{sector}"
+    try:
+        redis_client.setex(key, 86400, json.dumps({
+            "approved_by": call.from_user.id,
+            "approved_by_user": "btntrx",
+            "sector": sector,
+            "approved_at": datetime.datetime.utcnow().isoformat(),
+            "ttl_hours": 24
+        }))
+    except Exception as e:
+        logger.error(f"Redis approval save error: {e}")
+        
+    await call.message.edit_text(
+        f"✅ <b>ДОСТУП ПІДТВЕРДЖЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
+        f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"
+        f"⏱ <b>Термін дії:</b> 24 години (1 день)\n"
+        f"🟢 <b>Статус:</b> АКТИВНИЙ ДОСТУП ДО ЧУТЛИВИХ ДАНИХ НАДАНО",
+        parse_mode="HTML"
+    )
+    await call.answer("✅ Доступ успішно надано на 24 години!")
+
+
+@router.callback_query(F.data.startswith("rejc_perm:"))
+async def cb_reject_permission(call: types.CallbackQuery):
+    if str(call.from_user.id) != str(ADMIN_ID):
+        await call.answer("⛔ Тільки головний адміністратор @btntrx може відхиляти доступ!", show_alert=True)
+        return
+        
+    parts = call.data.split(":")
+    req_id = parts[1]
+    sector = parts[2] if len(parts) > 2 else "all"
+    
+    await call.message.edit_text(
+        f"❌ <b>ЗАПИТ ВІДХИЛЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
+        f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
+        f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"
+        f"🔴 <b>Статус:</b> ВІДХИЛЕНО (Доступ до чутливих даних заблоковано)",
+        parse_mode="HTML"
+    )
+    await call.answer("❌ Запит відхилено!")
+
