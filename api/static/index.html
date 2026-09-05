@@ -920,6 +920,25 @@
             background-color: rgba(2, 132, 199, 0.4) !important;
             border: 1px solid var(--accent-cyan) !important;
         }
+
+        .leaflet-tooltip.c4isr-tactical-tooltip {
+            background: rgba(10, 16, 28, 0.96) !important;
+            border: 1px solid var(--accent-cyan) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            padding: 10px 12px !important;
+            color: #f8fafc !important;
+            pointer-events: auto !important;
+        }
+        .leaflet-tooltip.c4isr-tactical-tooltip:before {
+            border-top-color: var(--accent-cyan) !important;
+        }
+        @keyframes c4isr-pulse {
+            0% { transform: scale(1); opacity: 0.9; }
+            100% { transform: scale(1.7); opacity: 0; }
+        }
         /* ─── Standard Tactical Modal ─── */
         .tactical-modal-overlay {
             position: fixed;
@@ -1402,12 +1421,12 @@
                     <span class="layer-counter-tag" id="cnt-ew">6 RFI</span>
                 </div>
 
-                <div class="layer-checkbox-row checked" id="row-clustering">
+                <div class="layer-checkbox-row" id="row-clustering">
                     <div class="layer-checkbox-left">
-                        <div class="custom-check-box">✓</div>
+                        <div class="custom-check-box"></div>
                         <span>Щільність подій (Кластеризація)</span>
                     </div>
-                    <span class="layer-counter-tag">Auto</span>
+                    <span class="layer-counter-tag">Вимкнено</span>
                 </div>
 
                 <div class="layer-checkbox-row" id="row-symbology-mil">
@@ -1766,7 +1785,7 @@
         const map = L.map('map', {
             center: initOblast.center,
             zoom: initOblast.zoom,
-            minZoom: 6,
+            minZoom: 3,
             maxZoom: 19,
             zoomControl: false
         });
@@ -1822,13 +1841,13 @@
             attribution: '© OpenTopoMap'
         });
 
-        // Clustering Group vs Discrete Group
+        // Clustering Group vs Discrete Group (Default: Discrete ungrouped for immediate time readability)
         const clusterGroup = L.markerClusterGroup({
             maxClusterRadius: 35,
             spiderfyOnMaxZoom: true,
             showCoverageOnHover: false
-        }).addTo(map);
-        const discreteEventsGroup = L.layerGroup();
+        });
+        const discreteEventsGroup = L.layerGroup().addTo(map);
 
         // State Store
         let currentMode = 'LIVE';
@@ -1837,7 +1856,7 @@
         let rawZones = [];
         let selectedHours = 24;
         let showHeadings = true;
-        let isClusteringEnabled = true;
+        let isClusteringEnabled = false;
 
         // ─── 2. ШАРИ Management Engine (SPECIFICATION EXACT) ───
         const layersSheet = document.getElementById('layers-sheet');
@@ -2247,6 +2266,13 @@
 
         toggleLayerRow('row-clustering', null, (on) => {
             isClusteringEnabled = on;
+            if (isClusteringEnabled) {
+                map.removeLayer(discreteEventsGroup);
+                map.addLayer(clusterGroup);
+            } else {
+                map.removeLayer(clusterGroup);
+                map.addLayer(discreteEventsGroup);
+            }
             renderTimeline(selectedHours);
         });
 
@@ -2608,6 +2634,19 @@
             }
         }
 
+        const EVENT_TYPE_LABELS = {
+            'direct_strike': '🎯 Влучання / Наслідки атаки',
+            'explosion': '💥 Вибух / Детонація',
+            'air_defense': '🛡️ Робота ППО / Перехоплення',
+            'radar_track': '📡 Повітряна ціль / Радарний трек',
+            'fire': '🔥 Пожежа / Загоряння',
+            'general_alert': '⚠️ Сигнал тривоги / Небезпека',
+            'alert': '⚠️ Сигнал небезпеки',
+            'shelling': '💣 Артобстріл',
+            'destruction': '🏚️ Руйнування інфраструктури',
+            'casualties': '🚑 Постраждалі'
+        };
+
         function renderTimeline(hours) {
             clusterGroup.clearLayers();
             discreteEventsGroup.clearLayers();
@@ -2626,13 +2665,43 @@
                 grp.addTo(zonesLayer);
             });
 
-            // Events
+            // Channel resolution mapping
+            const CHANNEL_MAP = {
+                '1181169156': 'kievreal1',
+                '-1001181169156': 'kievreal1',
+                '2053889953': 'operatyvnyi_monitor',
+                '-1002053889953': 'operatyvnyi_monitor'
+            };
+
+            // Events Rendering
             rawEvents.forEach(e => {
                 if (new Date(e.detected_at).getTime() < cutoff) return;
                 const isStrike = (e.event_type || '').includes('strike') || (e.event_type || '').includes('explosion');
-                const emoji = isStrike ? '💥' : '⚠️';
-                const bg = isStrike ? 'rgba(239, 68, 68, 0.35)' : 'rgba(234, 179, 8, 0.3)';
-                const border = isStrike ? '#ef4444' : '#eab308';
+                const isRadar = (e.event_type || '') === 'radar_track';
+                const emoji = isStrike ? '💥' : (isRadar ? '📡' : '⚠️');
+                const borderColor = isStrike ? '#ef4444' : (isRadar ? '#38bdf8' : '#f59e0b');
+                const bgColor = isStrike ? 'rgba(239, 68, 68, 0.4)' : (isRadar ? 'rgba(56, 189, 248, 0.35)' : 'rgba(245, 158, 11, 0.35)');
+
+                // Time calculation & formatting
+                let timeStr = '--:--';
+                let timeDiffMin = 0;
+                if (e.detected_at) {
+                    const dt = new Date(e.detected_at);
+                    timeStr = dt.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+                    timeDiffMin = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 60000));
+                }
+                const timeDiffText = timeDiffMin < 60 ? `${timeDiffMin} хв тому` : `${Math.floor(timeDiffMin/60)} год тому`;
+                const isRecent = timeDiffMin <= 35;
+
+                // Canonical channel and direct source link
+                let chRaw = (e.source_channel || '').trim();
+                const chClean = CHANNEL_MAP[chRaw] || chRaw.replace(/^@/, '');
+                const isNumeric = /^-?\d+$/.test(chClean);
+                const srcDisplay = isNumeric ? `ID:${chClean}` : (chClean ? `@${chClean}` : 'OSINT');
+                let srcLink = e.source_link || '';
+                if (!srcLink && chClean && !isNumeric && e.message_id) {
+                    srcLink = `https://t.me/${chClean}/${e.message_id}`;
+                }
 
                 let icon;
                 if (isMilSymbology) {
@@ -2648,11 +2717,16 @@
                 } else {
                     icon = L.divIcon({
                         className: '',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15],
+                        iconSize: [0, 0],
                         html: `
-                            <div style="width:30px; height:30px; border-radius:50%; background:${bg}; border:2px solid ${border}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${border}; font-size:14px;">
-                                ${emoji}
+                            <div class="c4isr-event-pin" style="display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -50%); cursor:pointer;">
+                                <div style="width:28px; height:28px; border-radius:50%; background:${bgColor}; border:2px solid ${borderColor}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px ${borderColor}; font-size:13px; position:relative;">
+                                    ${emoji}
+                                    ${isRecent ? `<span class="pin-pulse" style="position:absolute; width:100%; height:100%; border-radius:50%; border:1.5px solid ${borderColor}; animation: c4isr-pulse 1.8s infinite;"></span>` : ''}
+                                </div>
+                                <div style="background:rgba(6,9,17,0.92); border:1px solid ${borderColor}; border-radius:4px; padding:1px 5px; font-size:10px; font-weight:800; font-family:var(--font-mono); color:#f8fafc; margin-top:2px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.8); text-shadow:0 1px 2px #000;">
+                                    ${timeStr}
+                                </div>
                             </div>
                         `
                     });
@@ -2660,6 +2734,54 @@
 
                 const m = L.marker([e.lat, e.lon], { icon: icon });
                 m.on('click', () => openEventSheet(e));
+
+                // C2 Verification Chain on Hover with Primary Source Link
+                const typeLabel = EVENT_TYPE_LABELS[e.event_type] || '⚡ Оперативна подія';
+                const conf = e.confidence_score || Math.min(98, Math.max(40, (e.resonance_score || 50) + (e.is_official ? 30 : 0)));
+                const hasConsensus = (e.sources_count || 1) >= 2;
+                const isOfficial = !!e.is_official;
+                const sourcesListDisplay = e.sources_list ? e.sources_list.split(',').map(s => s.trim().startsWith('@') ? s.trim() : `@${s.trim()}`).slice(0, 4).join(', ') : srcDisplay;
+
+                const tooltipHtml = `
+                    <div style="min-width:240px; max-width:310px; padding:2px; font-family:var(--font-sans); color:#f8fafc;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px;">
+                            <span style="font-size:11.5px; font-weight:800; color:${borderColor};">${typeLabel}</span>
+                            <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-secondary); white-space:nowrap;">${timeStr} (${timeDiffText})</span>
+                        </div>
+                        <div style="font-size:11px; font-weight:700; color:var(--accent-blue); margin-bottom:6px;">
+                            📍 ${e.location_text || 'Локація уточнюється'}
+                        </div>
+                        
+                        <div style="background:rgba(10,15,26,0.88); border:1px solid var(--border-glow); border-radius:6px; padding:6px; margin-bottom:6px;">
+                            <div style="display:flex; justify-content:space-between; font-size:9.5px; font-weight:700; color:var(--accent-cyan); margin-bottom:4px;">
+                                <span>🛡️ C2-ЛАНЦЮГ ВЕРИФІКАЦІЇ</span>
+                                <span style="color:#34d399;">Довіра: ${conf}%</span>
+                            </div>
+                            <div style="font-size:9px; color:#cbd5e1; line-height:1.3; margin-bottom:3px;">
+                                📡 <b>Джерела:</b> ${sourcesListDisplay} ${hasConsensus ? `(${e.sources_count} підтверджень)` : ''}
+                            </div>
+                            <div style="font-size:9px; color:#94a3b8;">
+                                🎯 <b>Геолокація:</b> ${e.geocoding_logic || 'Топонімічна прив\'язка'}
+                            </div>
+                        </div>
+
+                        ${srcLink ? `
+                            <div style="margin-top:4px; text-align:right;">
+                                <a href="${srcLink}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:4px; background:rgba(0,229,255,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan); text-decoration:none; padding:3px 8px; border-radius:4px; font-size:10.5px; font-weight:700;" onclick="event.stopPropagation()">
+                                    🔗 Першоджерело (${srcDisplay}) ↗
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                m.bindTooltip(tooltipHtml, {
+                    permanent: false,
+                    direction: 'top',
+                    className: 'c4isr-tactical-tooltip',
+                    interactive: true,
+                    offset: [0, -18]
+                });
 
                 if (isClusteringEnabled) {
                     clusterGroup.addLayer(m);
@@ -2816,18 +2938,24 @@
                 srcLink = `https://t.me/${chClean}/${e.message_id}`;
             }
 
+            const eventTitle = EVENT_TYPE_LABELS[e.event_type] || '⚡ Оперативна подія';
+            const sourcesListDisplay = e.sources_list ? e.sources_list.split(',').map(s => s.trim().startsWith('@') ? s.trim() : `@${s.trim()}`).join(', ') : srcDisplay;
+
             objContent.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;">
-                        ${isOfficial ? '🟢 ОФІЦІЙНО' : (hasConsensus ? `🟢 ПІДТВЕРДЖЕНО (${e.sources_count} дж.)` : '🟡 ПОВІДОМЛЯЄТЬСЯ')}
-                    </span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;">
+                            ${isOfficial ? '🟢 ОФІЦІЙНО' : (hasConsensus ? `🟢 ПІДТВЕРДЖЕНО (${e.sources_count} дж.)` : '🟡 ПОВІДОМЛЯЄТЬСЯ')}
+                        </span>
+                        ${e.has_media ? `<span style="background:rgba(56,189,248,0.2); border:1px solid #38bdf8; color:#38bdf8; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px;">📹 ВІДЕО / ФОТО</span>` : ''}
+                    </div>
                     <button class="header-btn" onclick="closeObjectSheet()">✕</button>
                 </div>
                 <div style="font-size:15px; font-weight:800; color:#fff; margin-bottom:4px;">
-                    💥 ${e.event_type === 'direct_strike' ? 'Влучання / Наслідки атаки' : 'Вибух / Подія'}
+                    ${eventTitle}
                 </div>
                 <div style="font-size:12.5px; font-weight:700; color:var(--accent-blue); margin-bottom:10px;">
-                    📍 ${e.location_text || 'Київ'}
+                    📍 ${e.location_text || 'Локація уточнюється'}
                 </div>
                 
                 <div style="background:rgba(10,15,26,0.7); border:1px solid var(--border-glow); border-radius:10px; padding:8px 10px; margin-bottom:10px;">
@@ -2844,6 +2972,9 @@
                         <div style="color:${isOfficial ? 'var(--safe-green)' : 'rgba(255,255,255,0.2)'};">➔</div>
                         <div>${isOfficial ? '🏛️ Офіційно' : '⏳ Оперативно'}</div>
                     </div>
+                    <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:9px; color:#94a3b8;">
+                        👥 <b>Підтверджуючі канали:</b> <span style="color:#f8fafc;">${sourcesListDisplay}</span>
+                    </div>
                 </div>
 
                 ${e.message_text ? `<div style="background:rgba(255,255,255,0.04); border:1px solid var(--border-dim); border-radius:8px; padding:8px 10px; font-size:11px; color:#e2e8f0; margin-bottom:12px;">📝 ${e.message_text}</div>` : ''}
@@ -2853,7 +2984,7 @@
                         ☀️ Перевірити тінь (хронолокація NOAA)
                     </button>
                     <div style="display:flex; gap:8px;">
-                        ${srcLink ? `<a href="${srcLink}" target="_blank" class="tool-btn" style="flex:1; width:auto; height:36px; border-color:var(--accent-blue); color:var(--accent-blue); text-decoration:none; font-size:12px;">🌐 Допис →</a>` : ''}
+                        ${srcLink ? `<a href="${srcLink}" target="_blank" rel="noopener noreferrer" class="tool-btn" style="flex:1; width:auto; height:36px; border-color:var(--accent-blue); color:var(--accent-blue); text-decoration:none; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">${e.has_media ? '📹 Відео / Допис ↗' : '🌐 Першоджерело ↗'}</a>` : ''}
                         <button class="tool-btn" style="width:auto; height:36px; padding:0 16px; font-size:12px;" onclick="closeObjectSheet()">Закрити</button>
                     </div>
                 </div>

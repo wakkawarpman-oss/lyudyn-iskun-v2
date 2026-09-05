@@ -54,6 +54,39 @@ EXTERNAL_OBLAST_STEMS: Dict[str, list] = {
     ],
     "zhytomyr": [
         "житомир", "житомирськ", "житомирщин", "коростень", "бердичів", "звягель"
+    ],
+    "rivne": [
+        "рівне", "рівненськ", "рівненщин", "квасилів", "дубно", "ваcell", "сарни", "шакирзян", "острог", "костопіль"
+    ],
+    "volyn": [
+        "луцьк", "волин", "волинськ", "ковель", "нововолинськ", "володимир"
+    ],
+    "lviv": [
+        "львів", "львівськ", "львівщин", "дрогобич", "стрий", "червоноград", "самбір", "трускавець", "садовий"
+    ],
+    "ternopil": [
+        "тернопіль", "тернопільськ", "тернопільщин", "чортків", "кременець", "бережани"
+    ],
+    "ivano-frankivsk": [
+        "івано-франківськ", "прикарпатт", "калуш", "коломи", "надвірн", "яремч"
+    ],
+    "zakarpattia": [
+        "ужгород", "закарпатт", "мукачев", "берегов", "хуст", "виноградів"
+    ],
+    "chernivtsi": [
+        "чернівц", "чернівецьк", "буковин", "новоселиц", "сторожинець"
+    ],
+    "khmelnytskyi": [
+        "хмельницьк", "хмельниччин", "кам'янець-подільськ", "шепетівк", "славут", "нетішин"
+    ],
+    "cherkasy": [
+        "черкас", "черкащин", "умань", "сміла", "золотонош", "канів"
+    ],
+    "kirovohrad": [
+        "кропивницьк", "кіровоград", "олександрі", "знам'янк", "світловодськ"
+    ],
+    "crimea": [
+        "крим", "севастопол", "сімферопол", "керч", "євпаторі", "ялта", "феодосі", "джанкой"
     ]
 }
 
@@ -205,6 +238,95 @@ def detect_external_oblast(text: str) -> Optional[str]:
                 return ob
 
     return None
+
+
+CHANNEL_OBLAST_MAP = {
+    "suspilnerivne": "rivne",
+    "suspilnelviv": "lviv",
+    "suspilnevolyn": "volyn",
+    "suspilneternopil": "ternopil",
+    "suspilnecherkasy": "cherkasy",
+    "suspilnechernihiv": "chernihiv",
+    "suspilnesumy": "sumy",
+    "suspilnekharkiv": "kharkiv",
+    "suspilnednipro": "dnipropetrovsk",
+    "suspilnezaporizhzhya": "zaporizhzhia",
+    "suspilnekherson": "kherson",
+    "suspilnemykolaiv": "mykolaiv",
+    "suspilneodesa": "odesa",
+    "suspilnezhytomyr": "zhytomyr",
+    "suspilnepoltava": "poltava",
+    "suspilnevinnytsya": "vinnytsia",
+    "suspilnekhmelnytskyi": "khmelnytskyi",
+    "suspilnekropyvnytskyi": "kirovohrad",
+    "suspilneuzhhorod": "zakarpattia",
+    "suspilnechernivtsi": "chernivtsi",
+    "dnepr_operativ": "dnipropetrovsk",
+    "ny_i_dnipro": "dnipropetrovsk",
+    "dp_trevoga": "dnipropetrovsk",
+    "sirena_dp": "dnipropetrovsk",
+    "adm_dp": "dnipropetrovsk",
+    "dnipropetrovskaoda": "dnipropetrovsk",
+    "ivan_fedorov_zp": "zaporizhzhia",
+    "zoda_gov_ua": "zaporizhzhia",
+    "sirenazaporizhzhia": "zaporizhzhia",
+    "tryvoga_zp": "zaporizhzhia",
+    "info_zp": "zaporizhzhia",
+    "synegubov": "kharkiv",
+    "ihor_terekhov": "kharkiv",
+    "khersonskaoda": "kherson",
+    "vinnytsiaoda": "vinnytsia",
+    "poltavskaoda": "poltava",
+    "kirovohradskaoda": "kirovohrad",
+    "luhanskavtsa": "luhansk",
+    "krymrealii": "crimea"
+}
+
+def detect_channel_oblast(channel_handle: str) -> Optional[str]:
+    """Resolves channel's native oblast from handle name or registry."""
+    if not channel_handle:
+        return None
+    ch = str(channel_handle).lstrip("@").strip().lower()
+    if ch in CHANNEL_OBLAST_MAP:
+        return CHANNEL_OBLAST_MAP[ch]
+    for key, ob in CHANNEL_OBLAST_MAP.items():
+        if key in ch:
+            return ob
+    # Fallback to checking oblast stems in channel handle
+    for ob, stems in EXTERNAL_OBLAST_STEMS.items():
+        if ob in ch:
+            return ob
+    return None
+
+
+CIVILIAN_NOISE_PHRASES = [
+    "дорожніх робіт", "дорожні роботи", "ремонт доріг", "ремонтуватимуть",
+    "прибирання листя", "прибирання доріг", "зливові каналізації", "зливова каналізація",
+    "комунальні служби", "водоканал", "водопостачання", "зупинився рух тролейбусів",
+    "зупинився рух трамваїв", "ускладнення руху", "колесовідбійник", "струменевий ремонт",
+    "графік відключень", "планові відключення", "комунальники", "дрібного сміття",
+    "прочищатимуть зливові", "механізоване прибирання", "міні-дтп"
+]
+
+MILITARY_THREAT_KEYWORDS = [
+    "вибух", "приліт", "влучан", "збит", "ппо", "пуск", "баліст", "крилат", "ракет",
+    "шахед", "бпла", "дрон", "каб", "авіа", "артобстріл", "повітрян", "тривог", "детонац", "уламк",
+    "обстріл", "артилері", "рідні жертв", "постраждал"
+]
+
+def is_civilian_non_threat_noise(text: str) -> bool:
+    """
+    Identifies civilian municipal maintenance, road repairs, traffic announcements,
+    and domestic utility news that have no tactical or military air defense significance.
+    """
+    if not text:
+        return False
+    t_lower = text.lower()
+    has_noise = any(p in t_lower for p in CIVILIAN_NOISE_PHRASES)
+    if not has_noise:
+        return False
+    has_threat = any(k in t_lower for k in MILITARY_THREAT_KEYWORDS)
+    return has_noise and not has_threat
 
 
 def is_explicitly_kyiv_context(text: str) -> bool:

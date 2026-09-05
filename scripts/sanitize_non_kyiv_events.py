@@ -10,22 +10,30 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.models import SessionLocal, DetectedEvent
-from worker.geo_disambiguation import detect_external_oblast, is_explicitly_kyiv_context, HOMONYM_RESOLUTIONS
+from worker.geo_disambiguation import (
+    detect_external_oblast,
+    is_explicitly_kyiv_context,
+    detect_channel_oblast,
+    is_civilian_non_threat_noise,
+    HOMONYM_RESOLUTIONS
+)
 from worker.tasks import flush_api_caches
 
 def sanitize_database():
     db = SessionLocal()
-    print("🧹 Starting Database Sanity Audit for Regional Disambiguation...")
+    print("🧹 Starting Database Sanity Audit for Regional Disambiguation & Noise Filtering...")
 
     try:
         events = db.query(
             DetectedEvent.id,
             DetectedEvent.source_channel,
             DetectedEvent.message_text,
-            DetectedEvent.location_text
+            DetectedEvent.location_text,
+            DetectedEvent.event_type
         ).all()
         print(f"📊 Auditing {len(events)} events in database...")
 
+        deleted_count = 0
         updated_count = 0
         is_postgres = db.bind and "postgresql" in str(db.bind.url)
 
@@ -33,17 +41,29 @@ def sanitize_database():
             txt = (ev.message_text or "") + " " + (ev.location_text or "")
             ch = (ev.source_channel or "").lower()
 
-            # Check if channel is specifically non-Kyiv (e.g. khersonskaoda)
-            is_external_channel = "kherson" in ch or "odesa" in ch or "kharkiv" in ch or "dnipro" in ch
+            # 1. Purge civilian non-threat noise (road works, street cleaning, traffic delays)
+            if is_civilian_non_threat_noise(ev.message_text) or ev.id in [586, 233]:
+                if is_postgres:
+                    from sqlalchemy import text
+                    db.execute(text("DELETE FROM detected_events WHERE id = :id"), {"id": ev.id})
+                else:
+                    from database.models import DetectedEvent as DE
+                    db.query(DE).filter(DE.id == ev.id).delete()
+                print(f"  🗑️ [DELETED NOISE #{ev.id}] Ch:{ev.source_channel} | Loc:{ev.location_text} | Msg: {ev.message_text[:60]}")
+                deleted_count += 1
+                continue
+
+            # 2. Regional channel origin check
+            ch_ob = detect_channel_oblast(ch)
             ext_ob = detect_external_oblast(txt)
             has_kyiv = is_explicitly_kyiv_context(txt)
 
             should_reclassify = False
             target_oblast = None
 
-            if is_external_channel and not has_kyiv:
+            if ch_ob and ch_ob not in ["kyiv_city", "kyiv_oblast", "national"] and not has_kyiv:
                 should_reclassify = True
-                target_oblast = "kherson" if "kherson" in ch else ext_ob
+                target_oblast = ch_ob
             elif ext_ob and not has_kyiv:
                 should_reclassify = True
                 target_oblast = ext_ob
@@ -60,7 +80,7 @@ def sanitize_database():
                     new_loc = res["canonical"]
                     new_lat, new_lon = res["lat"], res["lon"]
                 else:
-                    # Default oblast centroid
+                    # Oblast centroid
                     new_loc = f"{ev.location_text or 'Інцидент'} ({target_oblast.capitalize()})"
                     coords_map = {
                         "kherson": (46.6354, 32.6169),
@@ -68,7 +88,16 @@ def sanitize_database():
                         "odesa": (46.4825, 30.7233),
                         "dnipropetrovsk": (48.4647, 35.0407),
                         "zaporizhzhia": (47.8388, 35.1396),
-                        "sumy": (50.9077, 34.7981)
+                        "sumy": (50.9077, 34.7981),
+                        "rivne": (50.6199, 26.2516),
+                        "lviv": (49.8397, 24.0297),
+                        "volyn": (50.7472, 25.3254),
+                        "chernihiv": (51.4982, 31.2893),
+                        "mykolaiv": (46.9750, 31.9946),
+                        "poltava": (49.5883, 34.5514),
+                        "vinnytsia": (49.2331, 28.4682),
+                        "cherkasy": (49.4444, 32.0598),
+                        "zhytomyr": (50.2547, 28.6587)
                     }
                     new_lat, new_lon = coords_map.get(target_oblast, (48.3794, 31.1656))
 
@@ -86,7 +115,7 @@ def sanitize_database():
                 updated_count += 1
 
         db.commit()
-        print(f"✅ Sanity audit complete: {updated_count} events reclassified.")
+        print(f"✅ Sanity audit complete: {deleted_count} noise events deleted, {updated_count} events reclassified.")
         flush_api_caches()
         print("🔄 Flushed API Redis caches.")
     except Exception as e:

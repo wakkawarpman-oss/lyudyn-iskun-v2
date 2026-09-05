@@ -165,6 +165,16 @@
       "username": "kievreal1",
       "title": "Реальний Київ",
       "tier": 2
+    },
+    {
+      "username": "kievinfo_kyiv",
+      "title": "Київ ІНФО",
+      "tier": 2
+    },
+    {
+      "username": "kiev_info",
+      "title": "Київ Інфо",
+      "tier": 2
     }
   ],
   "kyiv_oblast": [

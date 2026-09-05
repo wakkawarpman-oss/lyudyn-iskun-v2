@@ -183,3 +183,84 @@ def test_district_clash_clustering_guard():
     # A new distinct event must be added to the database.
     assert len(fake_db.added) == 1
     assert "Дніпровський" in fake_db.added[0].location_text
+
+
+def test_civilian_noise_road_repairs_rivne():
+    """Verifies that the Rivne municipal road maintenance post is flagged as civilian noise."""
+    from worker.geo_disambiguation import is_civilian_non_threat_noise, detect_channel_oblast
+    from worker.tasks import pipeline_extract
+
+    rivne_text = (
+        "вул. Олекси Новака; вул. Коцюбинського; вул. Дворецький; вул. Дубенська; вул. Соборна; "
+        "вул. Молодіжна та Богдана Хмельницького (Квасилів).\n"
+        "Про це повідомили у Telegram в.о. міського голови Рівного Віктора Шакирзяна.\n"
+        "На вулицях Кулика і Гудачека проводитимуть струменевий ремонт. Також на вулицях Соборній, "
+        "Богдана Хмельницького, Базарній та Пересопницькій у Рівному ремонтуватимуть і прочищатимуть зливові каналізації.\n"
+        "Механізоване прибирання листя заплановано на вул. Княгині Ольги, Олекси Новака.\n"
+        "Врахуйте цю інформацію при плануванні маршруту поїздок."
+    )
+
+    assert is_civilian_non_threat_noise(rivne_text) is True
+    assert detect_channel_oblast("suspilnerivne") == "rivne"
+
+    payload = {
+        "channel": "suspilnerivne",
+        "message_id": 43726,
+        "text": rivne_text,
+        "media_path": None
+    }
+    from unittest.mock import patch
+    import json
+    with patch("worker.tasks.SessionLocal"):
+        res = pipeline_extract(json.dumps(payload))
+    assert res["skip"] is True
+    assert res["reason"] in ["civilian_noise", "not_kyiv"]
+
+
+def test_civilian_traffic_accident_not_radar_track():
+    """Verifies that transport delay 'рух тролейбусів' does not trigger radar_track."""
+    from worker.geo_disambiguation import is_civilian_non_threat_noise
+    from worker.llm_engine import rule_based_fallback_parser
+
+    traffic_text = "Через оце міні-ДТП на Рейгана-Червоної Калини зупинився рух тролейбусів та значне ускладнення руху."
+    assert is_civilian_non_threat_noise(traffic_text) is True
+
+    parsed = rule_based_fallback_parser(traffic_text)
+    assert parsed.get("is_radar_track") is False
+    assert parsed.get("event_type") == "civilian_noise"
+
+
+def test_channel_oblast_resolver():
+    """Verifies channel handle resolution to native administrative oblast."""
+    from worker.geo_disambiguation import detect_channel_oblast
+
+    assert detect_channel_oblast("suspilnerivne") == "rivne"
+    assert detect_channel_oblast("suspilnelviv") == "lviv"
+    assert detect_channel_oblast("dnepr_operativ") == "dnipropetrovsk"
+    assert detect_channel_oblast("suspilnezaporizhzhya") == "zaporizhzhia"
+    assert detect_channel_oblast("suspilnekherson") == "kherson"
+    assert detect_channel_oblast("kievinfo_kyiv") is None  # Kyiv channel
+
+
+def test_street_name_guard_does_not_trigger_kotsyubynske():
+    """Verifies that 'вул. Коцюбинського' does not match the village of Kotsiubynske."""
+    from worker.llm_engine import rule_based_fallback_parser
+
+    text = "Проведення робіт на вул. Коцюбинського та вул. Соборна."
+    parsed = rule_based_fallback_parser(text)
+    # Must NOT be resolved as Kotsiubynske, Kyiv oblast
+    assert parsed.get("location") != "Коцюбинське"
+
+
+def test_real_military_air_defense_retains_priority():
+    """Verifies that authentic air defense target tracking is NOT filtered out."""
+    from worker.geo_disambiguation import is_civilian_non_threat_noise
+    from worker.llm_engine import rule_based_fallback_parser
+
+    threat_text = "Увага! Рух ударних БПЛА через Бровари курсом на Київ! Працює ППО!"
+    assert is_civilian_non_threat_noise(threat_text) is False
+
+    parsed = rule_based_fallback_parser(threat_text)
+    assert parsed.get("is_kyiv_region") is True
+    assert parsed.get("is_radar_track") is True or parsed.get("event_type") in ["radar_track", "air_defense"]
+

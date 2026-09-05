@@ -107,9 +107,11 @@ def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depe
         DetectedEvent.event_type,
         DetectedEvent.location_text,
         DetectedEvent.resonance_score,
+        DetectedEvent.confidence_score,
         DetectedEvent.detected_at,
         DetectedEvent.verification_status,
         DetectedEvent.sources_count,
+        DetectedEvent.sources_list,
         DetectedEvent.is_official,
         DetectedEvent.has_media,
         DetectedEvent.is_fallback_geo,
@@ -165,9 +167,13 @@ def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depe
         if e.is_fallback_geo:
             continue
 
-        # Tactical hygiene filter: Drop non-military city news (drugs, petty crime, traffic)
+        msg_lower = (e.message_text or '').lower()
+        from worker.geo_disambiguation import is_civilian_non_threat_noise
+        # Tactical hygiene filter: Drop non-military city news (traffic, road repairs, domestic maintenance)
+        if is_civilian_non_threat_noise(msg_lower):
+            continue
+
         if e.event_type in ('general_alert', 'alert') and not e.is_official:
-            msg_lower = (e.message_text or '').lower()
             if not any(k in msg_lower for k in AIR_DEFENSE_KEYWORDS):
                 continue
 
@@ -208,11 +214,13 @@ def get_events(hours: int = 72, oblast: Optional[str] = None, db: Session = Depe
             "event_type": e.event_type,
             "location_text": e.location_text,
             "resonance_score": e.resonance_score,
+            "confidence_score": getattr(e, "confidence_score", 50) or 50,
             "detected_at": f"{e.detected_at.isoformat()}Z" if e.detected_at else None,
             "lat": e.lat,
             "lon": e.lon,
             "verification_status": e.verification_status or "UNVERIFIED_SINGLE_SOURCE",
             "sources_count": e.sources_count or 1,
+            "sources_list": getattr(e, "sources_list", chan) or chan,
             "is_official": e.is_official or False,
             "has_media": e.has_media or False,
             "geo_precision": prec,

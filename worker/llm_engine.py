@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import base64
@@ -110,6 +111,25 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     text = str(raw_text)
     t_lower = text.lower()
     
+    from worker.geo_disambiguation import (
+        detect_external_oblast,
+        is_explicitly_kyiv_context,
+        disambiguate_toponym,
+        is_civilian_non_threat_noise
+    )
+
+    # 0. Fast-reject civilian municipal maintenance / road works / traffic disruptions
+    if is_civilian_non_threat_noise(text):
+        return {
+            "is_kyiv_region": False,
+            "is_confirmed_incident": False,
+            "is_radar_track": False,
+            "event_type": "civilian_noise",
+            "location": "Цивільні комунальні роботи",
+            "osm_query": "Україна",
+            "short_summary": "Цивільне комунальне / дорожнє оголошення"
+        }
+    
     # Maps map a matched stem to its proper display name — kept separate from the
     # match list because several toponyms are matched on truncated stems
     # (e.g. 'дарниц' matches "Дарниця"/"Дарницький"), and capitalizing the raw
@@ -145,8 +165,6 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
         'сумськ', 'суми', 'черкас', 'вінниц', 'житомир', 'хмельницьк', 'львів', 'миколаїв', 
         'херсон', 'севастопол', 'донецьк', 'луганськ', 'бахмут', 'куп\'янськ', 'нікопол', 'павлоград', 'чернігів'
     ]
-    
-    from worker.geo_disambiguation import detect_external_oblast, is_explicitly_kyiv_context, disambiguate_toponym
 
     ext_ob = detect_external_oblast(t_lower)
     has_explicit_kyiv = is_explicitly_kyiv_context(t_lower)
@@ -164,7 +182,9 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
         event_type = "explosion"
     elif 'приліт' in t_lower or 'влучання' in t_lower:
         event_type = "direct_strike"
-    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'рух', 'бпла', 'дрон', 'мопед', '🛵', 'курс', 'вектор']):
+    elif any(w in t_lower for w in ['шахед', 'ракет', 'ціль', 'бпла', 'дрон', 'мопед', '🛵', 'вектор ціл']) or any(
+        phrase in t_lower for phrase in ['рух ціл', 'рух бпла', 'рух ракет', 'рух дронів', 'курс на', 'летить на', 'помічено ціль', 'повітряна ціль']
+    ):
         event_type = "radar_track"
     elif 'пожеж' in t_lower or 'загорян' in t_lower:
         event_type = "fire"
@@ -176,6 +196,9 @@ def rule_based_fallback_parser(raw_text: str) -> dict:
     
     for k in regional_cities:
         if k in t_lower:
+            # Guard: If preceded by street designator (e.g. 'вул. Коцюбинського'), this is a street, not a town!
+            if re.search(r'(?:вул\.?|вулиц[яіе]|пров\.?|проспект|просп\.?|бульвар|бул\.?)\s+' + re.escape(k), t_lower):
+                continue
             loc_name = regional_city_names[k]
             osm_query = f"{loc_name}, Київська область, Україна"
             break

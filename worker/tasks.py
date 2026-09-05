@@ -135,6 +135,26 @@ def pipeline_extract(self, payload_str):
     if not text and not media_path:
         return {"skip": True, "reason": "empty"}
 
+    from worker.geo_disambiguation import (
+        detect_external_oblast,
+        is_explicitly_kyiv_context,
+        detect_channel_oblast,
+        is_civilian_non_threat_noise
+    )
+
+    # Fast-reject civilian municipal maintenance / road works / traffic delays BEFORE any DB/media/LLM processing
+    if is_civilian_non_threat_noise(text):
+        return {"skip": True, "reason": "civilian_noise"}
+
+    channel_clean = payload.get("channel", "").lstrip("@").lower()
+    ch_native_oblast = detect_channel_oblast(channel_clean)
+    has_kyiv_context = is_explicitly_kyiv_context(text)
+
+    # Channel origin guard: if channel is from Rivne, Lviv, Kherson etc., and text does not explicitly mention Kyiv, drop it!
+    if ch_native_oblast and ch_native_oblast not in ["kyiv_city", "kyiv_oblast"]:
+        if not has_kyiv_context:
+            return {"skip": True, "reason": "not_kyiv", "non_kyiv_oblast": ch_native_oblast}
+
     # Record message forward relationship (Telerecon Forward Graph)
     fwd_from = payload.get("fwd_from")
     target_channel = payload.get("channel", "")
@@ -146,15 +166,6 @@ def pipeline_extract(self, payload_str):
         except Exception as e:
             logger.warning(f"Telerecon forward edge recording warning: {e}")
 
-    # Cheap early exit BEFORE the Groq LLM call: RSS re-fetches its 1-hour
-    # window every 5 minutes and /sync re-fetches the last 5 messages per
-    # channel unconditionally, so the same message routinely arrives here
-    # already-processed. The only other duplicate check lives at the very
-    # end of the chain (pipeline_cluster_and_save), so without this, a
-    # message that's already in the DB still pays for a full LLM call and
-    # geocode attempt before being discarded. That final check stays in
-    # place as a second line of defense against duplicate rows for two
-    # near-simultaneous submissions of the same message.
     channel = payload.get("channel", "")
     message_id = payload.get("message_id")
     if channel and message_id is not None:
@@ -175,9 +186,6 @@ def pipeline_extract(self, payload_str):
     if media_path and is_video_file(media_path) and os.path.exists(media_path):
         frame_path = extract_representative_frame(media_path)
         if frame_path:
-            # From here on the rest of this function treats it as a photo —
-            # GeoSpy/Vision/phash all just take a jpg path. EXIF won't find
-            # GPS in a video-derived frame; that's expected, not a bug.
             media_path = frame_path
         else:
             media_path = None
@@ -199,9 +207,7 @@ def pipeline_extract(self, payload_str):
             logger.warning(f"OSINT error: {e}")
 
     t_lower = text.lower()
-    from worker.geo_disambiguation import detect_external_oblast, is_explicitly_kyiv_context
     ext_oblast = detect_external_oblast(text)
-    has_kyiv_context = is_explicitly_kyiv_context(text)
 
     # Fast-exit for explicit non-Kyiv regional news reposts before making expensive LLM calls
     if ext_oblast and not has_kyiv_context:
@@ -221,14 +227,16 @@ def pipeline_extract(self, payload_str):
     else:
         llm_data = process_with_llm(text, media_path)
 
+    if llm_data.get("event_type") == "civilian_noise":
+        return {"skip": True, "reason": "civilian_noise"}
+
     is_kyiv_region = llm_data.get("is_kyiv_region", False)
-    channel_clean = payload.get("channel", "").lstrip("@").lower()
     
     # Pure Kyiv-only channels that primarily post about Kyiv / Kyiv region
     pure_kyiv_channels = [
         "1181169156", "kyivlive", "kyiv_novosti", "t_kyiv", "kyiv_alarm", "va_kyiv", "vakyiv",
         "kyivcityofficial", "los_solomas", "kyivoperat", "kyivoperativ", "kontur_map",
-        "dsns_kyiv_region", "kyiv24"
+        "dsns_kyiv_region", "kyiv24", "kievinfo_kyiv", "kiev_info", "kievinfo"
     ]
     if channel_clean in pure_kyiv_channels:
         is_kyiv_region = True
