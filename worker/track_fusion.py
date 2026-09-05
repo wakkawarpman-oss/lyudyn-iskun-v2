@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 import numpy as np
 from filterpy.kalman import KalmanFilter
+from worker.track_fusion_v2 import AeroLimits, KalmanTrackFilterV2
 
 R_EARTH_M = 6371000.0
 

@@ -13,7 +13,7 @@ recursive log-odds updating across multi-domain sensors:
 """
 import math
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -344,7 +344,67 @@ def mnar_adjustment(
     return BASE_LIKELIHOOD_RATIOS.get(st, 1.0)
 
 
-def fuse_multi_domain_evidence(
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P1 High-Precision Sensor Configuration & Likelihood Decay (User Design)
+# ─────────────────────────────────────────────────────────────────────────────
+# Налаштування датчиків: (LR_0_hit, LR_0_miss, Tau_decay_sec)
+SENSOR_CONFIG: Dict[str, Tuple[float, float, float]] = {
+    "RADAR": (15.0, 0.2, 90.0),     # Швидко застаріває
+    "ACOUSTIC": (8.0, 0.5, 90.0),   # Акустика (двигун MD-550 - 142 Гц)
+    "SIGINT": (12.0, 0.3, 180.0),   # Радіоперехоплення
+    "OSINT": (20.0, 0.8, 300.0),    # Телеграм-канали (живе довше)
+}
+
+
+def calculate_decayed_lr(sensor_type: str, dt_sec: float, is_hit: bool) -> float:
+    """Обчислює LR з урахуванням часу, що пройшов від фіксації."""
+    cfg = SENSOR_CONFIG.get(sensor_type.upper(), (10.0, 0.5, 120.0))
+    lr_0_hit, lr_0_miss, tau = cfg
+    lr_base = lr_0_hit if is_hit else lr_0_miss
+
+    # Експоненційне згасання до нейтрального 1.0
+    lr_decayed = 1.0 + (lr_base - 1.0) * math.exp(-max(0.0, dt_sec) / tau)
+    return lr_decayed
+
+
+def _fuse_multi_domain_dict(
+    sensor_data: Dict[str, Optional[float]],
+    altitude_m: float,
+    in_river_canyon: bool
+) -> float:
+    """
+    Байєсівське злиття з урахуванням MNAR.
+    sensor_data: словник {тип_сенсора: час_від_останнього_контакту_в_сек (або None, якщо контакту не було)}
+    """
+    prior_odds = 0.01 / (1.0 - 0.01)  # Початкова ймовірність 1%
+    posterior_odds = prior_odds
+
+    # Правило MNAR: Маскування рельєфом та антени "Комета-М"
+    is_masked = (altitude_m < 80.0) and in_river_canyon
+
+    for sensor, dt_sec in sensor_data.items():
+        s_upper = sensor.upper()
+        if dt_sec is not None:
+            # Сенсор бачить ціль (Hit)
+            lr = calculate_decayed_lr(s_upper, dt_sec, is_hit=True)
+        else:
+            # Сенсор НЕ бачить ціль (Miss)
+            if is_masked and s_upper in ["RADAR", "SIGINT"]:
+                # MNAR: скасовуємо штраф за відсутність сигналу
+                lr = 1.0
+            else:
+                # Звичайний штраф за втрату цілі (але він теж згасає з часом)
+                lr = calculate_decayed_lr(s_upper, 0.0, is_hit=False)
+
+        posterior_odds *= lr
+
+    # Переведення Odds назад у ймовірність P(Threat)
+    p_threat = posterior_odds / (1.0 + posterior_odds)
+    return min(0.999, max(0.0, p_threat))  # Запобіжник 0-100%
+
+
+def _fuse_multi_domain_list(
     evidence_list: List[Evidence],
     current_time: Optional[datetime] = None,
     prior_prob: float = 0.5
@@ -368,7 +428,6 @@ def fuse_multi_domain_evidence(
 
     for ev in evidence_list:
         st = ev.sensor_type.upper()
-        # Check MNAR
         effective_lr = mnar_adjustment(st, ev.altitude_m, ev.terrain_masked, ev.target_type)
         if effective_lr is None:
             mnar.append(st)
@@ -377,7 +436,7 @@ def fuse_multi_domain_evidence(
         tau = SENSOR_TAU.get(st, 120.0)
         dt_s = max(0.0, (now - ev.timestamp).total_seconds())
         actual_lr = decay_likelihood_ratio(ev.base_lr or effective_lr, dt_s, tau)
-        
+
         current_lo += math.log(max(0.001, actual_lr))
         contributing.append(st)
         if dt_s >= tau:
@@ -401,6 +460,31 @@ def fuse_multi_domain_evidence(
         decayed_sensors=decayed,
         mnar_sensors=mnar
     )
+
+
+def fuse_multi_domain_evidence(
+    sensor_data_or_list: Any = None,
+    altitude_m: Optional[float] = None,
+    in_river_canyon: Optional[bool] = None,
+    current_time: Optional[datetime] = None,
+    prior_prob: float = 0.5,
+    **kwargs
+) -> Any:
+    """
+    Байєсівське злиття з урахуванням MNAR.
+    Підтримує:
+    1. fuse_multi_domain_evidence(sensor_data, altitude_m, in_river_canyon) -> float
+    2. fuse_multi_domain_evidence(evidence_list, current_time, prior_prob) -> ThreatAssessment
+    """
+    if isinstance(sensor_data_or_list, dict):
+        alt = altitude_m if altitude_m is not None else kwargs.get("altitude_m", 100.0)
+        canyon = bool(in_river_canyon) if in_river_canyon is not None else kwargs.get("in_river_canyon", False)
+        return _fuse_multi_domain_dict(sensor_data_or_list, alt, canyon)
+    elif isinstance(sensor_data_or_list, list):
+        return _fuse_multi_domain_list(sensor_data_or_list, current_time=current_time, prior_prob=prior_prob)
+    elif sensor_data_or_list is None:
+        return _fuse_multi_domain_list([], current_time=current_time, prior_prob=prior_prob)
+    raise TypeError(f"Unsupported evidence type for fusion: {type(sensor_data_or_list)}")
 
 
 def format_threat_summary(assessment: ThreatAssessment) -> str:

@@ -235,3 +235,71 @@ def evaluate_terrain_masking(lat: float, lng: float, target_alt_agl_m: float = 6
         'target_alt_agl_m': target_alt_agl_m,
         'directive': directive
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. TerrainMaskingEngine (0.001° Spatial Cache Engine)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TerrainMaskingEngine:
+    """
+    Сітка 0.001° (~111м) для швидкої O(1) перевірки маскування рельєфом річкових каньйонів.
+    """
+    def __init__(self, redis_url: str = REDIS_URL):
+        self.redis_url = redis_url
+        self.resolution = 3  # 10^-3 градуса = 0.001
+        self.r = _get_redis_client()
+
+
+
+    def _generate_grid_key(self, lat: float, lng: float) -> str:
+        """
+        Конвертує WGS-84 у ключ сітки 0.001°.
+        Наприклад: lat=47.8327, lng=35.1371 -> key="tactical:cache:river_mask:47.833_35.137"
+        """
+        lat_grid = round(lat, self.resolution)
+        lng_grid = round(lng, self.resolution)
+        return f"tactical:cache:river_mask:{lat_grid:.3f}_{lng_grid:.3f}"
+
+    def set_river_canyon_bit(self, lat: float, lng: float, is_canyon: bool):
+        """Збереження даних рельєфу в кеш (запускається під час ініціалізації)"""
+        key = self._generate_grid_key(lat, lng)
+        client = self.r
+        if client is not None:
+            try:
+                client.set(key, int(is_canyon), ex=3600)
+            except Exception as e:
+                logger.debug("Redis set failed for %s: %s", key, e)
+
+    def is_in_river_canyon(self, lat: float, lng: float) -> bool:
+        """
+        O(1) перевірка, чи знаходиться координата в зоні маскування рельєфом.
+        """
+        key = self._generate_grid_key(lat, lng)
+        client = self.r
+        val = None
+        if client is not None:
+            try:
+                val = client.get(key)
+            except Exception as e:
+                logger.debug("Redis read failed for %s: %s", key, e)
+
+        if val is None:
+            # Fallback до геометричного аналізу річкових коридорів / DEM
+            in_canyon = self._calculate_los_from_dem(lat, lng)
+            if client is not None:
+                try:
+                    client.set(key, int(in_canyon), ex=3600)
+                except Exception:
+                    pass
+            return in_canyon
+
+        try:
+            return bool(int(val))
+        except (ValueError, TypeError):
+            return str(val).lower() not in ("0", "null", "false")
+
+    def _calculate_los_from_dem(self, lat: float, lng: float) -> bool:
+        """Резервний розрахунок геометрії коридорів"""
+        corridor = find_nearest_river_corridor(lat, lng)
+        return corridor is not None
