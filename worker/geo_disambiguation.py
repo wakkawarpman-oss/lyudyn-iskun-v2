@@ -284,6 +284,8 @@ CHANNEL_OBLAST_MAP = {
     "zp_radar": "zaporizhzhia",
     "novostiniko": "mykolaiv",
     "nikolaev_live": "mykolaiv",
+    "senkevichonline": "mykolaiv",
+    "mykolaivskaoda": "mykolaiv",
     "sumy_radar": "sumy",
     "sumy_glavnoe": "sumy",
     "poltava_alerts": "poltava",
@@ -298,6 +300,29 @@ CHANNEL_OBLAST_MAP = {
     "krymrealii": "crimea"
 }
 
+_REGISTRY_OBLAST_CACHE = None
+
+def _load_registry_channel_map():
+    global _REGISTRY_OBLAST_CACHE
+    if _REGISTRY_OBLAST_CACHE is not None:
+        return _REGISTRY_OBLAST_CACHE
+    mapping = {}
+    import json, os
+    reg_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "database", "channels", "channel_registry.json")
+    if os.path.exists(reg_path):
+        try:
+            with open(reg_path, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            for ob, items in d.items():
+                for item in items:
+                    u = item.get("username", "").lstrip("@").lower().strip()
+                    if u:
+                        mapping[u] = ob
+        except Exception:
+            pass
+    _REGISTRY_OBLAST_CACHE = mapping
+    return mapping
+
 def detect_channel_oblast(channel_handle: str) -> Optional[str]:
     """Resolves channel's native oblast from handle name or registry."""
     if not channel_handle:
@@ -305,7 +330,13 @@ def detect_channel_oblast(channel_handle: str) -> Optional[str]:
     ch = str(channel_handle).lstrip("@").strip().lower()
     if ch in CHANNEL_OBLAST_MAP:
         return CHANNEL_OBLAST_MAP[ch]
+    reg_map = _load_registry_channel_map()
+    if ch in reg_map:
+        return reg_map[ch]
     for key, ob in CHANNEL_OBLAST_MAP.items():
+        if key in ch:
+            return ob
+    for key, ob in reg_map.items():
         if key in ch:
             return ob
     # Fallback to checking oblast stems in channel handle
