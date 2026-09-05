@@ -9,8 +9,8 @@ from api.security.authz import (
 
 def test_admin_and_officer_standing_approval():
     admin = UserIdentity(
-        user_id="8965828778",
-        username="btntrx",
+        user_id="SECURITY_OFFICER_1",
+        username="security_officer_1",
         role=RoleEnum.SECURITY_OFFICER,
         clearance=SecurityClearance.RESTRICTED
     )
@@ -28,7 +28,7 @@ def test_guest_and_public_denied_restricted_access():
 def test_operator_with_active_redis_approval():
     mock_redis = MagicMock()
     mock_redis.keys.return_value = [b"tactical:approval:op_token_1:all"]
-    mock_redis.get.return_value = json.dumps({"approved_by": "8965828778", "user_id": "op_token_1"})
+    mock_redis.get.return_value = json.dumps({"approved_by": "SECURITY_OFFICER_1", "user_id": "op_token_1"})
     
     operator = UserIdentity(
         user_id="op_token_1",

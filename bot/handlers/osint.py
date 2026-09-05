@@ -208,7 +208,7 @@ async def cmd_status(message: types.Message):
 @router.message(Command("map"))
 async def cmd_web_map(message: types.Message):
     dash_url = get_dashboard_url()
-    token = os.getenv("TACTICAL_API_TOKEN", "tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c")
+    token = os.getenv("TACTICAL_API_TOKEN", "admin_tactical_token_2026")
     text = (
         "🗺️ <b>ЖИВА ТАКТИЧНА ВЕБ-МАПА C4ISR & GEOINT</b>\n\n"
         "• 🔴 <b>Зони ураження (Blast Radii):</b> 50м / 180м / 450м\n"

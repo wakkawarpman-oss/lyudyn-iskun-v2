@@ -9,7 +9,7 @@ from database.models import SessionLocal, DetectedEvent
 class DatabaseBackup:
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.admin_id = os.getenv("ADMIN_ID", "8965828778")
+        self.admin_id = os.getenv("ADMIN_ID", "SECURITY_OFFICER_1")
 
     async def run(self):
         # Run backup every 24 hours

@@ -13,7 +13,7 @@ from database.models import DetectedEvent
 
 logger = logging.getLogger("bot.handlers")
 
-ADMIN_ID = os.getenv("ADMIN_ID", "8965828778")
+ADMIN_ID = os.getenv("ADMIN_ID", "SECURITY_OFFICER_1")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
@@ -76,7 +76,7 @@ def get_dashboard_url() -> str:
                 return url_str
     except Exception:
         pass
-    return "http://136.113.156.17"
+    return "http://127.0.0.1"
 
 
 async def safe_send(message: types.Message, text: str, **kwargs):

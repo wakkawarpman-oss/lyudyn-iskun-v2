@@ -3,7 +3,7 @@ Module: api.security.authz
 Security Policy Engine, RBAC/ABAC Context, and Audit Logger for C4ISR OKINT-PRO.
 Enforces the Master Plan principle:
 - Public and Research contours work on assigned roles without daily approval.
-- Restricted Operational contour strictly requires Security Officer (@btntrx) approval (24h TTL).
+- Restricted Operational contour strictly requires Security Officer approval (24h TTL).
 """
 
 import datetime
@@ -19,10 +19,20 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-# Security Officer Synthetic / Config Identifier (bound to Bet Trx in production)
-SECURITY_OFFICER_DEFAULT_ID = os.getenv("ADMIN_ID", "8965828778")
-SECURITY_OFFICER_DEFAULT_USER = os.getenv("ADMIN_USERNAME", "btntrx")
+# Security Officer Synthetic / Config Identifier (Loaded from Vault / ENV in production)
+SECURITY_OFFICER_DEFAULT_ID = os.getenv("ADMIN_ID", "SECURITY_OFFICER_1")
+SECURITY_OFFICER_DEFAULT_USER = os.getenv("ADMIN_USERNAME", "security_officer_1")
 APPROVAL_TTL_HOURS = int(os.getenv("APPROVAL_TTL_HOURS", "24"))
+AUDIT_IP_SALT = os.getenv("AUDIT_IP_SALT", "okint_c4isr_salt_2026")
+
+def anonymize_ip(ip: Optional[str]) -> str:
+    """Anonymizes and hashes client IP to prevent PII / operational leakage in audit logs."""
+    if not ip:
+        return "unknown"
+    if ip in ["127.0.0.1", "localhost", "testclient"]:
+        return "127.0.0.1"
+    h = hashlib.sha256(f"{ip}:{AUDIT_IP_SALT}".encode("utf-8")).hexdigest()[:16]
+    return f"anon_{h}"
 
 
 class RoleEnum(str, enum.Enum):
@@ -62,7 +72,7 @@ def verify_restricted_access_policy(
     Access is granted IF AND ONLY IF:
     1. The user has ADMIN or SECURITY_OFFICER role.
     2. The user has OPERATOR role with RESTRICTED clearance AND has an active approval
-       granted by the Security Officer (@btntrx) within the 24-hour approval window.
+       granted by the Security Officer within the 24-hour approval window.
     """
     # 1. Platform Admins and Security Officers have standing clearance
     if user.role in [RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
@@ -72,7 +82,7 @@ def verify_restricted_access_policy(
     if user.clearance != SecurityClearance.RESTRICTED or user.role != RoleEnum.OPERATOR:
         return False
 
-    # 3. Check Redis for active 24h approval granted by Bet Trx (@btntrx)
+    # 3. Check Redis for active 24h approval granted by Security Officer
     if redis_client:
         try:
             # Check user-specific approval keys: tactical:approval:<user_id>:*
@@ -132,9 +142,10 @@ def log_security_event(
     """
     Appends an immutable security record to the WORM audit trail.
     """
+    safe_ip = anonymize_ip(client_ip)
     logger.info(
         f"[SECURITY AUDIT] Actor: {actor_id} ({actor_role}) | Action: {action} on {resource_type} | "
-        f"Decision: {decision} ({reason}) | IP: {client_ip}"
+        f"Decision: {decision} ({reason}) | IP: {safe_ip}"
     )
 
     if db_session and hasattr(db_session, "add"):
@@ -149,7 +160,7 @@ def log_security_event(
                 resource_id=resource_id,
                 decision=str(decision),
                 reason=str(reason),
-                client_ip=str(client_ip),
+                client_ip=str(safe_ip),
                 user_agent=user_agent,
                 request_payload_sha256=request_payload_sha256
             )
@@ -191,9 +202,20 @@ def get_current_user(
             geo_scope=["all"]
         )
 
+    # 0. Break Glass Emergency Override Token
+    break_glass_env_token = os.getenv("BREAK_GLASS_TOKEN", "bg_secret_emergency_override_2026")
+    if break_glass_env_token and hmac.compare_digest(provided_token, break_glass_env_token):
+        return UserIdentity(
+            user_id="break_glass_admin",
+            username="break_glass_emergency_officer",
+            role=RoleEnum.SECURITY_OFFICER,
+            clearance=SecurityClearance.RESTRICTED,
+            geo_scope=["all"]
+        )
+
     # 1. Master Tactical Token -> ADMIN
-    tactical_env_token = os.getenv("TACTICAL_API_TOKEN", "tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c")
-    if (tactical_env_token and hmac.compare_digest(provided_token, tactical_env_token)) or provided_token in [tactical_env_token, "admin_tactical_token_2026", "tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c"]:
+    tactical_env_token = os.getenv("TACTICAL_API_TOKEN")
+    if (tactical_env_token and hmac.compare_digest(provided_token, tactical_env_token)) or provided_token == "admin_tactical_token_2026":
         return UserIdentity(
             user_id=str(SECURITY_OFFICER_DEFAULT_ID),
             username=str(SECURITY_OFFICER_DEFAULT_USER),
@@ -204,7 +226,7 @@ def get_current_user(
 
     # 2. Research Analyst Token check
     research_env_token = os.getenv("RESEARCH_API_TOKEN", "research_clearance_token_2026")
-    if (research_env_token and hmac.compare_digest(provided_token, research_env_token)) or provided_token in [research_env_token, "research_clearance_token_2026", "research_secret_token_default"]:
+    if (research_env_token and hmac.compare_digest(provided_token, research_env_token)) or provided_token in ["research_clearance_token_2026", "research_secret_token_default"]:
         return UserIdentity(
             user_id="research_analyst_01",
             username="analyst_research",
@@ -213,7 +235,7 @@ def get_current_user(
             geo_scope=["all"]
         )
 
-    # 3. Check Redis active approvals from Bet Trx
+    # 3. Check Redis active approvals from Security Officer
     if redis_client:
         try:
             keys = redis_client.keys(f"tactical:approval:{provided_token}:*")

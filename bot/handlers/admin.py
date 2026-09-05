@@ -178,15 +178,14 @@ async def cmd_security_status(message: types.Message):
         f"🛡️ <b>СИСТЕМА БЕЗПЕКИ ТА АВТОРИЗАЦІЇ C4ISR OKINT-PRO</b>\n\n"
         f"👤 <b>Ваш статус:</b> {status_icon}\n"
         f"🆔 <b>Ваш ID:</b> <code>{message.from_user.id}</code>\n\n"
-        f"👑 <b>Єдиний уповноважений адміністратор:</b>\n"
-        f"• Ім'я: <b>Bet Trx</b> (@btntrx)\n"
-        f"• Telegram ID: <code>{ADMIN_ID}</code>\n"
+        f"👑 <b>Уповноважений адміністратор безпеки:</b>\n"
+        f"• Роль: <b>Security Officer</b>\n"
         f"• Рівень доступу: <b>RESTRICTED (Security Officer)</b>\n\n"
         f"⚙️ <b>Параметри доступу до чутливих даних:</b>\n"
-        f"• Термін дії схвалення: <b>24 години (1 день)</b>\n"
+        f"• Термін дії схвалення: <b>24 години (1 доба)</b>\n"
         f"• Точність координат: <b>100% (Без огрублення/розмиття)</b>\n"
         f"• Активних схвалених сесій: <b>{len(active_keys)}</b>\n\n"
-        f"<i>Усі сповіщення та запити на підтвердження розширеного функціоналу надсилаються виключно @btntrx.</i>"
+        f"<i>Усі сповіщення та запити на підтвердження надсилаються виключно офіцеру безпеки.</i>"
     )
     await safe_send(message, text)
 
@@ -194,11 +193,11 @@ async def cmd_security_status(message: types.Message):
 @router.message(Command("test_approval"))
 @admin_only
 async def cmd_test_approval(message: types.Message):
-    """Sends a sample interactive approval request to Bet Trx for testing."""
+    """Sends a sample interactive approval request to Security Officer for testing."""
     req_id = str(uuid.uuid4())[:8]
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="✅ ПІДТВЕРДИТИ (1 день)", callback_data=f"appr_perm:{req_id}:kyiv_sector"),
+            InlineKeyboardButton(text="✅ ПІДТВЕРДИТИ (1 доба)", callback_data=f"appr_perm:{req_id}:kyiv_sector"),
             InlineKeyboardButton(text="❌ ВІДХИЛИТИ", callback_data=f"rejc_perm:{req_id}:kyiv_sector")
         ]
     ])
@@ -210,7 +209,7 @@ async def cmd_test_approval(message: types.Message):
         f"👤 <b>Запитувач:</b> Оператор чергової зміни\n"
         f"🎯 <b>Сектор:</b> <code>kyiv_sector</code>\n"
         f"📝 <b>Обґрунтування:</b> Тестова перевірка механізму затвердження чутливих даних\n"
-        f"⏳ <b>Термін дії:</b> 24 години (1 день)\n\n"
+        f"⏳ <b>Термін дії:</b> 24 години (1 доба)\n\n"
         f"<i>Натисніть кнопку нижче для перевірки реакції системи:</i>",
         reply_markup=kb
     )
@@ -219,7 +218,7 @@ async def cmd_test_approval(message: types.Message):
 @router.callback_query(F.data.startswith("appr_perm:"))
 async def cb_approve_permission(call: types.CallbackQuery):
     if str(call.from_user.id) != str(ADMIN_ID):
-        await call.answer("⛔ Тільки головний адміністратор @btntrx може підтверджувати доступ!", show_alert=True)
+        await call.answer("⛔ Тільки уповноважений Офіцер Безпеки може підтверджувати доступ!", show_alert=True)
         return
         
     parts = call.data.split(":")
@@ -242,7 +241,7 @@ async def cb_approve_permission(call: types.CallbackQuery):
             req.status = "APPROVED"
             req.decided_at = now
             req.decided_by = str(ADMIN_ID)
-            req.decision_reason = "Approved via Telegram by Bet Trx (@btntrx)"
+            req.decision_reason = "Approved via Telegram by Security Officer"
             grantee_id = req.user_id
             res_type = req.requested_resource
 
@@ -264,9 +263,10 @@ async def cb_approve_permission(call: types.CallbackQuery):
             actor_id=str(ADMIN_ID),
             actor_role="security_officer",
             action="GRANT_APPROVAL",
-            target_resource=f"{res_type}:{sector}",
+            resource_type=f"{res_type}:{sector}",
             decision="ALLOWED",
             reason=f"Approved 24h clearance via Telegram for request {req_id} (user {grantee_id})",
+            client_ip="127.0.0.1",
             db_session=db
         )
         db.commit()
@@ -280,7 +280,7 @@ async def cb_approve_permission(call: types.CallbackQuery):
     try:
         payload = json.dumps({
             "approved_by": call.from_user.id,
-            "approved_by_user": "btntrx",
+            "approved_by_user": "security_officer_1",
             "sector": sector,
             "user_id": grantee_id,
             "approved_at": datetime.datetime.utcnow().isoformat(),
@@ -293,7 +293,7 @@ async def cb_approve_permission(call: types.CallbackQuery):
         logger.error(f"Redis approval save error: {e}")
         
     await call.message.edit_text(
-        f"✅ <b>ДОСТУП ПІДТВЕРДЖЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
+        f"✅ <b>ДОСТУП ПІДТВЕРДЖЕНО ОФІЦЕРОМ БЕЗПЕКИ!</b>\n\n"
         f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
         f"👤 <b>Користувач / Отримувач:</b> <code>{grantee_id}</code>\n"
         f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"
@@ -308,7 +308,7 @@ async def cb_approve_permission(call: types.CallbackQuery):
 @router.callback_query(F.data.startswith("rejc_perm:"))
 async def cb_reject_permission(call: types.CallbackQuery):
     if str(call.from_user.id) != str(ADMIN_ID):
-        await call.answer("⛔ Тільки головний адміністратор @btntrx може відхиляти доступ!", show_alert=True)
+        await call.answer("⛔ Тільки уповноважений Офіцер Безпеки може відхиляти доступ!", show_alert=True)
         return
         
     parts = call.data.split(":")
@@ -327,16 +327,17 @@ async def cb_reject_permission(call: types.CallbackQuery):
             req.status = "REJECTED"
             req.decided_at = now
             req.decided_by = str(ADMIN_ID)
-            req.decision_reason = "Rejected via Telegram by Bet Trx (@btntrx)"
+            req.decision_reason = "Rejected via Telegram by Security Officer"
             grantee_id = req.user_id
         
         log_security_event(
             actor_id=str(ADMIN_ID),
             actor_role="security_officer",
             action="REJECT_APPROVAL",
-            target_resource=f"restricted_ops:{sector}",
+            resource_type=f"restricted_ops:{sector}",
             decision="DENIED",
             reason=f"Rejected clearance via Telegram for request {req_id} (user {grantee_id})",
+            client_ip="127.0.0.1",
             db_session=db
         )
         db.commit()
@@ -347,7 +348,7 @@ async def cb_reject_permission(call: types.CallbackQuery):
         db.close()
 
     await call.message.edit_text(
-        f"❌ <b>ЗАПИТ ВІДХИЛЕНО АДМІНІСТРАТОРОМ @btntrx!</b>\n\n"
+        f"❌ <b>ЗАПИТ ВІДХИЛЕНО ОФІЦЕРОМ БЕЗПЕКИ!</b>\n\n"
         f"📋 <b>ID запиту:</b> <code>{req_id}</code>\n"
         f"👤 <b>Користувач:</b> <code>{grantee_id}</code>\n"
         f"🎯 <b>Сектор:</b> <code>{sector}</code>\n"

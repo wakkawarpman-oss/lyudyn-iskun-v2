@@ -1603,7 +1603,7 @@
 
             <!-- ATAK DATAPACKAGE EXPORT -->
             <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border-dim);">
-                <a href="/api/cot/zip?token=tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c" download="iskun_cot_datapackage.zip" class="tool-btn" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; background:rgba(0,229,255,0.12); border:1.5px solid var(--accent-cyan); color:var(--accent-cyan); font-weight:800; font-size:12px; height:40px; border-radius:10px;">
+                <a href="#" onclick="downloadAtakPackage(event)" class="tool-btn" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; background:rgba(0,229,255,0.12); border:1.5px solid var(--accent-cyan); color:var(--accent-cyan); font-weight:800; font-size:12px; height:40px; border-radius:10px;">
                     📦 Завантажити ATAK DataPackage (.zip)
                 </a>
             </div>
@@ -1957,6 +1957,18 @@
         if (currentOblast === 'kyiv') currentOblast = 'kyiv_city';
         if (!OBLAST_CONFIG[currentOblast]) currentOblast = 'kyiv_city';
         const initOblast = OBLAST_CONFIG[currentOblast];
+
+        function downloadAtakPackage(e) {
+            if (e) e.preventDefault();
+            let token = localStorage.getItem('tactical_token') || sessionStorage.getItem('tactical_token');
+            if (!token) {
+                token = prompt("Введіть тактичний токен доступу (Tactical Token):", "admin_tactical_token_2026");
+                if (token) localStorage.setItem('tactical_token', token);
+            }
+            if (token) {
+                window.location.href = `/api/cot/zip?token=${encodeURIComponent(token)}`;
+            }
+        }
 
         // ─── 1. Map Initialization ───
         const map = L.map('map', {

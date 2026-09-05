@@ -67,7 +67,7 @@ def test_civilian_contour_drone_exact_kinematics_no_extensions():
 
 def test_operational_contour_drone_with_authorized_extensions():
     """
-    When an authorized tactical token or Bet Trx approval is provided,
+    When an authorized tactical token or Security Officer approval is provided,
     the restricted operational contour receives the targeting cone and launch triangulation.
     """
     mock_threats = {
@@ -109,14 +109,14 @@ def test_operational_contour_drone_with_authorized_extensions():
 def test_active_alerts_restricted_for_civilian_contour():
     """
     Verifies that get_active_substation_threats denies access to unauthenticated callers
-    and requires authorization by Bet Trx.
+    and requires authorization by Security Officer.
     """
     with patch("api.main.is_tactical_authorized", return_value=False):
         data = get_active_substation_threats()
         assert data["status"] == "restricted"
         assert data["contour"] == "civilian"
         assert data["alerts"] == []
-        assert "@btntrx" in data["message"]
+        assert "Security Officer" in data["message"]
 
 
 def test_active_alerts_accessible_when_authorized():

@@ -5,7 +5,7 @@
    ```bash
    redis-cli DEL tactical:approval:<token>:*
    ```
-2. Офіцер Безпеки (@btntrx) надсилає команду `/security` в боті для аудиту активних сесій.
+2. Офіцер Безпеки (Security Officer) надсилає команду `/security` в боті для аудиту активних сесій.
 3. Перевірити журнал `audit_sec.security_audit_trail` на предмет вивантаження CoT стрімів з невідомих IP.
 
 ## 2. Сценарій Б: Компрометація Master TACTICAL_API_TOKEN

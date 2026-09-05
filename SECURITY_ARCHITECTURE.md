@@ -30,7 +30,7 @@
 +-------------------------------------------------------------------------+
 | ⚔️ RESTRICTED OPERATIONAL КОНТУР                                        |
 | - Ролі: operator, admin, security_officer                               |
-| - Схвалення адміна: СУВОРО ОБОВ’ЯЗКОВЕ (Security Officer @btntrx, 24h)  |
+| - Схвалення адміна: СУВОРО ОБОВ’ЯЗКОВЕ (Security Officer, TTL 24h)       |
 | - Дані: Cursor-on-Target (CoT XML), конуси загроз підстанціям, РЕБ,    |
 |   радіорозвідка SIGINT, тріангуляція стартових майданчиків             |
 +-------------------------------------------------------------------------+
@@ -50,7 +50,8 @@
 | `POST /api/v1/telemetry/sigint-hit` | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | `GET /api/v1/research/simulations` | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
 | `POST /api/v1/research/replay` | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
-| `POST /api/v1/access/decide` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (@btntrx) |
+| `POST /api/v1/access/approve` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Security Officer) |
+| `POST /api/v1/access/break-glass` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Emergency Key) |
 
 ## 3. Незмінний Аудит Безпеки (WORM - Write Once, Read Many)
 

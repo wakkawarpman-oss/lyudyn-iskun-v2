@@ -162,7 +162,7 @@ def test_cot_datapackage_zip_export():
     from api.cot import get_cot_zip_datapackage, verify_tactical_token
     from fastapi import HTTPException
 
-    token = "tac_bb322f2ef46e0ca293a54ef4dc1bc882de9f9f4c"
+    token = "admin_tactical_token_2026"
     os.environ["TACTICAL_API_TOKEN"] = token
 
     # 1. Test token verification

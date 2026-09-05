@@ -8,7 +8,7 @@ from database.models import SessionLocal, DetectedEvent
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID", "8965828778")
+ADMIN_ID = os.getenv("ADMIN_ID", "SECURITY_OFFICER_1")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 def send_alert(message: str):
@@ -50,7 +50,7 @@ def run_health_check():
         
     # 3. Auto-sync active dashboard URL to Redis
     try:
-        tunnel_url = os.getenv("DASHBOARD_URL", "http://136.113.156.17")
+        tunnel_url = os.getenv("DASHBOARD_URL", "http://127.0.0.1")
         r = redis.Redis.from_url(REDIS_URL)
         r.set("active_tunnel_url", tunnel_url)
     except Exception as te:

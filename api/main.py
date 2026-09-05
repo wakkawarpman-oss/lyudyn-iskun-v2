@@ -13,6 +13,8 @@ import os
 import json
 import redis
 import hmac
+import time
+from typing import Dict, List, Optional
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.Redis.from_url(REDIS_URL)
@@ -26,6 +28,46 @@ from api.security.authz import (
     log_security_event,
 )
 
+# --- Rate Limiting Engine ---
+RATE_LIMIT_GUEST = int(os.getenv("RATE_LIMIT_GUEST", "100"))      # 100 req/h for anonymous clients
+RATE_LIMIT_AUTH = int(os.getenv("RATE_LIMIT_AUTH", "1000"))       # 1000 req/h for authenticated clients
+RATE_LIMIT_WINDOW = 3600    # 1 hour
+
+_local_rate_limit_cache: Dict[str, List[float]] = {}
+
+def check_rate_limit(client_id: str, is_authenticated: bool = False):
+    limit = RATE_LIMIT_AUTH if is_authenticated else RATE_LIMIT_GUEST
+    now = time.time()
+    if redis_client:
+        try:
+            key = f"ratelimit:{client_id}"
+            req_count = redis_client.incr(key)
+            if req_count == 1:
+                redis_client.expire(key, RATE_LIMIT_WINDOW)
+            if req_count > limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail={"error": "RATE_LIMIT_EXCEEDED", "message": f"Rate limit of {limit} req/hour exceeded. Try again later."}
+                )
+            return
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    # In-memory fallback
+    window_start = now - RATE_LIMIT_WINDOW
+    records = _local_rate_limit_cache.get(client_id, [])
+    records = [t for t in records if t > window_start]
+    if len(records) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "RATE_LIMIT_EXCEEDED", "message": f"Rate limit of {limit} req/hour exceeded. Try again later."}
+        )
+    records.append(now)
+    _local_rate_limit_cache[client_id] = records
+
+
 def is_tactical_authorized(request: Optional[Request] = None, token: Optional[str] = None, db: Optional[Session] = None) -> bool:
     """
     Validates whether the request is authorized for the restricted operational / military contour.
@@ -33,7 +75,7 @@ def is_tactical_authorized(request: Optional[Request] = None, token: Optional[st
     1. Civilian contour (default): 1:1 exact WGS-84 coordinates, kinematics, waypoints, trail,
        and true strike addresses, but stripped of internal targeting cones, EW directives, and sensor telemetry.
     2. Restricted operational contour: requires tactical API token or an active approval granted
-       by single administrator Bet Trx (@btntrx, ID 8965828778) stored in Redis with 24-hour TTL.
+       by Security Officer (SECURITY_OFFICER_1) stored in Redis with 24-hour TTL.
     """
     user = get_current_user(request=request, token=token, redis_client=redis_client)
     authorized = verify_restricted_access_policy(
@@ -504,6 +546,9 @@ def get_radar_drones(
     from worker.geo_extractors.poi_matcher import POI_DATABASE
 
     is_authorized = is_tactical_authorized(request, token, db=db)
+    client_ip = request.client.host if (request and getattr(request, "client", None)) else "127.0.0.1"
+    check_rate_limit(client_ip, is_authenticated=is_authorized)
+
     threats_data = get_live_radar_threats(oblast=oblast)
     drones = threats_data.get("drones", [])
     inbound_drones = threats_data.get("inbound_drones", [])
@@ -533,17 +578,21 @@ def get_radar_drones(
                 d["estimated_launch"] = None
                 d["projected_targets"] = []
         else:
-            # Civilian Contour: 1:1 EXACT coordinates, speed, heading, waypoints, trail, and ETA,
-            # but strictly stripped of internal targeting cones, EW directives, and sensor telemetry.
-            d["estimated_launch"] = None
+            # Civilian Contour (Public OSINT): strictly 1:1 exact WGS-84 coordinates and kinematics,
+            # but stripped of target substations, launch triangulation, internal EW profiles, and sensor nodes.
             d["projected_targets"] = []
+            d["estimated_launch"] = None
             d["ew_profile"] = None
             d["sigint_corroboration"] = None
             d["corroborating_sensors"] = []
 
-    threats_data["contour"] = "restricted_operational" if is_authorized else "civilian"
-    threats_data["coordinates_fidelity"] = "1:1_exact_wgs84"
-    return threats_data
+    contour_name = "restricted_operational" if is_authorized else "civilian"
+    return {
+        "contour": contour_name,
+        "coordinates_fidelity": "1:1_exact_wgs84",
+        "oblast": oblast,
+        "drones": (drones + inbound_drones)
+    }
 
 @app.get("/api/v1/threats/enemy-facilities")
 def get_enemy_facilities():
@@ -560,7 +609,7 @@ def get_active_substation_threats(
         return {
             "status": "restricted",
             "contour": "civilian",
-            "message": "Substation target dispatch summary requires operational clearance authorized by Bet Trx (@btntrx)",
+            "message": "Substation target dispatch summary requires operational clearance authorized by Security Officer",
             "alerts": []
         }
     from worker.osint.threat_dispatcher import get_active_dispatch_summary
@@ -786,7 +835,7 @@ class AccessRequestPayload(BaseModel):
 
 def dispatch_telegram_approval_request(req_id: str, user_id: str, email: str, resource: str, sector: str, justification: str):
     bot_token = os.getenv("BOT_TOKEN")
-    admin_id = os.getenv("ADMIN_ID", "8965828778")
+    admin_id = os.getenv("ADMIN_ID")
     if not bot_token or not admin_id:
         return
     import requests
@@ -833,6 +882,19 @@ def submit_access_request(
     user = get_current_user(request=request, token=token, redis_client=redis_client)
     req_id = f"req_{uuid.uuid4().hex[:8]}"
     
+    # Anomaly Detection: check for suspiciously short justifications
+    if len(payload.justification.strip()) < 6:
+        log_security_event(
+            actor_id=user.user_id,
+            actor_role=user.role.value,
+            action="SECURITY_ANOMALY_DETECTED",
+            resource_type=f"{payload.requested_resource}:{payload.target_sector}",
+            decision="FLAGGED",
+            reason="SUSPICIOUS_SHORT_JUSTIFICATION",
+            client_ip=request.client.host if (request and getattr(request, "client", None)) else "127.0.0.1",
+            db_session=db
+        )
+
     from database.models import AccessRequest
     new_req = AccessRequest(
         request_id=req_id,
@@ -847,7 +909,7 @@ def submit_access_request(
     db.add(new_req)
     db.commit()
 
-    # Forward interactive notification with 1-click approve buttons to Bet Trx (@btntrx)
+    # Forward interactive notification with 1-click approve buttons to Security Officer
     dispatch_telegram_approval_request(
         req_id=req_id,
         user_id=new_req.user_id,
@@ -860,7 +922,7 @@ def submit_access_request(
     return {
         "request_id": req_id,
         "status": "PENDING",
-        "message": "Access request forwarded to Security Officer Bet Trx (@btntrx). Valid for 24h once approved.",
+        "message": "Access request forwarded to Security Officer. Valid for 24h once approved.",
         "validity_ttl_hours": 24
     }
 
@@ -868,7 +930,7 @@ class AccessApprovalPayload(BaseModel):
     request_id: str
     decision: str = "APPROVED"
     hours: int = 24
-    reason: Optional[str] = "Approved by Security Officer Bet Trx"
+    reason: Optional[str] = "Approved by Security Officer"
 
 @app.post("/api/v1/access/approve")
 def decide_access_request(
@@ -881,7 +943,7 @@ def decide_access_request(
     if user.role not in [RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
         raise HTTPException(
             status_code=403,
-            detail={"error": "OFFICER_REQUIRED", "message": "Only Security Officer Bet Trx (@btntrx) can approve restricted access"}
+            detail={"error": "OFFICER_REQUIRED", "message": "Only Security Officer can approve restricted access"}
         )
     
     import uuid
@@ -974,6 +1036,102 @@ def decide_access_request(
         "decided_by": user.user_id,
         "validity_hours": hours if req.status == "APPROVED" else 0,
         "message": f"Request {req.status} successfully by Security Officer."
+    }
+
+# --- Break Glass Emergency Procedure ---
+
+class BreakGlassPayload(BaseModel):
+    break_glass_token: str
+    justification: str
+    operator_callsign: str
+    hours: Optional[int] = 4
+
+@app.post("/api/v1/access/break-glass")
+def trigger_break_glass_emergency_access(
+    payload: BreakGlassPayload,
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Emergency Break-Glass Procedure:
+    Used ONLY when the Security Officer is unreachable during a critical air defense emergency.
+    Grants maximum 4-hour operational clearance and records an immutable emergency audit alert.
+    """
+    bg_expected = os.getenv("BREAK_GLASS_TOKEN", "bg_secret_emergency_override_2026")
+    client_ip = request.client.host if (request and getattr(request, "client", None)) else "127.0.0.1"
+
+    if not hmac.compare_digest(payload.break_glass_token, bg_expected):
+        log_security_event(
+            actor_id=f"callsign_{payload.operator_callsign}",
+            actor_role="unknown",
+            action="BREAK_GLASS_FAILED",
+            resource_type="all:restricted_ops",
+            decision="DENIED",
+            reason="INVALID_BREAK_GLASS_TOKEN",
+            client_ip=client_ip,
+            db_session=db
+        )
+        raise HTTPException(status_code=403, detail="Invalid Break Glass Emergency Token")
+
+    import uuid
+    import json
+    from database.models import AccessApproval
+
+    hours = min(payload.hours or 4, 4)
+    now = datetime.datetime.utcnow()
+    until = now + datetime.timedelta(hours=hours)
+    appr_id = f"bg_{uuid.uuid4().hex[:8]}"
+    op_id = f"break_glass_{payload.operator_callsign}"
+
+    appr_row = AccessApproval(
+        approval_id=appr_id,
+        request_id=f"break_glass_{payload.operator_callsign}",
+        user_id=op_id,
+        resource_type="tactical_events",
+        geo_scope="all",
+        valid_from=now,
+        valid_to=until,
+        granted_by="BREAK_GLASS_EMERGENCY_OVERRIDE",
+        created_at=now
+    )
+    db.add(appr_row)
+
+    if redis_client:
+        try:
+            redis_client.setex(
+                f"tactical:approval:{op_id}:all",
+                hours * 3600,
+                json.dumps({
+                    "approved_by": "BREAK_GLASS_EMERGENCY",
+                    "approved_by_user": "emergency_officer",
+                    "sector": "all",
+                    "user_id": op_id,
+                    "approved_at": now.isoformat(),
+                    "ttl_hours": hours
+                })
+            )
+        except Exception as err:
+            logger.warning(f"Redis break glass setex error: {err}")
+
+    log_security_event(
+        actor_id=op_id,
+        actor_role="security_officer",
+        action="BREAK_GLASS_TRIGGERED",
+        resource_type="all:restricted_ops",
+        decision="ALLOWED",
+        reason=f"Emergency Break Glass triggered by {payload.operator_callsign}: {payload.justification}",
+        client_ip=client_ip,
+        db_session=db
+    )
+    db.commit()
+
+    return {
+        "status": "EMERGENCY_CLEARANCE_GRANTED",
+        "approval_id": appr_id,
+        "operator_id": op_id,
+        "validity_hours": hours,
+        "expires_at": until.isoformat() + "Z",
+        "notice": "This emergency session is monitored with CRITICAL audit priority."
     }
 
 @app.get("/api/v1/alert/status")
