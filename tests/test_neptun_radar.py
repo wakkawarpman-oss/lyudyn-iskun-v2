@@ -116,3 +116,25 @@ def test_get_live_radar_threats_network_failure():
         assert result["count"] == 0
         assert result["status"] == "offline_fallback"
         assert result["drones"] == []
+
+
+def test_filter_drones_for_oblast_inbound():
+    from worker.osint.neptun_radar import filter_drones_for_oblast
+    # trk_direct: 30 km from Kyiv (lat 50.30, lng 30.60)
+    # trk_inbound: 90 km from Kyiv, heading 320 towards Kyiv (lat 50.00, lng 31.40)
+    # trk_far: 450 km away (lat 46.50, lng 32.50)
+    mock_drones = [
+        {"id": "trk_direct", "lat": 50.30, "lng": 30.60, "heading": 350, "speed_kmh": 185, "relevant_oblasts": ["kyiv_city"]},
+        {"id": "trk_inbound", "lat": 50.00, "lng": 31.40, "heading": 310, "speed_kmh": 185, "relevant_oblasts": ["kyiv_oblast"]},
+        {"id": "trk_far", "lat": 46.50, "lng": 32.50, "heading": 180, "speed_kmh": 185, "relevant_oblasts": ["kherson"]}
+    ]
+
+    direct, inbound = filter_drones_for_oblast(mock_drones, "kyiv_city")
+    assert len(direct) == 1
+    assert direct[0]["id"] == "trk_direct"
+    assert direct[0]["is_direct_threat"] is True
+
+    assert len(inbound) == 1
+    assert inbound[0]["id"] == "trk_inbound"
+    assert inbound[0]["is_inbound_threat"] is True
+    assert inbound[0]["distance_to_center_km"] < 120.0

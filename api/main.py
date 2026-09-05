@@ -460,7 +460,8 @@ def get_radar_drones(oblast: Optional[str] = None):
         if data.get("category") in ("substation", "energy", "fuel_depot", "defense_industry")
     ]
 
-    for d in drones:
+    inbound_drones = threats_data.get("inbound_drones", [])
+    for d in (drones + inbound_drones):
         lat = d.get("lat")
         lng = d.get("lng")
         heading = d.get("heading")

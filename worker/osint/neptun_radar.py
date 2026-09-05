@@ -81,6 +81,68 @@ def classify_threat(threat_type: str, text: str) -> tuple[str, str, str]:
     return 'Повітряна Ціль', '#ff9900', 'generic'
 
 
+def angle_diff(b1: float, b2: float) -> float:
+    diff = abs(b1 - b2) % 360
+    return 360 - diff if diff > 180 else diff
+
+
+def filter_drones_for_oblast(all_drones: list, oblast: str) -> tuple[list, list]:
+    """
+    Separates drones into:
+    1. direct_drones (within sector boundary or direct radius)
+    2. inbound_drones (outside direct radius, but within 160 km with inbound heading or perimeter proximity)
+    """
+    if not oblast or oblast == "all":
+        return all_drones, []
+
+    center_cfg = OBLAST_CENTERS.get(oblast)
+    if not center_cfg:
+        direct = [d for d in all_drones if oblast in d.get("relevant_oblasts", [])]
+        return direct, []
+
+    c_lat, c_lon, direct_r = center_cfg
+    from worker.osint.launch_triangulation import calculate_bearing
+
+    direct_drones = []
+    inbound_drones = []
+
+    for d in all_drones:
+        d_lat = d.get("lat")
+        d_lng = d.get("lng")
+        if d_lat is None or d_lng is None:
+            continue
+
+        dist_km = calculate_distance_km(d_lat, d_lng, c_lat, c_lon)
+        is_direct = (dist_km <= direct_r) or (oblast in d.get("relevant_oblasts", []))
+
+        heading = d.get("heading") or 0.0
+        bearing_to_center = calculate_bearing(d_lat, d_lng, c_lat, c_lon)
+        diff = angle_diff(heading, bearing_to_center)
+        speed = d.get("speed_kmh") or 185.0
+        eta_min = round((dist_km / speed) * 60) if speed > 0 else 0
+
+        d_copy = dict(d)
+        d_copy["distance_to_center_km"] = dist_km
+        d_copy["bearing_to_center_deg"] = round(bearing_to_center, 1)
+        d_copy["heading_diff_deg"] = round(diff, 1)
+        d_copy["eta_to_center_min"] = eta_min
+
+        if is_direct:
+            d_copy["is_direct_threat"] = True
+            d_copy["is_inbound_threat"] = False
+            direct_drones.append(d_copy)
+        elif dist_km <= 160.0:
+            if diff <= 65.0 or dist_km <= 100.0:
+                d_copy["is_direct_threat"] = False
+                d_copy["is_inbound_threat"] = True
+                inbound_drones.append(d_copy)
+
+    direct_drones.sort(key=lambda x: x.get("distance_to_center_km", 999))
+    inbound_drones.sort(key=lambda x: x.get("distance_to_center_km", 999))
+
+    return direct_drones, inbound_drones
+
+
 def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = None) -> dict:
     """
     Polls the live Neptun tactical feed and returns processed radar tracks.
@@ -100,16 +162,23 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
         try:
             cached_res = json.loads(raw_json)
             if oblast and oblast != "all":
-                filtered_drones = [
-                    d for d in cached_res.get("drones", [])
-                    if oblast in d.get("relevant_oblasts", [])
-                ]
+                direct_drones, inbound_drones = filter_drones_for_oblast(cached_res.get("drones", []), oblast)
                 return {
                     **cached_res,
-                    "drones": filtered_drones,
-                    "count": len(filtered_drones)
+                    "drones": direct_drones,
+                    "inbound_drones": inbound_drones,
+                    "count": len(direct_drones),
+                    "direct_count": len(direct_drones),
+                    "inbound_count": len(inbound_drones),
+                    "total_threat_count": len(direct_drones) + len(inbound_drones)
                 }
-            return cached_res
+            return {
+                **cached_res,
+                "inbound_drones": [],
+                "direct_count": len(cached_res.get("drones", [])),
+                "inbound_count": 0,
+                "total_threat_count": len(cached_res.get("drones", []))
+            }
         except Exception:
             pass
 
@@ -284,11 +353,21 @@ def get_live_radar_threats(force_refresh: bool = False, oblast: Optional[str] = 
 
     # Return filtered by oblast if requested
     if oblast and oblast != "all":
-        filtered_drones = [d for d in drones if oblast in d.get("relevant_oblasts", [])]
+        direct_drones, inbound_drones = filter_drones_for_oblast(drones, oblast)
         return {
             **result,
-            "drones": filtered_drones,
-            "count": len(filtered_drones)
+            "drones": direct_drones,
+            "inbound_drones": inbound_drones,
+            "count": len(direct_drones),
+            "direct_count": len(direct_drones),
+            "inbound_count": len(inbound_drones),
+            "total_threat_count": len(direct_drones) + len(inbound_drones)
         }
 
-    return result
+    return {
+        **result,
+        "inbound_drones": [],
+        "direct_count": len(drones),
+        "inbound_count": 0,
+        "total_threat_count": len(drones)
+    }

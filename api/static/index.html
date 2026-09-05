@@ -265,6 +265,65 @@
             font-weight: 800;
             letter-spacing: 0.4px;
         }
+        .context-threat-banner.threat-direct {
+            background: rgba(38, 12, 22, 0.96) !important;
+            border-bottom: 1.5px solid rgba(255, 0, 85, 0.8) !important;
+            box-shadow: 0 4px 18px rgba(255, 0, 85, 0.4) !important;
+        }
+        .context-threat-banner.threat-direct .threat-tag {
+            background: #ef4444 !important;
+            color: #fff !important;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+        }
+        .context-threat-banner.threat-inbound {
+            background: rgba(45, 26, 10, 0.96) !important;
+            border-bottom: 1.5px solid rgba(245, 158, 11, 0.8) !important;
+            box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35) !important;
+        }
+        .context-threat-banner.threat-inbound .threat-tag {
+            background: #f59e0b !important;
+            color: #000 !important;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+        }
+        .context-threat-banner.threat-alert-clear {
+            background: rgba(15, 28, 48, 0.96) !important;
+            border-bottom: 1.5px solid rgba(56, 189, 248, 0.7) !important;
+            box-shadow: 0 4px 18px rgba(56, 189, 248, 0.25) !important;
+        }
+        .context-threat-banner.threat-alert-clear .threat-tag {
+            background: #0284c7 !important;
+            color: #fff !important;
+        }
+        .context-threat-banner.threat-all-clear {
+            background: rgba(10, 32, 22, 0.96) !important;
+            border-bottom: 1.5px solid rgba(16, 185, 129, 0.7) !important;
+            box-shadow: 0 4px 18px rgba(16, 185, 129, 0.25) !important;
+        }
+        .context-threat-banner.threat-all-clear .threat-tag {
+            background: #10b981 !important;
+            color: #fff !important;
+        }
+        .map-replay-mode {
+            box-shadow: inset 0 0 0 4px rgba(245, 158, 11, 0.85) !important;
+        }
+        .feed-filter-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-dim);
+            color: var(--text-secondary);
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .feed-filter-pill.active {
+            background: rgba(0, 229, 255, 0.18);
+            border-color: var(--accent-cyan);
+            color: #fff;
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+        }
 
         /* ─── ВІДБІЙ МОНІТОРИНГ ВЕЛИКИЙ БАНЕР ─── */
         .vidbiy-pulse-dot {
@@ -1254,13 +1313,15 @@
     <!-- ВІДБІЙ МОНІТОРИНГ: ВЕЛИКИЙ БАНЕР -->
     <div class="vidbiy-big-banner-wrap hidden" id="vidbiy-big-banner-wrap"></div>
 
-    <!-- 2. Contextual Threat Banner -->
+    <!-- 2. Contextual Threat Banner (Truthful Cockpit HUD) -->
     <div class="context-threat-banner" id="threat-banner">
         <div class="threat-banner-left">
-            <span class="threat-tag">⚠️ ЗАГРОЗА</span>
-            <span id="threat-banner-text">10 цілей на підльоті до Києва (<180 км)</span>
+            <span class="threat-tag" id="threat-tag">🟢 НЕБО ЧИСТЕ</span>
+            <span id="threat-banner-text">Завантаження оперативної обстановки...</span>
         </div>
-        <span>›</span>
+        <div class="threat-banner-right" style="font-size: 11px; color: var(--accent-cyan); display: flex; align-items: center; gap: 4px;">
+            <span id="threat-banner-action">Радар онлайн</span>
+        </div>
     </div>
 
     <!-- 3. Right Floating Controls Stack -->
@@ -1271,8 +1332,8 @@
         <button class="tool-btn" id="btn-zoom-out" title="Зменшити">−</button>
     </div>
 
-    <!-- 4. Timeline Bar -->
-    <div class="timeline-bar-wrap" id="timeline-wrap">
+    <!-- 4. Timeline Bar (Hidden in LIVE mode) -->
+    <div class="timeline-bar-wrap hidden" id="timeline-wrap">
         <div class="timeline-row-compact">
             <button class="timeline-play-toggle" id="btn-timeline-play">▶</button>
             <input type="range" class="timeline-slider-native" id="timeline-slider" min="1" max="72" value="24" step="1">
@@ -1616,8 +1677,16 @@
                     <div class="stat-box-lbl">Зони Ураження</div>
                 </div>
             </div>
-            <div style="font-size:11px; font-weight:800; color:var(--text-secondary); margin-bottom:8px; text-transform:uppercase;">
-                ОСТАННІ ВЕРИФІКОВАНІ ПОДІЇ
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div style="font-size:11px; font-weight:800; color:var(--text-secondary); text-transform:uppercase;">
+                    ОСТАННІ ВЕРИФІКОВАНІ ПОДІЇ
+                </div>
+            </div>
+            <div class="drawer-feed-filters" style="display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px;">
+                <button class="feed-filter-pill active" id="feed-btn-all" onclick="setEventFeedFilter('all')">Усі (<span id="feed-cnt-all">0</span>)</button>
+                <button class="feed-filter-pill" id="feed-btn-strike" onclick="setEventFeedFilter('strike')">💥 Влучання (<span id="feed-cnt-strike">0</span>)</button>
+                <button class="feed-filter-pill" id="feed-btn-presents" onclick="setEventFeedFilter('presents')">🛡️ ППО (<span id="feed-cnt-presents">0</span>)</button>
+                <button class="feed-filter-pill" id="feed-btn-drone" onclick="setEventFeedFilter('drone')">🔴 Дрони (<span id="feed-cnt-drone">0</span>)</button>
             </div>
             <div class="event-feed-list" id="drawer-event-feed"></div>
         </div>
@@ -2690,33 +2759,66 @@
         document.getElementById('prof-nav')?.addEventListener('click', () => setProfile('nav'));
         document.getElementById('prof-clean')?.addEventListener('click', () => setProfile('clean'));
 
-        // ─── 3. Live Radar Targets (Neptun Live Feed) ───
+        // ─── 3. Live Radar Targets (Neptun Live Feed & Truthful Cockpit HUD) ───
+        let activeInboundDrones = [];
+        let latestAlertStatus = null;
+
         function updateThreatBanner() {
             const threatBanner = document.getElementById('threat-banner');
+            const threatTag = document.getElementById('threat-tag');
             const threatText = document.getElementById('threat-banner-text');
+            const threatAction = document.getElementById('threat-banner-action');
             const peekDrones = document.getElementById('peek-drones');
             const statValDrones = document.getElementById('stat-val-drones');
 
             const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv_city'];
-            const count = activeDrones.length;
+            const directCount = activeDrones.length;
+            const inboundCount = activeInboundDrones.length;
+            const totalCount = directCount + inboundCount;
 
-            if (peekDrones) peekDrones.textContent = `${count} цілей`;
-            if (statValDrones) statValDrones.textContent = count;
+            if (peekDrones) {
+                peekDrones.textContent = inboundCount > 0 && directCount === 0
+                    ? `${inboundCount} на підльоті`
+                    : `${directCount} цілей`;
+            }
+            if (statValDrones) statValDrones.textContent = totalCount;
 
-            if (count > 0) {
-                threatBanner.classList.remove('hidden');
+            if (!threatBanner) return;
+            threatBanner.classList.remove('threat-direct', 'threat-inbound', 'threat-alert-clear', 'threat-all-clear', 'hidden');
+
+            if (directCount > 0) {
+                threatBanner.classList.add('threat-direct');
+                if (threatTag) threatTag.textContent = '🔴 ЗАГРОЗА СЕКТОРУ';
                 const closest = activeDrones[0];
-                let distStr = '';
-                if (currentOblast.includes('kyiv') && closest.distance_to_kyiv_km) {
-                    distStr = `, ~${closest.distance_to_kyiv_km} км`;
-                } else if (currentOblast === 'dnipropetrovsk' && closest.distance_to_dnipro_km) {
-                    distStr = `, ~${closest.distance_to_dnipro_km} км`;
-                } else if (currentOblast === 'zaporizhzhia' && closest.distance_to_zaporizhzhia_km) {
-                    distStr = `, ~${closest.distance_to_zaporizhzhia_km} км`;
+                const dKm = closest.distance_to_center_km || closest.distance_to_kyiv_km || closest.distance_to_dnipro_km || closest.distance_to_zaporizhzhia_km || '';
+                const distStr = dKm ? `, ~${dKm} км` : '';
+                threatText.textContent = `${directCount} цілей у секторі ${cfg.title} (${closest.place || 'БпЛА'}${distStr})`;
+                if (threatAction) threatAction.textContent = 'Фокус ➔';
+            } else if (inboundCount > 0) {
+                threatBanner.classList.add('threat-inbound');
+                if (threatTag) threatTag.textContent = '🟡 НА ПІДЛЬОТІ';
+                const closestInbound = activeInboundDrones[0];
+                const dKm = closestInbound.distance_to_center_km || closestInbound.distance_to_kyiv_km || '';
+                const etaMin = closestInbound.eta_to_center_min ? `, ETA ~${closestInbound.eta_to_center_min} хв` : '';
+                threatText.textContent = `${inboundCount} цілей курсом на ${cfg.title} (~${dKm} км${etaMin})`;
+                if (threatAction) threatAction.textContent = 'Огляд ➔';
+            } else if (isVidbiyMonitoringActive && latestAlertStatus) {
+                if (latestAlertStatus.is_alert) {
+                    threatBanner.classList.add('threat-alert-clear');
+                    if (threatTag) threatTag.textContent = '🚨 ТРИВОГА ТРИВАЄ';
+                    threatText.textContent = `${cfg.title}: Локальних радарних цілей не виявлено (загроза балістики або виходу бортів)`;
+                    if (threatAction) threatAction.textContent = 'Деталі ➔';
+                } else {
+                    threatBanner.classList.add('threat-all-clear');
+                    if (threatTag) threatTag.textContent = '🟢 ВІДБІЙ ПІДТВЕРДЖЕНО';
+                    threatText.textContent = `${cfg.title}: Радіолокаційний простір чистий (R < 160 км)`;
+                    if (threatAction) threatAction.textContent = 'OK ✓';
                 }
-                threatText.textContent = `${count} цілей у зоні ${cfg.title} (${closest.place || 'БпЛА'}${distStr})`;
             } else {
-                threatBanner.classList.add('hidden');
+                threatBanner.classList.add('threat-all-clear');
+                if (threatTag) threatTag.textContent = '🟢 НЕБО ЧИСТЕ';
+                threatText.textContent = `Сектор ${cfg.title}: Активних повітряних цілей у радіусі 160 км не виявлено`;
+                if (threatAction) threatAction.textContent = 'Радар онлайн';
             }
         }
 
@@ -2835,11 +2937,13 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 const drones = data.drones || [];
+                const inbound = data.inbound_drones || [];
                 activeDrones = drones;
+                activeInboundDrones = inbound;
 
-                // Update category counts
+                // Update category counts across direct and inbound
                 let cDrones = 0, cMissiles = 0, cKabs = 0, cRecon = 0;
-                drones.forEach(d => {
+                drones.concat(inbound).forEach(d => {
                     const c = (d.category || '').toLowerCase();
                     if (c === 'drone' || c === 'shahed') cDrones++;
                     else if (c === 'missile' || c === 'cruise' || c === 'ballistic') cMissiles++;
@@ -2856,12 +2960,13 @@
                 if (cntMissilesEl) cntMissilesEl.textContent = cMissiles;
                 if (cntKabsEl) cntKabsEl.textContent = cKabs;
                 if (cntReconEl) cntReconEl.textContent = cRecon;
-                if (cntTracks) cntTracks.textContent = drones.length;
+                if (cntTracks) cntTracks.textContent = drones.length + inbound.length;
 
                 updateThreatBanner();
 
                 const currentIds = new Set();
-                drones.forEach(d => {
+                const allTargets = drones.concat(inbound.map(ib => ({ ...ib, isInbound: true })));
+                allTargets.forEach(d => {
                     if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
                     const dId = String(d.id || `${d.lat.toFixed(4)}_${d.lng.toFixed(4)}`);
                     const vis = getThreatVisuals(d);
@@ -3001,18 +3106,21 @@
                     }
 
                     // 4. Tactical Target Marker Icon
-                    const etaBadge = (d.eta_cone && d.eta_cone.eta_time_str) ? ` · ⏱️ ${d.eta_cone.eta_time_str}` : '';
+                    const isInbound = !!d.isInbound;
+                    const etaBadge = (d.eta_cone && d.eta_cone.eta_time_str) ? ` · ⏱️ ${d.eta_cone.eta_time_str}` : (d.eta_to_center_min ? ` · ⏱️ ~${d.eta_to_center_min}хв` : '');
+                    const inboundPrefix = isInbound ? `🟡 [ПІДЛІТ ~${d.distance_to_center_km || ''}км] ` : '';
+                    const markerColor = isInbound ? '#f59e0b' : vis.color;
                     const iconHtml = `
-                        <div class="m-drone-container">
-                            <div class="m-drone-ping" style="border-color:${vis.color}; background:${vis.glow};"></div>
+                        <div class="m-drone-container ${isInbound ? 'inbound-pulse' : ''}">
+                            <div class="m-drone-ping" style="border-color:${markerColor}; background:${isInbound ? 'rgba(245,158,11,0.25)' : vis.glow};"></div>
                             ${showHeadings ? `
                             <div class="m-drone-arrow" style="transform: rotate(${heading}deg);">
                                 ${vis.svg}
                             </div>` : `
-                            <div class="m-drone-dot" style="background:${vis.color}; box-shadow:0 0 10px ${vis.color};"></div>
+                            <div class="m-drone-dot" style="background:${markerColor}; box-shadow:0 0 10px ${markerColor};"></div>
                             `}
-                            <div class="m-drone-tag" style="border-color:${vis.color};">
-                                ${vis.tagIcon} ${vis.label} · ${d.place || 'Ціль'}${heading ? ` ${heading}°` : ''}${etaBadge}
+                            <div class="m-drone-tag" style="border-color:${markerColor}; ${isInbound ? 'background:rgba(30,20,5,0.92); color:#fde047;' : ''}">
+                                ${inboundPrefix}${vis.tagIcon} ${vis.label} · ${d.place || 'Ціль'}${heading ? ` ${heading}°` : ''}${etaBadge}
                             </div>
                         </div>
                     `;
@@ -3079,10 +3187,19 @@
         }
 
 
-        // Tap Threat Banner -> Fly to nearest drone in active oblast
+        // Tap Threat Banner -> Fly to nearest threat or fit cluster
         document.getElementById('threat-banner')?.addEventListener('click', () => {
-            const threat = activeDrones[0];
-            if (threat) map.flyTo([threat.lat, threat.lng], 12, { duration: 1 });
+            const targets = activeDrones.concat(activeInboundDrones);
+            if (targets.length === 1) {
+                map.flyTo([targets[0].lat, targets[0].lng], 12, { duration: 0.8 });
+                openDroneSheet(targets[0]);
+            } else if (targets.length > 1) {
+                const bounds = L.latLngBounds(targets.map(d => [d.lat, d.lng]));
+                map.fitBounds(bounds.pad(0.25));
+                openDroneSheet(targets[0]);
+            } else if (isVidbiyMonitoringActive && vidbiyBannerWrap) {
+                vidbiyBannerWrap.classList.toggle('hidden');
+            }
         });
 
         // ─── 4. Clustered Events & Blast Zones ───
@@ -3464,17 +3581,37 @@
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button class="tool-btn" style="flex:1; width:auto; height:38px; border-color:var(--accent-cyan); color:var(--accent-cyan); font-size:12px;" onclick="map.flyTo([${d.lat}, ${d.lng}], 13, {duration:0.8})">
-                        🎯 Навести камеру
+                        🎯 Камера
                     </button>
-                    <button class="tool-btn" style="width:auto; height:38px; padding:0 16px; font-size:12px;" onclick="closeObjectSheet()">
-                        Закрити
+                    <button class="tool-btn" id="btn-export-drone-cot" style="flex:1; width:auto; height:38px; border-color:#10b981; color:#10b981; font-size:12px;">
+                        📡 Експорт CoT
+                    </button>
+                    <button class="tool-btn" style="width:auto; height:38px; padding:0 14px; font-size:12px;" onclick="closeObjectSheet()">
+                        ✕
                     </button>
                 </div>
             `;
             objSheet.classList.add('open');
+            document.getElementById('btn-export-drone-cot')?.addEventListener('click', () => exportSingleDroneCoT(d));
 
             const pt = map.project([d.lat, d.lng], map.getZoom()).subtract([0, 130]);
             map.panTo(map.unproject(pt, map.getZoom()), { animate: true, duration: 0.3 });
+        }
+
+        function exportSingleDroneCoT(d) {
+            const now = new Date().toISOString();
+            const stale = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+            const callsign = `${d.label || 'SHAHED-136'} [${d.place || 'TARGET'}]`;
+            const cotXml = `<?xml version="1.0" standalone="yes"?>\n<event version="2.0" uid="DRONE-${d.id || Date.now()}" type="a-h-A-M-F-Q" time="${now}" start="${now}" stale="${stale}" how="m-g">\n  <point lat="${d.lat}" lon="${d.lng}" hae="150.0" ce="20.0" le="10.0"/>\n  <detail>\n    <contact callsign="${callsign}"/>\n    <track course="${d.heading || 0}" speed="${Math.round(((d.speed_kmh || 185) / 3.6) * 10) / 10}"/>\n    <remarks>OKINT-PRO C4ISR. Source: Neptun Radar, Heading: ${d.heading} deg, Speed: ${d.speed_kmh} km/h</remarks>\n  </detail>\n</event>`;
+            const blob = new Blob([cotXml], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cot_${d.id || 'target'}.xml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function openEventSheet(e) {
@@ -3628,19 +3765,81 @@
             overviewDrawer?.classList.remove('open');
         });
 
+        let currentFeedFilter = 'all';
+
+        function setEventFeedFilter(filterType) {
+            currentFeedFilter = filterType;
+            ['all', 'strike', 'presents', 'drone'].forEach(f => {
+                const btn = document.getElementById(`feed-btn-${f}`);
+                if (btn) {
+                    if (f === filterType) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            });
+            renderDrawerFeed();
+        }
+
         function renderDrawerFeed() {
             const feed = document.getElementById('drawer-event-feed');
             if (!feed) return;
-            feed.innerHTML = rawEvents.slice(0, 15).map(e => {
+
+            // Update filter counts
+            const cAll = rawEvents.length;
+            const cStrike = rawEvents.filter(e => {
+                const t = (e.event_type || '').toLowerCase();
+                return t.includes('strike') || t.includes('влуч') || t.includes('вибух');
+            }).length;
+            const cPresents = rawEvents.filter(e => {
+                const t = (e.event_type || '').toLowerCase();
+                return t.includes('presents') || t.includes('ппо') || t.includes('збит');
+            }).length;
+            const cDrone = rawEvents.filter(e => {
+                const t = (e.event_type || '').toLowerCase();
+                return t.includes('drone') || t.includes('шахед') || t.includes('бпла');
+            }).length;
+
+            const elAll = document.getElementById('feed-cnt-all');
+            const elStrike = document.getElementById('feed-cnt-strike');
+            const elPresents = document.getElementById('feed-cnt-presents');
+            const elDrone = document.getElementById('feed-cnt-drone');
+            if (elAll) elAll.textContent = cAll;
+            if (elStrike) elStrike.textContent = cStrike;
+            if (elPresents) elPresents.textContent = cPresents;
+            if (elDrone) elDrone.textContent = cDrone;
+
+            let filtered = rawEvents;
+            if (currentFeedFilter === 'strike') {
+                filtered = rawEvents.filter(e => {
+                    const t = (e.event_type || '').toLowerCase();
+                    return t.includes('strike') || t.includes('влуч') || t.includes('вибух');
+                });
+            } else if (currentFeedFilter === 'presents') {
+                filtered = rawEvents.filter(e => {
+                    const t = (e.event_type || '').toLowerCase();
+                    return t.includes('presents') || t.includes('ппо') || t.includes('збит');
+                });
+            } else if (currentFeedFilter === 'drone') {
+                filtered = rawEvents.filter(e => {
+                    const t = (e.event_type || '').toLowerCase();
+                    return t.includes('drone') || t.includes('шахед') || t.includes('бпла');
+                });
+            }
+
+            if (filtered.length === 0) {
+                feed.innerHTML = `<div style="text-align:center; padding:24px 12px; color:var(--text-secondary); font-size:12px;">Подій обраної категорії не зафіксовано</div>`;
+                return;
+            }
+
+            feed.innerHTML = filtered.slice(0, 25).map(e => {
                 const timeStr = new Date(e.detected_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
                 return `
                     <div class="feed-item-card" onclick="map.flyTo([${e.lat}, ${e.lon}], 14, {duration:0.8}); overviewDrawer.classList.remove('open'); openEventSheet(rawEvents.find(x => x.id === ${e.id}));">
                         <div class="feed-card-left">
                             <span class="feed-time">🕒 ${timeStr}</span>
-                            <span class="feed-loc">${e.location_text || 'Київ'}</span>
+                            <span class="feed-loc">${e.location_text || 'Сектор'}</span>
                         </div>
                         <span class="feed-tag" style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#f87171;">
-                            ${e.event_type}
+                            ${EVENT_TYPE_LABELS[e.event_type] || e.event_type}
                         </span>
                     </div>
                 `;
@@ -3671,15 +3870,19 @@
             });
 
             const timelineWrap = document.getElementById('timeline-wrap');
+            const mapContainer = document.getElementById('map');
             if (mode === 'REPLAY') {
                 if (timelineWrap) timelineWrap.classList.remove('hidden');
+                if (mapContainer) mapContainer.classList.add('map-replay-mode');
             } else if (mode === 'LIVE') {
                 if (timelineWrap) timelineWrap.classList.add('hidden');
+                if (mapContainer) mapContainer.classList.remove('map-replay-mode');
                 pauseTimeline();
                 fetchRadarDrones();
                 fetchEventsAndZones();
             } else if (mode === 'ANALYSIS') {
                 if (timelineWrap) timelineWrap.classList.add('hidden');
+                if (mapContainer) mapContainer.classList.remove('map-replay-mode');
                 pauseTimeline();
                 setProfile('analyt');
                 overviewDrawer.classList.add('open');
@@ -3703,6 +3906,8 @@
                 const res = await fetch(`/api/v1/alert/status?oblast=${currentOblast}`);
                 if (!res.ok) return;
                 const data = await res.json();
+                latestAlertStatus = data;
+                updateThreatBanner();
                 renderVidbiyBanner(data);
             } catch(e) {
                 console.warn('Vidbiy check error:', e);
@@ -3778,12 +3983,14 @@
 
         function stopVidbiyMonitoring() {
             isVidbiyMonitoringActive = false;
+            latestAlertStatus = null;
             vidbiyBtn?.classList.remove('vidbiy-active');
             vidbiyBannerWrap.classList.add('hidden');
             if (vidbiyTimer) {
                 clearInterval(vidbiyTimer);
                 vidbiyTimer = null;
             }
+            updateThreatBanner();
         }
 
         vidbiyBtn?.addEventListener('click', () => {
