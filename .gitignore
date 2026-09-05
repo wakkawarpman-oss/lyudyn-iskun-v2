@@ -20,3 +20,4 @@ node_modules/
 working_sessions.json
 active_pool*.txt
 graphify-out/
+data/
