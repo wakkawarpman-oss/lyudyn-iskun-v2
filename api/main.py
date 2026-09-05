@@ -12,9 +12,57 @@ import datetime
 import os
 import json
 import redis
+import hmac
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.Redis.from_url(REDIS_URL)
+
+def is_tactical_authorized(request: Optional[Request] = None, token: Optional[str] = None) -> bool:
+    """
+    Validates whether the request is authorized for the restricted operational / military contour.
+    Strictly enforces platform segmentation:
+    1. Civilian contour (default): 1:1 exact WGS-84 coordinates, kinematics, waypoints, trail,
+       and true strike addresses, but stripped of internal targeting cones, EW directives, and sensor telemetry.
+    2. Restricted operational contour: requires tactical API token or an active approval granted
+       by single administrator Bet Trx (@btntrx, ID 8965828778) stored in Redis with 24-hour TTL.
+    """
+    provided_token = token if isinstance(token, str) and token.strip() else None
+    if not provided_token and request is not None:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            provided_token = auth_header[7:].strip()
+        else:
+            provided_token = request.headers.get("X-Tactical-Token")
+
+    if not provided_token:
+        return False
+
+    expected_token = os.getenv("TACTICAL_API_TOKEN")
+    if expected_token and hmac.compare_digest(provided_token, expected_token):
+        return True
+
+    # Check active approvals granted by Bet Trx in Redis (tactical:approval:*)
+    try:
+        if redis_client:
+            matching_keys = redis_client.keys(f"tactical:approval:{provided_token}:*")
+            if matching_keys:
+                return True
+            admin_id_expected = str(os.getenv("ADMIN_ID", "8965828778"))
+            for k in redis_client.keys("tactical:approval:*"):
+                data_raw = redis_client.get(k)
+                if data_raw:
+                    try:
+                        k_str = k.decode() if isinstance(k, bytes) else str(k)
+                        appr = json.loads(data_raw)
+                        if str(appr.get("approved_by")) == admin_id_expected:
+                            if k_str.startswith(f"tactical:approval:{provided_token}"):
+                                return True
+                    except Exception:
+                        pass
+    except Exception as e:
+        logger.debug(f"Redis tactical authorization check error: {e}")
+
+    return False
 
 OBLAST_BOUNDS = {
     "kyiv_city": {"min_lat": 50.25, "max_lat": 50.60, "min_lon": 30.20, "max_lon": 30.85},
@@ -446,36 +494,55 @@ def get_danger_zones(hours: int = 72, oblast: Optional[str] = None, db: Session 
     return zones
 
 @app.get("/api/v1/radar/drones")
-def get_radar_drones(oblast: Optional[str] = None):
+def get_radar_drones(
+    request: Request = None,
+    oblast: Optional[str] = None,
+    token: Optional[str] = Query(None)
+):
     from worker.osint.neptun_radar import get_live_radar_threats
     from worker.osint.launch_triangulation import estimate_launch_origin, project_forward_substation_threats
     from worker.geo_extractors.poi_matcher import POI_DATABASE
 
+    is_authorized = is_tactical_authorized(request, token)
     threats_data = get_live_radar_threats(oblast=oblast)
     drones = threats_data.get("drones", [])
-
-    substations = [
-        {"name": name, "lat": data["lat"], "lon": data["lon"], "voltage": data.get("voltage", "110-750 kV")}
-        for name, data in POI_DATABASE.items()
-        if data.get("category") in ("substation", "energy", "fuel_depot", "defense_industry")
-    ]
-
     inbound_drones = threats_data.get("inbound_drones", [])
+
+    substations = None
+    if is_authorized:
+        substations = [
+            {"name": name, "lat": data["lat"], "lon": data["lon"], "voltage": data.get("voltage", "110-750 kV")}
+            for name, data in POI_DATABASE.items()
+            if data.get("category") in ("substation", "energy", "fuel_depot", "defense_industry")
+        ]
+
     for d in (drones + inbound_drones):
         lat = d.get("lat")
         lng = d.get("lng")
         heading = d.get("heading")
         speed = d.get("speed_kmh") or 185.0
 
-        if lat is not None and lng is not None and heading is not None and heading > 0:
-            d["estimated_launch"] = estimate_launch_origin(lat, lng, heading, speed)
-            d["projected_targets"] = project_forward_substation_threats(
-                lat, lng, heading, speed, substations, max_cone_deg=35.0, max_distance_km=75.0
-            )
+        if is_authorized:
+            # Operational / Military Contour: enriched with classified/restricted extensions
+            if lat is not None and lng is not None and heading is not None and heading > 0 and substations:
+                d["estimated_launch"] = estimate_launch_origin(lat, lng, heading, speed)
+                d["projected_targets"] = project_forward_substation_threats(
+                    lat, lng, heading, speed, substations, max_cone_deg=35.0, max_distance_km=75.0
+                )
+            else:
+                d["estimated_launch"] = None
+                d["projected_targets"] = []
         else:
+            # Civilian Contour: 1:1 EXACT coordinates, speed, heading, waypoints, trail, and ETA,
+            # but strictly stripped of internal targeting cones, EW directives, and sensor telemetry.
             d["estimated_launch"] = None
             d["projected_targets"] = []
+            d["ew_profile"] = None
+            d["sigint_corroboration"] = None
+            d["corroborating_sensors"] = []
 
+    threats_data["contour"] = "restricted_operational" if is_authorized else "civilian"
+    threats_data["coordinates_fidelity"] = "1:1_exact_wgs84"
     return threats_data
 
 @app.get("/api/v1/threats/enemy-facilities")
@@ -484,9 +551,21 @@ def get_enemy_facilities():
     return {"facilities": KNOWN_ENEMY_FACILITIES, "count": len(KNOWN_ENEMY_FACILITIES)}
 
 @app.get("/api/v1/threats/active-alerts")
-def get_active_substation_threats():
+def get_active_substation_threats(
+    request: Request = None,
+    token: Optional[str] = Query(None)
+):
+    if not is_tactical_authorized(request, token):
+        return {
+            "status": "restricted",
+            "contour": "civilian",
+            "message": "Substation target dispatch summary requires operational clearance authorized by Bet Trx (@btntrx)",
+            "alerts": []
+        }
     from worker.osint.threat_dispatcher import get_active_dispatch_summary
-    return get_active_dispatch_summary()
+    res = get_active_dispatch_summary()
+    res["contour"] = "restricted_operational"
+    return res
 
 @app.get("/api/v1/recon/tot-telecom")
 def get_tot_telecom():
@@ -514,10 +593,26 @@ def get_radar_aviation_intel(force_refresh: bool = False):
     return get_aviation_intel_summary(force_refresh=force_refresh)
 
 @app.get("/api/v1/radar/acoustic-tracks")
-def get_radar_acoustic_tracks():
+def get_radar_acoustic_tracks(
+    request: Request = None,
+    token: Optional[str] = Query(None)
+):
     from worker.osint.acoustic_gateway import get_active_acoustic_hits
     hits = get_active_acoustic_hits()
-    return {"hits": hits, "count": len(hits)}
+    is_authorized = is_tactical_authorized(request, token)
+    if not is_authorized:
+        sanitized_hits = [
+            {
+                "lat": h.get("lat"),
+                "lon": h.get("lon"),
+                "confidence": h.get("confidence"),
+                "time": h.get("time"),
+                "label": "Акустична фіксація цілі"
+            }
+            for h in hits
+        ]
+        return {"hits": sanitized_hits, "count": len(sanitized_hits), "contour": "civilian"}
+    return {"hits": hits, "count": len(hits), "contour": "restricted_operational"}
 
 class AcousticHitPayload(BaseModel):
     lat: float
