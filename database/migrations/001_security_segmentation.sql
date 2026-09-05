@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public_osint.sanitized_events (
 
 -- 4. Дослідницький контур: симуляції, датасети, replay
 CREATE TABLE IF NOT EXISTS research.simulation_runs (
-    run_id UUID PRIMARY KEY,
+    run_id VARCHAR(128) PRIMARY KEY,
     scenario_name VARCHAR(128) NOT NULL,
     parameters JSONB NOT NULL,
     synthetic_targets_count INT,
