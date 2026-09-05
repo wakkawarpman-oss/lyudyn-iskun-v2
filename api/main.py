@@ -17,6 +17,15 @@ import hmac
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 redis_client = redis.Redis.from_url(REDIS_URL)
 
+from api.security.authz import (
+    RoleEnum,
+    SecurityClearance,
+    UserIdentity,
+    get_current_user,
+    verify_restricted_access_policy,
+    log_security_event,
+)
+
 def is_tactical_authorized(request: Optional[Request] = None, token: Optional[str] = None) -> bool:
     """
     Validates whether the request is authorized for the restricted operational / military contour.
@@ -26,43 +35,31 @@ def is_tactical_authorized(request: Optional[Request] = None, token: Optional[st
     2. Restricted operational contour: requires tactical API token or an active approval granted
        by single administrator Bet Trx (@btntrx, ID 8965828778) stored in Redis with 24-hour TTL.
     """
-    provided_token = token if isinstance(token, str) and token.strip() else None
-    if not provided_token and request is not None:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            provided_token = auth_header[7:].strip()
-        else:
-            provided_token = request.headers.get("X-Tactical-Token")
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    authorized = verify_restricted_access_policy(
+        user=user,
+        resource_type="tactical_events",
+        requested_sector="all",
+        redis_client=redis_client
+    )
 
-    if not provided_token:
-        return False
-
-    expected_token = os.getenv("TACTICAL_API_TOKEN")
-    if expected_token and hmac.compare_digest(provided_token, expected_token):
-        return True
-
-    # Check active approvals granted by Bet Trx in Redis (tactical:approval:*)
+    client_ip = request.client.host if (request and getattr(request, "client", None)) else "127.0.0.1"
+    decision = "ALLOWED" if authorized else "DENIED"
+    reason = "APPROVAL_VALID" if authorized else "CIVILIAN_CONTOUR"
     try:
-        if redis_client:
-            matching_keys = redis_client.keys(f"tactical:approval:{provided_token}:*")
-            if matching_keys:
-                return True
-            admin_id_expected = str(os.getenv("ADMIN_ID", "8965828778"))
-            for k in redis_client.keys("tactical:approval:*"):
-                data_raw = redis_client.get(k)
-                if data_raw:
-                    try:
-                        k_str = k.decode() if isinstance(k, bytes) else str(k)
-                        appr = json.loads(data_raw)
-                        if str(appr.get("approved_by")) == admin_id_expected:
-                            if k_str.startswith(f"tactical:approval:{provided_token}"):
-                                return True
-                    except Exception:
-                        pass
+        log_security_event(
+            actor_id=user.user_id,
+            actor_role=user.role.value,
+            action="RESTRICTED_ACCESS_CHECK",
+            resource_type="tactical_events",
+            decision=decision,
+            reason=reason,
+            client_ip=client_ip
+        )
     except Exception as e:
-        logger.debug(f"Redis tactical authorization check error: {e}")
+        logger.debug(f"Audit log fallback: {e}")
 
-    return False
+    return authorized
 
 OBLAST_BOUNDS = {
     "kyiv_city": {"min_lat": 50.25, "max_lat": 50.60, "min_lon": 30.20, "max_lon": 30.85},
@@ -660,7 +657,9 @@ class SigintHitPayload(BaseModel):
     tactical_advisory: str = ""
 
 @app.post("/api/v1/telemetry/sigint-hit")
-def post_sigint_hit(payload: SigintHitPayload):
+def post_sigint_hit(payload: SigintHitPayload, request: Request = None, token: Optional[str] = Query(None)):
+    if not is_tactical_authorized(request, token):
+        raise HTTPException(status_code=403, detail="Operational authorization required for SIGINT ingestion")
     from worker.osint.sigint_bus import record_sigint_hit
     hit = record_sigint_hit(
         frequency_mhz=payload.frequency_mhz,
@@ -672,6 +671,125 @@ def post_sigint_hit(payload: SigintHitPayload):
         tactical_advisory=payload.tactical_advisory,
     )
     return {"status": "ok", "hit": hit}
+
+# --- Research / Simulation Endpoints (Role-based, no daily approval needed) ---
+
+@app.get("/api/v1/research/simulations")
+def get_research_simulations(
+    request: Request = None,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    if user.role not in [RoleEnum.ANALYST_RESEARCH, RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "ROLE_REQUIRED", "message": "Access requires analyst_research or admin role"}
+        )
+    from database.models import SimulationRun
+    runs = db.query(SimulationRun).order_by(SimulationRun.created_at.desc()).limit(20).all()
+    return {
+        "contour": "research",
+        "count": len(runs),
+        "simulations": [
+            {
+                "run_id": r.run_id,
+                "scenario_name": r.scenario_name,
+                "targets_count": r.synthetic_targets_count,
+                "created_by": r.created_by,
+                "created_at": r.created_at.isoformat() if r.created_at else None
+            }
+            for r in runs
+        ]
+    }
+
+class ReplayPayload(BaseModel):
+    incident_id: str
+    speed_factor: Optional[float] = 1.0
+
+@app.post("/api/v1/research/replay")
+def create_research_replay(
+    payload: ReplayPayload,
+    request: Request = None,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    if user.role not in [RoleEnum.ANALYST_RESEARCH, RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "ROLE_REQUIRED", "message": "Replay simulation requires analyst_research or admin role"}
+        )
+    import uuid
+    run_id = f"sim_{uuid.uuid4().hex[:12]}"
+    return {
+        "contour": "research",
+        "status": "simulation_initialized",
+        "run_id": run_id,
+        "incident_id": payload.incident_id,
+        "speed_factor": payload.speed_factor,
+        "synthetic_targets_generated": 14,
+        "mode": "historical_replay_archive_gt90d"
+    }
+
+@app.get("/api/v1/research/datasets")
+def get_research_datasets(
+    request: Request = None,
+    token: Optional[str] = Query(None)
+):
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    if user.role not in [RoleEnum.ANALYST_RESEARCH, RoleEnum.ADMIN, RoleEnum.SECURITY_OFFICER]:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "ROLE_REQUIRED", "message": "Datasets access requires analyst_research or admin role"}
+        )
+    return {
+        "contour": "research",
+        "datasets": [
+            {"id": "ds_shahed_trajectory_2024", "records": 4820, "license": "Restricted Research (CC-BY-NC)"},
+            {"id": "ds_kalman_acoustic_cross_v1", "records": 1240, "license": "Defense AI Benchmark"}
+        ]
+    }
+
+# --- Access Request & Approval Endpoints (Security Officer Workflow) ---
+
+class AccessRequestPayload(BaseModel):
+    requested_resource: str = "tactical_events"
+    target_sector: str = "all"
+    justification: str
+    user_email: Optional[str] = "operator@tactical.gov.ua"
+
+@app.post("/api/v1/access/request")
+def submit_access_request(
+    payload: AccessRequestPayload,
+    request: Request = None,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    import uuid
+    user = get_current_user(request=request, token=token, redis_client=redis_client)
+    req_id = f"req_{uuid.uuid4().hex[:8]}"
+    
+    from database.models import AccessRequest
+    new_req = AccessRequest(
+        request_id=req_id,
+        user_id=user.user_id if user.user_id != "anonymous" else req_id,
+        user_email=payload.user_email,
+        requested_resource=payload.requested_resource,
+        target_sector=payload.target_sector,
+        justification=payload.justification,
+        status="PENDING",
+        requested_at=datetime.datetime.utcnow()
+    )
+    db.add(new_req)
+    db.commit()
+
+    return {
+        "request_id": req_id,
+        "status": "PENDING",
+        "message": "Access request forwarded to Security Officer Bet Trx (@btntrx). Valid for 24h once approved.",
+        "validity_ttl_hours": 24
+    }
 
 @app.get("/api/v1/alert/status")
 def get_live_alert_status(oblast: Optional[str] = None):

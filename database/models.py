@@ -150,6 +150,117 @@ class HITLFeedbackAudit(Base):
     notes = Column(Text, nullable=True)
 
 
+def schema_or_none(name: str):
+    return name if not DATABASE_URL.startswith("sqlite") else None
+
+
+class SanitizedEvent(Base):
+    __tablename__ = "sanitized_events"
+    __table_args__ = {"schema": schema_or_none("public_osint")}
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    event_uid = Column(String(64), unique=True, nullable=False, index=True)
+    event_type = Column(String(64), nullable=False, index=True)
+    detected_at = Column(DateTime, nullable=False, index=True)
+    oblast = Column(String(64), nullable=False)
+    district = Column(String(64), nullable=True)
+    rough_lat = Column(Float, nullable=False)
+    rough_lng = Column(Float, nullable=False)
+    rough_geom = Column(Geometry('POINT', srid=4326), nullable=True)
+    significance_level = Column(String(32), nullable=False)
+    verification_status = Column(String(64), nullable=False)
+    sources_count = Column(Integer, default=1)
+    sanitized_summary = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SimulationRun(Base):
+    __tablename__ = "simulation_runs"
+    __table_args__ = {"schema": schema_or_none("research")}
+
+    run_id = Column(String(64), primary_key=True)
+    scenario_name = Column(String(128), nullable=False)
+    parameters = Column(Text, nullable=False)
+    synthetic_targets_count = Column(Integer, default=0)
+    kalman_tuning_metrics = Column(Text, nullable=True)
+    created_by = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class TacticalEvent(Base):
+    __tablename__ = "tactical_events"
+    __table_args__ = {"schema": schema_or_none("restricted_ops")}
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    incident_id = Column(String(64), nullable=False, index=True)
+    exact_lat = Column(Float, nullable=False)
+    exact_lng = Column(Float, nullable=False)
+    exact_geom = Column(Geometry('POINT', srid=4326), nullable=True)
+    altitude_m = Column(Float, nullable=True)
+    speed_kmh = Column(Float, nullable=True)
+    heading_deg = Column(Float, nullable=True)
+    target_type = Column(String(64), nullable=False)
+    raw_telemetry = Column(Text, nullable=True)
+    source_channel = Column(String(128), nullable=True)
+    confidence_score = Column(Integer, nullable=False, default=50)
+    security_level = Column(String(32), default="restricted")
+    detected_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AccessRequest(Base):
+    __tablename__ = "access_requests"
+    __table_args__ = {"schema": schema_or_none("restricted_ops")}
+
+    request_id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    user_email = Column(String(128), nullable=False)
+    requested_resource = Column(String(64), nullable=False)
+    target_sector = Column(String(64), nullable=False)
+    justification = Column(Text, nullable=False)
+    status = Column(String(32), default="PENDING")
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    decided_at = Column(DateTime, nullable=True)
+    decided_by = Column(String(64), nullable=True)
+    decision_reason = Column(Text, nullable=True)
+
+
+class AccessApproval(Base):
+    __tablename__ = "access_approvals"
+    __table_args__ = (
+        Index("idx_approvals_lookup", "user_id", "resource_type", "valid_from", "valid_to"),
+        {"schema": schema_or_none("restricted_ops")}
+    )
+
+    approval_id = Column(String(64), primary_key=True)
+    request_id = Column(String(64), nullable=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    resource_type = Column(String(64), nullable=False)
+    geo_scope = Column(String(64), nullable=False)
+    valid_from = Column(DateTime, nullable=False)
+    valid_to = Column(DateTime, nullable=False)
+    granted_by = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SecurityAuditTrail(Base):
+    __tablename__ = "security_audit_trail"
+    __table_args__ = {"schema": schema_or_none("audit_sec")}
+
+    log_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    actor_id = Column(String(64), nullable=False)
+    actor_role = Column(String(64), nullable=False)
+    action = Column(String(64), nullable=False)
+    resource_type = Column(String(64), nullable=False)
+    resource_id = Column(String(128), nullable=True)
+    decision = Column(String(32), nullable=False)
+    reason = Column(String(128), nullable=True)
+    client_ip = Column(String(64), nullable=False)
+    user_agent = Column(Text, nullable=True)
+    request_payload_sha256 = Column(String(64), nullable=True)
+
+
 import base64
 import hashlib
 

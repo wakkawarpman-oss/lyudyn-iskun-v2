@@ -1,0 +1,171 @@
+# security_level: restricted
+# Docker Compose with 3-tier Network Segmentation per Master Plan:
+# - net_public: Web API public endpoints, Cloudflare Tunnel
+# - net_internal: Celery Workers, Redis Broker, Telethon Listener, NATS
+# - net_restricted_ops: PostGIS DB, Tactical Correlators, CoT Exporter
+
+services:
+  ai_worker:
+    build: .
+    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 40 -Q messages,celery
+    depends_on:
+      - redis
+      - db
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    volumes:
+      - media_data:/app/media
+      - ./worker:/app/worker
+      - ./database:/app/database
+      - ./data:/app/data
+    networks:
+      - net_internal
+      - net_restricted_ops
+    healthcheck:
+      test: ["NONE"]
+
+  ai_worker_llm:
+    build: .
+    command: celery -A worker.celery_app worker --loglevel=info -P gevent -c 10 -Q llm_tasks
+    depends_on:
+      - redis
+      - db
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    volumes:
+      - media_data:/app/media
+      - ./worker:/app/worker
+      - ./database:/app/database
+      - ./data:/app/data
+    networks:
+      - net_internal
+      - net_restricted_ops
+    healthcheck:
+      test: ["NONE"]
+
+  bot_ui:
+    build: .
+    command: python -m bot.main
+    depends_on:
+      - redis
+      - db
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    healthcheck:
+      test: ["NONE"]
+    volumes:
+      - ./bot:/app/bot
+      - ./worker:/app/worker
+      - ./database:/app/database
+    networks:
+      - net_internal
+      - net_restricted_ops
+
+  cloudflared:
+    command: tunnel --url http://web_api:80
+    depends_on:
+      - web_api
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    networks:
+      - net_public
+
+  db:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+    image: postgis/postgis:15-3.3
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - net_restricted_ops
+
+  listener:
+    build: .
+    command: python -m listener.telethon_client
+    depends_on:
+      - redis
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    volumes:
+      - media_data:/app/media
+      - ./listener:/app/listener
+      - ./database:/app/database
+    networks:
+      - net_internal
+    healthcheck:
+      test: ["NONE"]
+
+  redis:
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - net_internal
+      - net_restricted_ops
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data/jetstream", "-m", "8222"]
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
+    restart: unless-stopped
+    volumes:
+      - nats_data:/data/jetstream
+    networks:
+      - net_internal
+
+  web_api:
+    build: .
+    command: uvicorn api.main:app --host 0.0.0.0 --port 80
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    image: lyudyn-iskun-core:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - media_data:/app/media
+      - ./api:/app/api
+      - ./bot:/app/bot
+      - ./worker:/app/worker
+      - ./database:/app/database
+      - ./data:/app/data
+    networks:
+      - net_public
+      - net_internal
+      - net_restricted_ops
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:80/api/v1/alert/status', timeout=2)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  net_public:
+    driver: bridge
+    internal: false
+  net_internal:
+    driver: bridge
+    internal: true
+  net_restricted_ops:
+    driver: bridge
+    internal: true
+
+volumes:
+  media_data:
+  postgres_data:
+  redis_data:
+  nats_data:
