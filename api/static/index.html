@@ -1320,7 +1320,13 @@
             <span id="threat-banner-text">Завантаження оперативної обстановки...</span>
             <span id="cockpit-aviation-tag" style="display:none; background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:4px; margin-left:6px;"></span>
         </div>
-        <div class="threat-banner-right" style="font-size: 11px; color: var(--accent-cyan); display: flex; align-items: center; gap: 4px;">
+        <div class="threat-banner-right" style="font-size: 11px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
+            <div class="horizon-switch-box" style="display:flex; align-items:center; background:rgba(15,23,42,0.85); border:1px solid var(--border-dim); border-radius:6px; padding:2px; gap:2px; font-family:var(--font-mono); font-size:10px;">
+                <button type="button" class="hz-btn" onclick="setTimeHorizon(6, this)" title="Показати події за останні 6 годин" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">6г</button>
+                <button type="button" class="hz-btn" onclick="setTimeHorizon(12, this)" title="Показати події за останні 12 годин" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">12г</button>
+                <button type="button" class="hz-btn active" onclick="setTimeHorizon(24, this)" title="Показати події за добу" style="background:rgba(0,229,255,0.25); border:1px solid var(--accent-cyan); color:#00e5ff; padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">24г</button>
+                <button type="button" class="hz-btn" onclick="setTimeHorizon(72, this)" title="Показати події за 3 доби" style="background:transparent; border:none; color:var(--text-muted); padding:1px 5px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:700;">3д</button>
+            </div>
             <span id="threat-banner-action">Радар онлайн</span>
         </div>
     </div>
@@ -2042,7 +2048,31 @@
         let activeDrones = [];
         let rawEvents = [];
         let rawZones = [];
-        let selectedHours = 24;
+        let selectedHours = parseInt(localStorage.getItem('c4isr_selected_hours')) || 24;
+
+        function setTimeHorizon(hrs, btn) {
+            selectedHours = hrs;
+            localStorage.setItem('c4isr_selected_hours', hrs);
+            document.querySelectorAll('.hz-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.border = 'none';
+                b.style.color = 'var(--text-muted)';
+            });
+            const targetBtn = btn || document.querySelector(`.hz-btn[data-hours="${hrs}"]`) || document.querySelector(`.hz-btn[onclick*="${hrs}"]`);
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+                targetBtn.style.background = 'rgba(0,229,255,0.25)';
+                targetBtn.style.border = '1px solid var(--accent-cyan)';
+                targetBtn.style.color = '#00e5ff';
+            }
+            const slider = document.getElementById('timeline-slider');
+            if (slider) slider.value = hrs;
+            const lbl = document.getElementById('timeline-time-lbl');
+            if (lbl) lbl.textContent = `${hrs} год`;
+            renderTimeline(selectedHours);
+            renderDrawerFeed();
+        }
         let showHeadings = true;
         let isClusteringEnabled = false;
 
@@ -3139,13 +3169,34 @@
                     bgColor = 'rgba(56, 189, 248, 0.35)';
                 }
 
-                // Time calculation & formatting
+                // Time calculation & formatting (Strict Europe/Kyiv Military Time)
                 let timeStr = '--:--';
                 let timeDiffMin = 0;
+                let badgeLabel = '--:--';
                 if (e.detected_at) {
                     const dt = new Date(e.detected_at);
-                    timeStr = dt.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+                    // Force Europe/Kyiv timezone so operational military time is synchronized worldwide
+                    timeStr = dt.toLocaleTimeString('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit' });
                     timeDiffMin = Math.max(0, Math.floor((Date.now() - dt.getTime()) / 60000));
+
+                    // Smart calendar day & relative formatting
+                    const dtKyivDate = new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' }).format(dt);
+                    const nowKyivDate = new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' }).format(new Date());
+
+                    if (dtKyivDate === nowKyivDate) {
+                        if (timeDiffMin <= 40) {
+                            badgeLabel = `${timeDiffMin} хв тому`;
+                        } else {
+                            badgeLabel = timeStr;
+                        }
+                    } else {
+                        const diffHours = Math.floor(timeDiffMin / 60);
+                        if (diffHours < 36) {
+                            badgeLabel = `Вчора ${timeStr}`;
+                        } else {
+                            badgeLabel = `${dtKyivDate} ${timeStr}`;
+                        }
+                    }
                 }
                 const timeDiffText = timeDiffMin < 60 ? `${timeDiffMin} хв тому` : `${Math.floor(timeDiffMin/60)} год тому`;
                 const isRecent = timeDiffMin <= 35;
@@ -3186,7 +3237,7 @@
                                     ${isRecent ? `<span class="pin-pulse" style="position:absolute; width:100%; height:100%; border-radius:50%; border:1.5px solid ${borderColor}; animation: c4isr-pulse 1.8s infinite;"></span>` : ''}
                                 </div>
                                 <div style="background:rgba(6,9,17,0.92); border:1px solid ${borderColor}; border-radius:4px; padding:1px 5px; font-size:10px; font-weight:800; font-family:var(--font-mono); color:#f8fafc; margin-top:2px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.8); text-shadow:0 1px 2px #000;">
-                                    ${timeStr}
+                                    ${badgeLabel}
                                 </div>
                             </div>
                         `
@@ -4480,6 +4531,7 @@
         }
 
         switchOblast(currentOblast, true);
+        setTimeHorizon(selectedHours);
         fetchRadarDrones();
         fetchEventsAndZones().then(() => handleDeepLinks());
         fetchInfrastructurePOIs();
