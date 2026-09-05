@@ -105,6 +105,7 @@ services:
     - ./worker:/app/worker
     - ./database:/app/database
     - ./bot:/app/bot
+    - ./scripts:/app/scripts
   open_webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: lyudyn-iskun-v2-open_webui-1
