@@ -47,20 +47,19 @@ OBLAST_BOUNDS = {
     "sevastopol": {"min_lat": 44.40, "max_lat": 44.85, "min_lon": 33.35, "max_lon": 33.90},
 }
 
-def get_cached(key):
-    try:
-        val = redis_client.get(key)
-        if val:
-            return json.loads(val)
-    except Exception:
-        pass
-    return None
+from api.cache_layer import (
+    cache_manager,
+    TTL_RADAR_LIVE,
+    TTL_EVENTS_FEED,
+    TTL_STATS_AGGREGATES,
+    TTL_STATIC_LAYERS
+)
 
-def set_cached(key, val, ttl=60):
-    try:
-        redis_client.setex(key, ttl, json.dumps(val))
-    except Exception:
-        pass
+def get_cached(key):
+    return cache_manager.get(key)
+
+def set_cached(key, val, ttl=TTL_EVENTS_FEED):
+    return cache_manager.set(key, val, ttl=ttl)
 
 
 from api.cot import router as cot_router
@@ -641,6 +640,18 @@ def get_sun_shadow_calculation(lat: float, lon: float, dt: Optional[str] = None)
         except Exception:
             pass
     return geoint_engine.calculate_sun_position(lat, lon, parsed_dt)
+
+# ── Tactical Cache Management & Telemetry Endpoints ──
+@app.get("/api/v1/cache/metrics", tags=["Cache & Performance"])
+def get_cache_metrics():
+    """Returns real-time cache hit/miss rates, request counts, and connection health."""
+    return cache_manager.get_metrics()
+
+@app.post("/api/v1/cache/invalidate", tags=["Cache & Performance"])
+def invalidate_cache(pattern: str = "api:v3:events:*"):
+    """Non-blocking batch invalidator using SCAN + UNLINK for zero-lock flushing."""
+    cleared = cache_manager.invalidate_pattern(pattern)
+    return {"status": "ok", "pattern": pattern, "cleared_keys": cleared}
 
 # MBTiles Offline Server
 from api.mbtiles_server import router as mbtiles_router

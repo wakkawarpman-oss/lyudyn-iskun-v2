@@ -22,19 +22,25 @@ geolocator = Nominatim(user_agent="lyudyn_iskun_v2_prod", timeout=10)
 
 
 def flush_api_caches():
-    """Deletes cached API and analytics responses so the web map and bot pick up
-    new incidents on their NEXT poll/query instead of waiting out cache TTLs."""
+    """Deletes cached API and analytics responses using non-blocking SCAN + DELETE
+    so the single-threaded Redis event loop is never blocked during high RPS ingestion."""
     try:
         base_keys = ["api:events", "api:stats", "api:shelters", "api:geoint:zones", "osint:deep_analysis"]
         for k in base_keys:
             redis_client.delete(k)
-        for pattern in ["api:events:*", "api:zones:*"]:
-            matched = redis_client.keys(pattern)
-            if matched:
-                for mk in matched:
-                    redis_client.delete(mk)
+        
+        # Non-blocking scan_iter instead of blocking keys()
+        for pattern in ["api:events:*", "api:v3:events:*", "api:zones:*", "api:v3:stats*"]:
+            batch = []
+            for k in redis_client.scan_iter(match=pattern, count=500):
+                batch.append(k)
+                if len(batch) >= 500:
+                    redis_client.delete(*batch)
+                    batch = []
+            if batch:
+                redis_client.delete(*batch)
     except Exception as re:
-        logger.warning(f"Redis cache flush warning: {re}")
+        logger.warning(f"Redis non-blocking cache flush warning: {re}")
 logger = logging.getLogger(__name__)
 
 # Official government/military channels
