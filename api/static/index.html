@@ -103,7 +103,7 @@
             background: none;
             border: none;
             color: var(--text-primary);
-            font-size: 18px;
+            font-size: 16px;
             width: 36px;
             height: 36px;
             border-radius: 8px;
@@ -111,8 +111,27 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
         }
         .header-btn:active { background: rgba(255,255,255,0.08); }
+        .header-pill-btn {
+            width: auto !important;
+            min-width: 36px;
+            height: 32px !important;
+            padding: 0 10px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            border: 1px solid var(--border-dim) !important;
+            white-space: nowrap !important;
+            gap: 5px !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .header-pill-btn:hover {
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 10px rgba(0,229,255,0.25);
+        }
 
         .header-title-wrap {
             display: flex;
@@ -1001,6 +1020,56 @@
                 border-radius: 0;
                 border: none;
             }
+            .app-header {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+            .header-title {
+                display: none !important;
+            }
+            .header-title-wrap::after {
+                content: "ОКІНТ";
+                font-size: 13px;
+                font-weight: 800;
+                color: var(--accent-cyan);
+                letter-spacing: 0.8px;
+            }
+            .oblast-select-pill {
+                padding: 3px 18px 3px 6px !important;
+                font-size: 10px !important;
+                max-width: 110px !important;
+                text-overflow: ellipsis;
+            }
+            .mode-segmented-control {
+                gap: 1px !important;
+                padding: 1px !important;
+            }
+            .mode-btn {
+                padding: 3px 6px !important;
+                font-size: 9px !important;
+            }
+            #btn-sync-bot, #btn-open-ecosystem, #btn-open-graph {
+                display: none !important;
+            }
+            .mobile-drawer-quick-actions {
+                display: flex !important;
+            }
+            .status-peek-bar {
+                font-size: 10.5px !important;
+                padding: 6px 10px !important;
+            }
+            .peek-drag-indicator {
+                font-size: 10px !important;
+            }
+            .timeline-bar-wrap {
+                bottom: 105px !important;
+                left: 8px !important;
+                right: 8px !important;
+            }
+            .map-tool-rail {
+                right: 10px !important;
+                bottom: 120px !important;
+            }
         }
         .modal-head {
             padding: 14px 16px;
@@ -1161,11 +1230,11 @@
                     АНАЛІЗ
                 </button>
             </div>
-            <button class="header-btn" id="btn-sync-bot" title="Примусова актуалізація Telegram-джерел та синхронізація з ботом" style="border-color: #10b981; color: #10b981; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px; cursor: pointer;">🔄 СИНХР</button>
-            <button class="header-btn" id="btn-open-ecosystem" title="Повний реєстр інструментів, даних та нашарувань системи" style="border-color: #00e5ff; color: #00e5ff;">🕸️ СИСТЕМА</button>
-            <button class="header-btn" id="btn-open-graph" onclick="openGraphModal('osint')" title="Інтерактивний граф системи (Force Graph)" style="border-color: #a855f7; color: #c084fc; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; gap: 4px; cursor: pointer;">🕸️ ГРАФ</button>
-            <button class="header-btn" id="btn-search">🔍</button>
-            <a href="http://136.113.156.17:3000" target="_blank" class="header-btn" id="btn-open-cockpit" title="AI Cockpit / Open WebUI" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">🤖</a>
+            <button class="header-btn header-pill-btn" id="btn-sync-bot" title="Примусова актуалізація Telegram-джерел та синхронізація з ботом" style="border-color: #10b981; color: #10b981;">🔄 СИНХР</button>
+            <button class="header-btn header-pill-btn" id="btn-open-ecosystem" title="Повний реєстр інструментів, даних та нашарувань системи" style="border-color: #00e5ff; color: #00e5ff;">🕸️ СИСТЕМА</button>
+            <button class="header-btn header-pill-btn" id="btn-open-graph" onclick="openGraphModal('osint')" title="Інтерактивний граф системи (Force Graph)" style="border-color: #a855f7; color: #c084fc;">🕸️ ГРАФ</button>
+            <button class="header-btn" id="btn-search" title="Швидкий пошук POI">🔍</button>
+            <a href="https://t.me/fwGle3508d997814_bot" target="_blank" rel="noopener noreferrer" class="header-btn" id="btn-open-cockpit" title="Telegram Бот ОКІНТ-ПРО" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">🤖</a>
         </div>
     </header>
 
@@ -1466,6 +1535,12 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <span style="font-size:14px; font-weight:800; color:var(--accent-cyan); text-transform:uppercase;">ОПЕРАТИВНА ОБСТАНОВКА</span>
                 <button class="header-btn" id="btn-close-overview" style="font-size:14px;">✕</button>
+            </div>
+            <!-- Quick actions on mobile (hidden on desktop) -->
+            <div class="mobile-drawer-quick-actions" style="display:none; gap:8px; margin-bottom:12px;">
+                <button class="header-btn header-pill-btn" onclick="document.getElementById('btn-sync-bot')?.click()" style="flex:1; border-color: #10b981; color: #10b981; justify-content:center;">🔄 СИНХР</button>
+                <button class="header-btn header-pill-btn" onclick="document.getElementById('ecosystem-modal')?.classList.add('open')" style="flex:1; border-color: #00e5ff; color: #00e5ff; justify-content:center;">🕸️ СИСТЕМА</button>
+                <button class="header-btn header-pill-btn" onclick="openGraphModal('osint')" style="flex:1; border-color: #a855f7; color: #c084fc; justify-content:center;">🕸️ ГРАФ</button>
             </div>
             <div class="overview-stat-grid">
                 <div class="stat-box">
@@ -2726,7 +2801,9 @@
                 const srcDisplay = isNumeric ? `ID:${chClean}` : (chClean ? `@${chClean}` : 'OSINT');
                 let srcLink = e.source_link || '';
                 if (!srcLink && chClean && !isNumeric && e.message_id) {
-                    srcLink = `https://t.me/${chClean}/${e.message_id}`;
+                    srcLink = `https://t.me/s/${chClean}/${e.message_id}`;
+                } else if (srcLink && srcLink.includes('t.me/') && !srcLink.includes('t.me/s/')) {
+                    srcLink = srcLink.replace('t.me/', 't.me/s/');
                 }
 
                 let icon;
@@ -2997,7 +3074,9 @@
             // Build direct Telegram link ONLY for valid handles (preventing redirects to telegram.org)
             let srcLink = e.source_link || '';
             if (!srcLink && chClean && !isNumeric && e.message_id) {
-                srcLink = `https://t.me/${chClean}/${e.message_id}`;
+                srcLink = `https://t.me/s/${chClean}/${e.message_id}`;
+            } else if (srcLink && srcLink.includes('t.me/') && !srcLink.includes('t.me/s/')) {
+                srcLink = srcLink.replace('t.me/', 't.me/s/');
             }
 
             const eventTitle = EVENT_TYPE_LABELS[e.event_type] || '⚡ Оперативна подія';
@@ -3117,6 +3196,13 @@
         });
         document.getElementById('btn-close-overview')?.addEventListener('click', () => {
             overviewDrawer.classList.remove('open');
+        });
+
+        // Tap-to-dismiss overlays when tapping empty map space
+        map.on('click', () => {
+            closeObjectSheet();
+            closeLayersSheet();
+            overviewDrawer?.classList.remove('open');
         });
 
         function renderDrawerFeed() {
@@ -3393,7 +3479,9 @@
         timelineSlider?.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             selectedHours = val;
-            if (timelineTimeLbl) timelineTimeLbl.textContent = `${val} год`;
+            const cutoffDate = new Date(Date.now() - val * 3600 * 1000);
+            const timeStr = cutoffDate.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+            if (timelineTimeLbl) timelineTimeLbl.textContent = `${val} год (з ${timeStr})`;
             filterEventsByHours(val);
         });
 
@@ -3488,6 +3576,9 @@
         const addModal = document.getElementById('add-marker-modal');
         document.getElementById('tab-add')?.addEventListener('click', () => {
             setActiveTab('tab-add');
+            overviewDrawer.classList.remove('open');
+            layersSheet.classList.remove('open');
+            closeObjectSheet();
             const center = map.getCenter();
             const coordDisplay = document.getElementById('add-marker-coord-display');
             if (coordDisplay) {
@@ -3546,6 +3637,9 @@
         const reportsModal = document.getElementById('reports-modal');
         document.getElementById('tab-reports')?.addEventListener('click', () => {
             setActiveTab('tab-reports');
+            overviewDrawer.classList.remove('open');
+            layersSheet.classList.remove('open');
+            closeObjectSheet();
             const cfg = OBLAST_CONFIG[currentOblast] || OBLAST_CONFIG['kyiv'];
             const activeThreatCount = activeDrones.filter(d => currentOblast === 'all' || (currentOblast === 'kyiv' && d.is_kyiv_threat) || (currentOblast === 'dnipropetrovsk' && d.is_dnipro_threat) || (currentOblast === 'zaporizhzhia' && d.is_zaporizhzhia_threat)).length;
 
