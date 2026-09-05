@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS restricted_ops.tactical_events (
 
 -- 6. Затвердження доступу (Approvals)
 CREATE TABLE IF NOT EXISTS restricted_ops.access_requests (
-    request_id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
+    request_id VARCHAR(128) PRIMARY KEY,
+    user_id VARCHAR(128) NOT NULL,
     user_email VARCHAR(128) NOT NULL,
     requested_resource VARCHAR(64) NOT NULL,
     target_sector VARCHAR(64) NOT NULL,
@@ -83,19 +83,19 @@ CREATE TABLE IF NOT EXISTS restricted_ops.access_requests (
     status VARCHAR(32) DEFAULT 'PENDING',
     requested_at TIMESTAMPTZ DEFAULT NOW(),
     decided_at TIMESTAMPTZ,
-    decided_by UUID,
+    decided_by VARCHAR(128),
     decision_reason TEXT
 );
 
 CREATE TABLE IF NOT EXISTS restricted_ops.access_approvals (
-    approval_id UUID PRIMARY KEY,
-    request_id UUID REFERENCES restricted_ops.access_requests(request_id),
-    user_id UUID NOT NULL,
+    approval_id VARCHAR(128) PRIMARY KEY,
+    request_id VARCHAR(128) REFERENCES restricted_ops.access_requests(request_id),
+    user_id VARCHAR(128) NOT NULL,
     resource_type VARCHAR(64) NOT NULL,
     geo_scope VARCHAR(64) NOT NULL,
     valid_from TIMESTAMPTZ NOT NULL,
     valid_to TIMESTAMPTZ NOT NULL,
-    granted_by UUID NOT NULL,
+    granted_by VARCHAR(128) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -106,7 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_approvals_lookup
 CREATE TABLE IF NOT EXISTS audit_sec.security_audit_trail (
     log_id BIGSERIAL PRIMARY KEY,
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    actor_id UUID NOT NULL,
+    actor_id VARCHAR(128) NOT NULL,
     actor_role VARCHAR(64) NOT NULL,
     action VARCHAR(64) NOT NULL,
     resource_type VARCHAR(64) NOT NULL,
