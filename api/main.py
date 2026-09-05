@@ -311,6 +311,23 @@ def get_accuracy_metrics(hours: int = 72, db: Session = Depends(get_db)):
     set_cached(cache_key, data, ttl=60)
     return data
 
+
+@app.get("/api/datalake/stats")
+def get_datalake_statistics():
+    """Returns storage metrics and partition catalog for Parquet Data Lake (P3.2)."""
+    from worker.data_lake import get_data_lake_stats
+    return get_data_lake_stats()
+
+
+@app.post("/api/datalake/archive")
+def trigger_datalake_archive(days_back: int = 1, db: Session = Depends(get_db)):
+    """Triggers archival of events older than days_back to Parquet Data Lake."""
+    from datetime import datetime, timedelta
+    from worker.data_lake import archive_events_to_parquet
+    threshold = datetime.utcnow() - timedelta(days=days_back)
+    return archive_events_to_parquet(db, threshold_date=threshold)
+
+
 @app.get("/api/shelters")
 @app.get("/api/v1/shelters")
 def get_map_shelters(db: Session = Depends(get_db)):
@@ -635,10 +652,10 @@ def api_drone_raycast(req: DroneRaycastRequest):
 # ─── New Tactical C4ISR & Target Verification Endpoints ───
 
 @app.get("/api/v1/threats/wez-envelopes")
-def get_wez_envelopes():
-    """Returns Weapon Engagement Zones (WEZ) & Radar detection domes for enemy air defense assets."""
+def get_wez_envelopes(target_alt_m: float = 50.0):
+    """Returns Weapon Engagement Zones (WEZ), terrain-aware radar horizon, and LOS domes (P3.1)."""
     from worker.osint.wez_envelopes import generate_wez_geojson
-    return generate_wez_geojson()
+    return generate_wez_geojson(target_alt_m=target_alt_m)
 
 class LobTriangulationRequest(BaseModel):
     bearings: List[Dict[str, Any]]

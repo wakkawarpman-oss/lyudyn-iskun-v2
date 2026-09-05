@@ -800,6 +800,14 @@ def cleanup_old_events(retention_hours: int = 24):
     try:
         threshold_24h = datetime.utcnow() - timedelta(hours=retention_hours)
         
+        # P3.2 Parquet Data Lake: Preserve all historical events to columnar Parquet before purging
+        try:
+            from worker.data_lake import archive_events_to_parquet
+            lake_res = archive_events_to_parquet(db, threshold_date=threshold_24h)
+            logger.info(f"Parquet Data Lake: Preserved {lake_res.get('archived_records', 0)} events prior to prune.")
+        except Exception as lake_err:
+            logger.warning(f"Parquet Data Lake archival warning: {lake_err}")
+
         # Tier 1: Delete noise older than 24h
         garbage_deleted = db.query(DetectedEvent).filter(
             DetectedEvent.detected_at < threshold_24h,

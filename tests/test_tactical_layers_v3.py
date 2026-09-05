@@ -43,6 +43,34 @@ def test_wez_envelopes_structure():
         assert props["color"].startswith("#")
 
 
+def test_wez_terrain_aware_los():
+    """Verify P3.1 terrain-aware radar horizon and LOS polygon calculations."""
+    from worker.osint.wez_envelopes import (
+        estimate_ground_elevation,
+        calculate_radar_horizon_km,
+        generate_terrain_aware_polygon,
+    )
+
+    # Elevation estimates
+    crimea_coast = estimate_ground_elevation(45.0, 35.83)
+    belgorod_upland = estimate_ground_elevation(50.59, 36.58)
+    assert crimea_coast < belgorod_upland
+
+    # Radar horizon against low-altitude target (50m) vs high-altitude (2000m)
+    horizon_low = calculate_radar_horizon_km(radar_elev_m=200.0, mast_m=15.0, target_alt_m=50.0)
+    horizon_high = calculate_radar_horizon_km(radar_elev_m=200.0, mast_m=15.0, target_alt_m=2000.0)
+    assert horizon_low < horizon_high
+    assert 70.0 < horizon_low < 110.0
+
+    # Polygon generation
+    poly = generate_terrain_aware_polygon(
+        lat=50.5954, lon=36.5872, max_range_km=250.0, mast_m=25.0, target_alt_m=50.0, num_radials=36
+    )
+    assert len(poly) == 37  # 36 radials + 1 closing point
+    assert poly[0] == poly[-1]  # Closed ring
+
+
+
 def test_lob_forward_geodesic():
     """Verify forward geodesic coordinate projection on WGS-84."""
     start_lat, start_lon = 50.4501, 30.5234 # Kyiv center

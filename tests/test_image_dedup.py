@@ -70,3 +70,41 @@ def test_find_similar_event_handles_empty_hash():
     fake_db = MagicMock()
     assert find_similar_event(fake_db, "") is None
     fake_db.query.assert_not_called()
+
+
+def test_compute_multihash_and_embedding(tmp_path):
+    from worker.osint.image_dedup import (
+        compute_multihash,
+        compute_image_embedding,
+        cosine_similarity,
+        is_semantic_duplicate,
+    )
+
+    orig_p = str(tmp_path / "orig2.jpg")
+    crop_p = str(tmp_path / "crop2.jpg")
+    diff_p = str(tmp_path / "diff2.jpg")
+
+    _make_test_image(orig_p, seed=10)
+    Image.open(orig_p).crop((5, 5, 195, 195)).resize((200, 200)).save(crop_p, quality=85)
+    _make_test_image(diff_p, seed=999)
+
+    m_orig = compute_multihash(orig_p)
+    assert "phash" in m_orig and "dhash" in m_orig and "whash" in m_orig and "colorhash" in m_orig
+
+    emb_orig = compute_image_embedding(orig_p)
+    emb_crop = compute_image_embedding(crop_p)
+    emb_diff = compute_image_embedding(diff_p)
+
+    assert len(emb_orig) == 128
+    assert len(emb_crop) == 128
+
+    sim_crop = cosine_similarity(emb_orig, emb_crop)
+    assert sim_crop > 0.95
+
+    # Check semantic duplicate detection
+    is_dup, score, reason = is_semantic_duplicate(
+        m_orig["phash"], compute_phash(crop_p), emb_orig, emb_crop
+    )
+    assert is_dup is True
+    assert score >= 50.0
+
