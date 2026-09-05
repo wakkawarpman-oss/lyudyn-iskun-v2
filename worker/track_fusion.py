@@ -88,6 +88,7 @@ class AerodynamicEnvelope:
     v_ref_ms: float = 50.0  # референсна швидкість для нормалізації
     threat_category: str = "UAV"  # UAV, CRUISE_MISSILE, BALLISTIC
     deployment_time_min: float = 30.0  # хвилин на розгортання
+    a_max_lateral_g: float = 2.5       # максимальне бічне перевантаження, g
 
     def effective_q(self, v_ms: float) -> float:
         """Квадратична модель q_eff з насиченням."""
@@ -100,6 +101,43 @@ class AerodynamicEnvelope:
     def clamp_velocity(self, v_ms: float) -> float:
         """Жорстке обмеження швидкості фізичними межами планера."""
         return max(self.v_stall_ms, min(self.v_dive_ms, v_ms))
+
+    def clamp_kinematics(
+        self,
+        current_vx: float,
+        current_vy: float,
+        dt_sec: float = 1.0,
+        target_vx: Optional[float] = None,
+        target_vy: Optional[float] = None
+    ) -> Tuple[float, float, bool]:
+        """Обмежує вектор швидкості та кутову швидкість розвороту планера за a_max_lateral_g."""
+        v_curr = math.hypot(current_vx, current_vy)
+        h_curr = math.degrees(math.atan2(current_vy, current_vx)) % 360.0
+
+        if target_vx is None or target_vy is None:
+            v_clamped = self.clamp_velocity(v_curr) if v_curr > 0 else self.v_cruise_ms
+            scale = v_clamped / v_curr if v_curr > 0 else 1.0
+            return current_vx * scale, current_vy * scale, abs(v_clamped - v_curr) > 0.01
+
+        v_targ = math.hypot(target_vx, target_vy)
+        h_targ = math.degrees(math.atan2(target_vy, target_vx)) % 360.0
+
+        v_targ_clamped = self.clamp_velocity(v_targ) if v_targ > 0 else self.v_cruise_ms
+        eff_v = max(self.v_stall_ms, v_curr)
+        a_max_ms2 = getattr(self, "a_max_lateral_g", 2.5) * 9.80665
+        omega_max_rad = a_max_ms2 / eff_v
+        max_d_heading = math.degrees(omega_max_rad * max(0.01, dt_sec))
+
+        d_heading = ((h_targ - h_curr + 180.0) % 360.0) - 180.0
+        clamped = False
+        if abs(d_heading) > max_d_heading:
+            clamped = True
+            h_new = (h_curr + math.copysign(max_d_heading, d_heading)) % 360.0
+        else:
+            h_new = h_targ
+
+        rad = math.radians(h_new)
+        return v_targ_clamped * math.cos(rad), v_targ_clamped * math.sin(rad), (clamped or abs(v_targ_clamped - v_targ) > 0.01)
 
 
 # Аеродинамічна база даних загроз — верифікована на OSINT-даних
@@ -442,8 +480,40 @@ class KalmanTrackFilter:
         self.kf.predict()
 
     def update(self, z: np.ndarray):
-        """Крок оновлення по вимірюванню z = [x, y]."""
+        """Крок оновлення по вимірюванню z = [x, y] із кінематичним клампінгом."""
+        x_prev = float(self.kf.x[0, 0])
+        y_prev = float(self.kf.x[1, 0])
+        vx_prev = float(self.kf.x[2, 0])
+        vy_prev = float(self.kf.x[3, 0])
+
         self.kf.update(z)
+
+        vx_post = float(self.kf.x[2, 0])
+        vy_post = float(self.kf.x[3, 0])
+
+        dt = max(0.1, self.dt)
+        meas_vx = (float(z[0, 0]) - x_prev) / dt
+        meas_vy = (float(z[1, 0]) - y_prev) / dt
+
+        if abs(vx_post - vx_prev) < 1e-4 and abs(vy_post - vy_prev) < 1e-4:
+            alpha = 0.5
+            target_vx = vx_prev + alpha * (meas_vx - vx_prev)
+            target_vy = vy_prev + alpha * (meas_vy - vy_prev)
+        else:
+            target_vx = vx_post
+            target_vy = vy_post
+
+        vx_clamped, vy_clamped, was_clamped = self.aero.clamp_kinematics(
+            current_vx=vx_prev,
+            current_vy=vy_prev,
+            dt_sec=dt,
+            target_vx=target_vx,
+            target_vy=target_vy
+        )
+        self.kf.x[2, 0] = vx_clamped
+        self.kf.x[3, 0] = vy_clamped
+        if was_clamped:
+            self._last_aero_clamped = True
 
     @property
     def state(self) -> dict:

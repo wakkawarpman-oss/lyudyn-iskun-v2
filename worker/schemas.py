@@ -229,3 +229,21 @@ class FirmsThermalSchema(BaseModel):
     acq_time: str
     satellite: str = "Suomi-NPP VIIRS (375m)"
 
+
+class ThreatAttributionFactor(BaseModel):
+    factor_name: str
+    impact_percent: float
+    log_odds_delta: float = 0.0
+    description: str
+    evidence_type: str = "sensor"
+
+
+class ThreatExplanationSchema(BaseModel):
+    threat_probability: float
+    threat_prob_percent: float
+    threat_level: str
+    primary_driver: str
+    is_terrain_masked: bool = False
+    factors: list[ThreatAttributionFactor] = Field(default_factory=list)
+
+

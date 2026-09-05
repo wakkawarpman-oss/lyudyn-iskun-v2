@@ -23,6 +23,7 @@ class AeroLimits:
     q_max: float       # Максимальний шум процесу (насичення)
     beta: float        # Коефіцієнт маневреності
     v_ref: float       # Крейсерська швидкість
+    a_max_lateral_g: float = 2.5  # Максимальне бічне перевантаження у одиницях g
 
 
 # База ТТХ на основі OSINT-даних (AlabugaLeaks, звіти)
@@ -59,6 +60,66 @@ class KalmanTrackFilterV2:
         # Квадратична модель
         q_calc = self.limits.q_base * (1.0 + self.limits.beta * (v_clamped / self.limits.v_ref)**2)
         return min(self.limits.q_max, q_calc)
+
+    def clamp_kinematics(
+        self,
+        current_vx: float,
+        current_vy: float,
+        dt_sec: float = 1.0,
+        target_vx: Optional[float] = None,
+        target_vy: Optional[float] = None
+    ) -> Tuple[float, float, Dict[str, Any]]:
+        """
+        Physics-Informed Kinematic Clamping.
+        Enforces maximum lateral acceleration (a_lat <= a_max_lateral_g * 9.81 m/s^2)
+        and aerodynamic velocity envelope [v_stall_ms, v_dive_ms].
+        """
+        v_current = math.hypot(current_vx, current_vy)
+        h_current = math.degrees(math.atan2(current_vy, current_vx)) % 360.0
+
+        if target_vx is None or target_vy is None:
+            v_clamped = max(self.limits.v_stall_ms, min(v_current, self.limits.v_dive_ms)) if v_current > 0 else self.limits.v_ref
+            scale = v_clamped / v_current if v_current > 0 else 1.0
+            return current_vx * scale, current_vy * scale, {
+                "v_ms": round(v_clamped, 2),
+                "heading_deg": round(h_current, 1),
+                "clamped_speed": abs(v_clamped - v_current) > 0.01,
+                "clamped_turn": False
+            }
+
+        v_target = math.hypot(target_vx, target_vy)
+        h_target = math.degrees(math.atan2(target_vy, target_vx)) % 360.0
+
+        # 1. Clamp velocity to aero limits
+        v_target_clamped = max(self.limits.v_stall_ms, min(v_target, self.limits.v_dive_ms)) if v_target > 0 else self.limits.v_ref
+
+        # 2. Enforce max lateral acceleration turn rate: omega_max = a_lat_max / v (rad/s)
+        eff_v = max(self.limits.v_stall_ms, v_current)
+        a_max_ms2 = getattr(self.limits, "a_max_lateral_g", 2.5) * 9.80665
+        omega_max_rad = a_max_ms2 / eff_v
+        max_d_heading_deg = math.degrees(omega_max_rad * max(0.01, dt_sec))
+
+        # Calculate shortest angular difference in [-180, 180]
+        d_heading = ((h_target - h_current + 180.0) % 360.0) - 180.0
+
+        clamped_turn = False
+        if abs(d_heading) > max_d_heading_deg:
+            clamped_turn = True
+            h_new_deg = (h_current + math.copysign(max_d_heading_deg, d_heading)) % 360.0
+        else:
+            h_new_deg = h_target
+
+        h_new_rad = math.radians(h_new_deg)
+        new_vx = v_target_clamped * math.cos(h_new_rad)
+        new_vy = v_target_clamped * math.sin(h_new_rad)
+
+        return new_vx, new_vy, {
+            "v_ms": round(v_target_clamped, 2),
+            "heading_deg": round(h_new_deg, 1),
+            "clamped_speed": abs(v_target_clamped - v_target) > 0.01,
+            "clamped_turn": clamped_turn,
+            "max_d_heading_deg": round(max_d_heading_deg, 2),
+        }
 
     def estimate_eta_cone(self, state_x: float, state_y: float, heading: float, v_ms: float, time_horizon_sec: int) -> Dict[str, Any]:
         """

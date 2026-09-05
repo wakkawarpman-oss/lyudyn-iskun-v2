@@ -37,6 +37,24 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def calculate_speed_of_sound(temp_celsius: float = 15.0) -> float:
+    """
+    Calculates temperature-compensated speed of sound in dry air:
+    c = 331.3 * sqrt(1.0 + T / 273.15) m/s
+    """
+    return round(331.3 * math.sqrt(max(0.0, 1.0 + float(temp_celsius) / 273.15)), 2)
+
+
+def calculate_tdoa_propagation_time_sec(distance_km: float, temp_celsius: float = 15.0) -> float:
+    """
+    Calculates acoustic signal propagation time from drone position to sensor:
+    t = distance_m / c(T)
+    """
+    c = calculate_speed_of_sound(temp_celsius)
+    distance_m = distance_km * 1000.0
+    return round(distance_m / max(1.0, c), 4)
+
+
 def record_acoustic_hit(
     lat: float,
     lng: float,
@@ -127,28 +145,36 @@ def get_active_acoustic_hits() -> List[dict]:
 def corroborate_drone_with_acoustics(
     drone_lat: float,
     drone_lng: float,
-    max_radius_km: float = 22.0
+    max_radius_km: float = 22.0,
+    temp_celsius: float = 15.0
 ) -> dict:
     """
-    Checks if an active drone position is corroborated by nearby microphone hits.
+    Checks if an active drone position is corroborated by nearby microphone hits,
+    with weather-compensated TDoA acoustic propagation physics.
     """
     hits = get_active_acoustic_hits()
     nearby_sensors = []
+    c_sound = calculate_speed_of_sound(temp_celsius)
 
     for h in hits:
         d = haversine_km(drone_lat, drone_lng, h["lat"], h["lng"])
         if d <= max_radius_km:
+            delay_sec = calculate_tdoa_propagation_time_sec(d, temp_celsius)
             nearby_sensors.append({
                 "sensor_id": h["sensor_id"],
                 "source": h["source"],
                 "distance_km": round(d, 1),
                 "azimuth": h.get("azimuth"),
                 "frequency_hz": h.get("frequency_hz", 142.0),
-                "snr_db": h.get("snr_db", 18.0)
+                "snr_db": h.get("snr_db", 18.0),
+                "tdoa_delay_sec": delay_sec,
+                "speed_of_sound_ms": c_sound,
             })
 
     return {
         "corroborated": len(nearby_sensors) > 0,
         "sensor_count": len(nearby_sensors),
+        "speed_of_sound_ms": c_sound,
+        "temp_celsius": float(temp_celsius),
         "sensors": nearby_sensors,
     }

@@ -499,3 +499,83 @@ def format_threat_summary(assessment: ThreatAssessment) -> str:
     sensors_joined = "+".join(sensors_str) if sensors_str else "None"
     return f"{pct}% [{sensors_joined}] ({assessment.confidence_label})"
 
+
+def explain_threat_assessment(
+    sensor_data: Dict[str, Optional[float]],
+    altitude_m: float = 100.0,
+    in_river_canyon: bool = False,
+    target_type: str = "SHAHED_136"
+) -> Dict[str, Any]:
+    """
+    Explainable AI (XAI) Attribution Engine.
+    Computes exact relative attribution percentages for all evidence factors
+    based on their log-odds deltas, producing actionable tactical explanations.
+    """
+    is_masked = (altitude_m < 80.0) and in_river_canyon
+
+    descriptions = {
+        "RADAR": "Радіолокаційний контакт (доплер/швидкість цілі)",
+        "ACOUSTIC": "Акустичний контакт постів перехоплення (звук двигуна MD-550)",
+        "SIGINT": "Радіоперехоплення телеметрії/керування (5.8 GHz/Mesh)",
+        "OSINT": "Оперативні моніторингові канали та звіти ПС ЗСУ",
+        "ADS_B": "Транспондер цивільної/військової авіації",
+    }
+
+    deltas = {}
+    for sensor, dt_sec in sensor_data.items():
+        s_upper = sensor.upper()
+        if dt_sec is not None:
+            lr = calculate_decayed_lr(s_upper, dt_sec, is_hit=True)
+            status = f"Підтверджено ({round(dt_sec, 1)}с тому)"
+        else:
+            if is_masked and s_upper in ["RADAR", "SIGINT"]:
+                lr = 1.0
+                status = "Маскування рельєфом (русло річки, без штрафу)"
+            else:
+                lr = calculate_decayed_lr(s_upper, 0.0, is_hit=False)
+                status = "Відсутній сигнал (штраф за втрату контакту)"
+
+        delta_lo = math.log(max(1e-4, lr))
+        deltas[s_upper] = {
+            "lr": round(lr, 3),
+            "delta_log_odds": round(delta_lo, 3),
+            "status": status,
+            "desc": descriptions.get(s_upper, f"Джерело {s_upper}")
+        }
+
+    total_abs_delta = sum(abs(v["delta_log_odds"]) for v in deltas.values())
+
+    factors = []
+    for s_name, data in deltas.items():
+        weight_pct = round((abs(data["delta_log_odds"]) / max(1e-4, total_abs_delta)) * 100.0, 1)
+        sign_str = "+" if data["delta_log_odds"] >= 0 else "-"
+        factors.append({
+            "factor_name": s_name,
+            "impact_percent": weight_pct,
+            "log_odds_delta": data["delta_log_odds"],
+            "description": f"{sign_str}{weight_pct}%: {data['desc']} — {data['status']}",
+            "evidence_type": "sensor"
+        })
+
+    factors.sort(key=lambda x: x["impact_percent"], reverse=True)
+
+    prob = _fuse_multi_domain_dict(sensor_data, altitude_m, in_river_canyon)
+
+    level = "LOW"
+    if prob >= 0.75:
+        level = "CRITICAL" if prob >= 0.90 else "HIGH"
+    elif prob >= 0.50:
+        level = "MEDIUM"
+
+    primary_driver = factors[0]["factor_name"] if factors else "UNKNOWN"
+
+    return {
+        "threat_probability": round(prob, 4),
+        "threat_prob_percent": round(prob * 100.0, 1),
+        "threat_level": level,
+        "primary_driver": primary_driver,
+        "is_terrain_masked": is_masked,
+        "factors": factors
+    }
+
+

@@ -9,9 +9,9 @@
 
 ## 📌 1. EXECUTIVE SUMMARY & MISSION
 
-**Lyudyn-Iskun V2** is a sovereign, real-time tactical OSINT (Open-Source Intelligence) and C4ISR warning platform dedicated to **Kyiv and Kyiv Region (Київ та Київська область)**.
+**C4ISR OKINT-PRO (Lyudyn-Iskun V2)** is a sovereign, real-time tactical Multi-Domain Situational Awareness and Early Warning platform covering **all 24 Oblasts of Ukraine, Kyiv City, Sevastopol, and Crimea**.
 
-The system continuously monitors 20+ military, official, and situational Telegram monitoring channels, parses unverified incoming messages via Groq LLM & Regex NLP, verifies spatial coordinates with PostGIS, computes C2 consensus scores, calculates blast danger radii, and delivers actionable alerts via Telegram Bot and an interactive OpenStreetMap GEOINT dashboard.
+The system continuously ingests 84+ military, official, and situational Telegram monitoring channels, radar feeds (Neptun / 3D radar), acoustic sensor networks (142 Hz MD-550 signature), SIGINT/ELINT RF intercepts, CCTV lines, and NASA VIIRS/FIRMS thermal hotspots. It fuses all multi-INT data via a Physics-Informed Kalman Filter (EKF), Bayesian Belief Networks (BBN) with Explainable AI (XAI), and protects the C2 operator through deterministic Anti-Hallucination and Anti-PSYOP Guardrails.
 
 ---
 
@@ -22,63 +22,50 @@ lyudyn-iskun-v2/
 ├── .env                              # Environment variables & API tokens (DO NOT COMMIT SECRETS)
 ├── .env.example                      # Template for environment configuration
 ├── .gitignore                        # Git ignore patterns
-├── Dockerfile                        # Multi-stage Python 3.11-slim container definition
+├── Dockerfile                        # Multi-stage Python 3.11 container definition
 ├── docker-compose.yml                # Microservices orchestration (7 services)
 ├── requirements.txt                  # Locked Python dependencies
 │
 ├── api/                              # 🌐 FASTAPI & WEB GEOINT DASHBOARD
-│   ├── main.py                       # FastAPI application & REST endpoints (/api/events, /api/stats, /api/shelters, /api/geoint/zones)
-│   └── static/
-│       └── index.html                # Leaflet.js interactive OpenStreetMap dashboard with shelter layers & blast radii
+│   ├── main.py                       # FastAPI application & REST endpoints (/api/events, /api/stats, /api/radar/drones)
+│   ├── cot.py                        # Cursor-on-Target (CoT XML 2.0 / MIL-STD-2525C) ATAK DataPackage exporter
+│   └── static/                       # Leaflet.js Canvas-accelerated tactical HUD with LIVE ONLY filter
 │
-├── api/cot.py                        # Cursor-on-Target (CoT) XML + ATAK DataPackage ZIP export, token-gated
-├── services/analytics_service.py     # Report formatting (analytics/top events) over database/repository.py
-├── database/repository.py            # EventRepository — query layer used by services/
-│
-├── bot/                              # 🤖 AIOGRAM 3 TELEGRAM BOT INTERFACE
-│   ├── main.py                       # Bot entrypoint, dispatcher & long-polling loop
-│   ├── handlers/                     # Modular command & callback handlers, split by domain:
-│   │   ├── __init__.py               #   aggregates sub-routers in declaration-order
-│   │   ├── admin.py                  #   /clean, /sync, /delkey, key management (admin-gated)
-│   │   ├── alerts.py                 #   incoming alert formatting & delivery
-│   │   ├── analytics.py              #   /analytics, /top
-│   │   ├── common.py                 #   /start, shared keyboard/menu handlers
-│   │   ├── osint.py                  #   Photo OSINT (EXIF/GeoSpy/Vision), /key
-│   │   ├── radar.py                  #   /report, /resonance
-│   │   ├── shelters.py               #   bomb shelter / metro station lookup
-│   │   └── utils.py                  #   shared helpers: safe_send, is_admin, admin_only, redis_client
-│   ├── keyboards.py                  # Reply & inline keyboard layouts
-│   ├── map_generator.py              # Static OSM map PNG renderer using Pillow Lanczos & staticmap
-│   ├── memes_db.py                   # Black humor & Dasha meme database (psychological decompression)
-│   └── threat_report.py              # Strategic threat assessment generator & TTX reference card
-│
-├── database/                         # 🗄️ POSTGIS DATABASE & PERSISTENCE
-│   └── models.py                     # SQLAlchemy models: DetectedEvent, UserApiKey, BombShelter
+├── database/                         # 🗄️ POSTGIS DATABASE & REGISTRIES
+│   ├── models.py                     # SQLAlchemy models: DetectedEvent, UserApiKey, BombShelter
+│   ├── military_units_registry.json  # 14 Russian UAV military units (924 ДЦ, Сенеж, Рубікон, Варяг)
+│   └── launch_sites_registry.json    # GPS coordinates of enemy launch sites for trajectory retrodiction
 │
 ├── listener/                         # 📡 TELETHON TELEGRAM INGESTION
-│   └── telethon_client.py            # Async Telethon listener across 20+ monitored channels (channel
-│                                      # whitelist is inline in worker/tasks.py, not a separate file)
+│   └── telethon_client.py            # Async Telethon listener across 84+ monitored channels
 │
-├── worker/                           # ⚙️ CELERY AI PROCESSING PIPELINE
-│   ├── celery_app.py                 # Celery app config, queue routing & Celery Beat schedules
-│   ├── tasks.py                      # Main message processing task, deduplication, 24h retention pruning
-│   ├── llm_engine.py                 # Groq LLM extraction (openai/gpt-oss-120b) + Fallback regex + Kyiv filter
-│   ├── canonical_geo.py              # Toponym → canonical name/coords resolver, is_fallback_geo detection
-│   ├── geo_extractors/               # Regex address parser + tactical POI matcher (60+ landmarks)
-│   ├── schemas.py                    # Pydantic schemas for event extraction validation
-│   ├── watchdog.py                   # Liveness monitor, health checker & tunnel sync
-│   └── osint/                        # 🔍 SPECIALIZED OSINT ANALYSIS MODULES
-│       ├── ai_geolocation.py         # GeoSpy AI visual landscape recognition
-│       ├── exif_extractor.py         # EXIF metadata, GPS coordinates & camera extractor
-│       ├── geoint_engine.py          # Solar azimuth, shadow chrono-location & blast danger radii
-│       ├── rss_intel.py              # RSS OSINT feed parser (used in worker/tasks.py: fetch_rss_news_task)
-│       └── sentiment.py              # Groq-powered psychological tension/panic scorer (openai/gpt-oss-20b) —
-│                                      # NOT YET wired into the pipeline, see roadmap below
+├── worker/                           # ⚙️ CELERY AI & MULTI-INT PIPELINE
+│   ├── celery_app.py                 # Celery app config, queue routing (-P gevent -c 40)
+│   ├── tasks.py                      # Main message processing task, deduplication, auto-sanitization
+│   ├── llm_engine.py                 # Groq LLM extraction + homonym disambiguation across 24 Oblasts
+│   ├── canonical_geo.py              # Toponym → canonical name/coords resolver with PostGIS
+│   ├── schemas.py                    # Pydantic schemas (ThreatAttributionFactor, ThreatExplanationSchema)
+│   ├── track_fusion.py               # Physics-Informed CWNA Kalman Filter (a_lat <= 2.5g, speed clamps)
+│   ├── track_fusion_v2.py            # Aerodynamic limits (AeroLimits), q_eff(v) & ETA cone sector calculation
+│   ├── scoring_bayesian.py           # Bayesian Belief Network (BBN), MNAR river canyon rule & XAI attribution
+│   │
+│   ├── verification/                 # 🛡️ VERIFICATION & PSYOP DEFENSE
+│   │   ├── psyop_detector.py         # Anti-Hallucination bounds, sliding-window burst detector & unit grounding
+│   │   └── live_target_verifier.py   # Ground-truth validator
+│   │
+│   └── osint/                        # 🔍 SPECIALIZED SENSOR & OSINT MODULES
+│       ├── acoustic_gateway.py       # Weather-compensated sound speed c(T) & TDoA propagation delay
+│       ├── lob_triangulation.py      # Line of Bearing (LOB) geodesic triangulation & CEP error
+│       ├── military_units.py         # NLP entity matcher for Russian UAV units & launch sites
+│       ├── terrain_los.py            # TerrainMaskingEngine (0.001° grid, Redis caching, river canyon buffers)
+│       ├── neptun_radar.py           # Neptun 3D radar track fusion & Doppler matching
+│       ├── weather_vector.py         # Atmospheric boundary layer & wind vector resolver
+│       └── sigint_bus.py             # 5.8 GHz VTX / 1.4 GHz mesh RF intercept processor
 │
-├── alembic/                          # Schema migrations (script_location — see alembic.ini)
-│
-├── tests/                            # 🧪 AUTOMATED TESTS
-│   └── (see tests/ directory directly — grows per feature, no fixed manifest here)
+├── tests/                            # 🧪 AUTOMATED TESTS (100% PASSING)
+│   ├── test_practical_innovations.py # Tests for Physics EKF, Weather TDoA, XAI, Anti-PSYOP
+│   ├── test_military_registries.py   # Tests for military units & launch sites
+│   └── test_p1_v2_design.py          # Tests for q_eff(v), MNAR river canyon & end-to-end pipeline
 │
 └── AGENT_ARCHITECTURE_ROADMAP.md     # 📖 THIS MASTER GUIDE
 ```
