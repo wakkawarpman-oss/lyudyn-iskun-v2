@@ -5,6 +5,7 @@ import logging
 import base64
 import requests
 import datetime
+from typing import Optional, Dict, Any, List
 from zoneinfo import ZoneInfo
 from worker.schemas import ParsedEventSchema
 
